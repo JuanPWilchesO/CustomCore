@@ -424,13 +424,33 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
             }
             loaded++;
             var location = customMob.entity().getLocation();
-            sender.sendMessage(" - " + customMob.definition().id() + " en "
-                    + location.getWorld().getName() + " " + location.getBlockX() + " "
+            // Con el id delante, el jugador ya sabe que escribir en 'despedir'. La marca
+            // de montura ayuda a distinguirlos cuando comparten definicion.
+            boolean mount = customMob.definition().category()
+                    == com.juanp.custommobs.mob.MobCategory.MOUNT;
+            sender.sendMessage(" - " + customMob.definition().id() + (mount ? " (montura)" : "")
+                    + " en " + location.getWorld().getName() + " " + location.getBlockX() + " "
                     + location.getBlockY() + " " + location.getBlockZ());
+        }
+        // Los que estan dentro de un huevo no son entidades vivas: no salen en la lista de
+        // activos, pero si cuentan. Sin esto, el jugador no veia la mitad de su cupo.
+        int inEggs = 0;
+        for (com.juanp.custommobs.mob.PlayerMobRegistry.MobLink link
+                : this.plugin.mobs().playerMobs().all()) {
+            if (!ownerId.equals(link.owner()) || link.deployed()) {
+                continue;
+            }
+            inEggs++;
+            sender.sendMessage(" - " + link.definitionId() + " (guardado en su huevo)");
         }
         if (used > loaded) {
             sender.sendMessage(TAG + " " + (used - loaded)
                     + " mas en chunks descargados (anclados a su bloque).");
+        }
+        if (loaded + inEggs == 0 && used == 0) {
+            sender.sendMessage(" - (no tiene mobs)");
+        } else {
+            sender.sendMessage(TAG + " Para deshacerte de uno: /custommobs despedir <id>, o 'todos'.");
         }
     }
 
@@ -903,6 +923,33 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
             for (String name : colorNames()) {
                 if (name.startsWith(args[1].toLowerCase(Locale.ROOT))) {
                     out.add(name);
+                }
+            }
+            return out;
+        }
+        // 'despedir' es del jugador: se le ofrecen SUS mobs —los desplegados y los que
+        // guarda dentro de huevos—. Antes habia que saberse el id de memoria.
+        if (args.length == 2 && (args[0].equalsIgnoreCase("despedir") || args[0].equalsIgnoreCase("dismiss"))
+                && sender instanceof Player owner) {
+            String prefix = args[1].toLowerCase(Locale.ROOT);
+            java.util.LinkedHashSet<String> ids = new java.util.LinkedHashSet<>();
+            for (CustomMob customMob : this.plugin.mobs().active()) {
+                if (owner.getUniqueId().equals(customMob.ownerId())) {
+                    ids.add(customMob.definition().id());
+                }
+            }
+            for (com.juanp.custommobs.mob.PlayerMobRegistry.MobLink link
+                    : this.plugin.mobs().playerMobs().all()) {
+                if (owner.getUniqueId().equals(link.owner())) {
+                    ids.add(link.definitionId());
+                }
+            }
+            if ("todos".startsWith(prefix)) {
+                out.add("todos");
+            }
+            for (String id : ids) {
+                if (id.startsWith(prefix)) {
+                    out.add(id);
                 }
             }
             return out;

@@ -12,10 +12,10 @@ Todos bajo `/custommobs` (alias `cmobs`, `cm`).
 | `remove [radio]` | retira los mobs custom cercanos (solo desde el juego) |
 | `active` | lista los mobs vivos, con dueno y ubicacion |
 | `enchants [filtro]` | lista encantamientos disponibles (util para validar ids) |
-| `cuota [jugador]` | consulta el cupo de mobs |
+| `cuota [jugador]` | consulta el cupo y **lista tus mobs** con su id y ubicacion |
 | `cuota recontar <jugador>` | rehace la cuenta **sin tocar mobs** |
 | `cuota retirar <jugador>` | retira sus mobs y deja el cupo en cero (**destructivo**) |
-| `despedir <id\|todos>` | retira **tus** mobs; lo puede usar cualquier jugador con los suyos |
+| `despedir <id\|todos>` | retira **tus** mobs; lo usa cualquier jugador con los suyos, y el id se autocompleta |
 | `faction set <jugador> <faccion>` | asigna faccion a un jugador (solo admin) |
 | `faction get <jugador>` | consulta su faccion |
 | `faction clear <jugador>` | se la quita |

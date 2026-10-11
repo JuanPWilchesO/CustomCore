@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.7 — identificar tus mobs antes de despedirlos
+
+- **Autocompletado de `despedir`**: al escribir `/cm despedir ` ya se ofrecen `todos` y los ids
+  de **tus** mobs (los desplegados y los que guardas en huevos). Antes habia que saberse el id.
+- **`cuota` lista tus mobs**: ademas de los numeros, lista cada mob con su **id** y su ubicacion,
+  marca las monturas y saca los que estan **guardados en huevos** (que no son entidades vivas y
+  no aparecian).
+- **El libro trae el id util**: en cada pagina, bajo el nombre, el id — y ahora tambien la linea
+  exacta para despedirlo (`/cm despedir <id>`).
+- **Teams ya no expulsa**: se cae lo del `teams.kick-command`. La incoherencia se **impide** (se
+  rechaza la entrada, en los dos sentidos); al conectarse solo se **avisa en el log**.
+
 ## 0.3.6 — brillo de facciones, Teams coherente y targeting repasado
 
 - **Brillo por faccion, para cada quien**: enemigos en rojo, aliados en verde, sin relacion en

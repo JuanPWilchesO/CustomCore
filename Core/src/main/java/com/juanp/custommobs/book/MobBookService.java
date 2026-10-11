@@ -122,6 +122,9 @@ public final class MobBookService {
         lines.add(Texts.color("&8" + entity.getWorld().getName() + " "
                 + entity.getLocation().getBlockX() + " " + entity.getLocation().getBlockY()
                 + " " + entity.getLocation().getBlockZ()));
+        lines.add("");
+        // El id de arriba sirve para algo: aqui esta como usarlo.
+        lines.add(Texts.color("&8Despedirlo: /cm despedir " + customMob.definition().id()));
         return String.join("\n", lines);
     }
 
@@ -134,6 +137,8 @@ public final class MobBookService {
         lines.add(Texts.color("&8" + link.definitionId()));
         lines.add("");
         lines.add(Texts.color("&8Guardado en su huevo."));
+        lines.add("");
+        lines.add(Texts.color("&8Despedirlo: /cm despedir " + link.definitionId()));
         if (link.state() != null) {
             lines.add(Texts.color("&4Vida: &0" + trim(link.state().health())));
         }
