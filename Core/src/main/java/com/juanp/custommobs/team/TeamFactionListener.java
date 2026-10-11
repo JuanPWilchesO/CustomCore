@@ -1,6 +1,8 @@
 package com.juanp.custommobs.team;
 
+import com.hites.godxteam.api.event.TeamChangedEvent;
 import com.hites.godxteam.api.event.TeamMemberJoinEvent;
+import com.hites.godxteam.api.TeamView;
 import com.juanp.custommobs.CustomMobsPlugin;
 import com.juanp.custommobs.mob.Texts;
 import org.bukkit.entity.Player;
@@ -51,5 +53,21 @@ public final class TeamFactionListener implements Listener {
         event.setCancelled(true);
         player.sendMessage(Texts.color("&cEse team es de otra faccion; la tuya es '" + mine
                 + "'. Sal de ella, o busca un team de los tuyos."));
+    }
+
+    /**
+     * Cuando el team cambia —por ejemplo, porque cambia su jefe—, se repasa quien hay dentro: si
+     * alguno dejo de cuadrar con la faccion del jefe, sale.
+     */
+    @EventHandler
+    public void onChanged(TeamChangedEvent event) {
+        TeamView team = event.getTeamView();
+        UUID ownerId = team.owner();
+        if (ownerId == null || team.members() == null) {
+            return;
+        }
+        for (UUID member : team.members()) {
+            this.plugin.factionTeams().kickIfInconsistent(member, ownerId);
+        }
     }
 }

@@ -189,7 +189,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
                 String faction = args[3].toLowerCase(Locale.ROOT);
                 this.plugin.playerFactions().set(target.getUniqueId(), faction);
                 sender.sendMessage(TAG + " " + label + " ahora es de la faccion '" + faction + "'.");
-                this.leaveInconsistentTeam(target);
+                this.reviewTeams(target, sender);
                 if (!this.knownFaction(faction)) {
                     sender.sendMessage(TAG + " Aviso: '" + faction + "' no sale en factions.yml"
                             + " ni en ningun mob; comprueba la ortografia.");
@@ -221,38 +221,29 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
     }
 
     /**
-     * Si el jugador esta en un team cuyo jefe es de OTRA faccion, lo saca del team.
+     * Repasa los teams que toca el cambio de faccion de un jugador.
      *
-     * <p>Un team con dos facciones dentro deja de ser consecuente con las reglas. La API de
-     * Teams solo deja <b>leer</b> —no tiene forma de sacar a nadie—, asi que la salida se hace
-     * con su comando, configurable en {@code config.yml} para no adivinar la sintaxis.
+     * <p>Dos casos: si el jugador esta en un team ajeno y ya no cuadra, sale; y si es <b>el
+     * jefe</b> de un team, al cambiar su faccion los suyos dejan de cuadrar, asi que se les
+     * repasa tambien. (A los desconectados no se les puede enumerar sin la API de Teams; se les
+     * repasa cuando el team cambie o al reconectarse.)
      */
-    private void leaveInconsistentTeam(OfflinePlayer target) {
+    private void reviewTeams(OfflinePlayer target, CommandSender sender) {
         TeamLink teams = this.plugin.teamLink();
         if (!teams.isAvailable() || teams.teamOf(target.getUniqueId()).isEmpty()) {
             return;
         }
+        UUID teamId = teams.teamOf(target.getUniqueId()).orElse(null);
         UUID ownerId = teams.ownerOf(target.getUniqueId()).orElse(null);
-        if (ownerId == null || ownerId.equals(target.getUniqueId())) {
-            return; // es el jefe: el team es suyo, y decide el
-        }
-        String ownerFaction = this.plugin.playerFactions().of(ownerId).orElse(null);
-        String mine = this.plugin.playerFactions().of(target.getUniqueId()).orElse(null);
-        boolean inconsistent;
-        if (ownerFaction == null) {
-            inconsistent = mine != null && this.plugin.getConfig()
-                    .getBoolean("teams.kick-if-owner-factionless", false);
-        } else {
-            inconsistent = !ownerFaction.equals(mine);
-        }
-        if (!inconsistent) {
+        if (ownerId == null || !ownerId.equals(target.getUniqueId())) {
+            this.plugin.factionTeams().kickIfInconsistent(target.getUniqueId(), ownerId);
             return;
         }
-        String name = target.getName() != null ? target.getName() : "";
-        String command = this.plugin.getConfig()
-                .getString("teams.kick-command", "team kick {jugador}")
-                .replace("{jugador}", name);
-        this.plugin.getServer().dispatchCommand(this.plugin.getServer().getConsoleSender(), command);
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            if (teams.teamOf(online.getUniqueId()).filter(teamId::equals).isPresent()) {
+                this.plugin.factionTeams().kickIfInconsistent(online.getUniqueId(), ownerId);
+            }
+        }
     }
 
     /** Resuelve un jugador por nombre, conectado o no, sin bloquear el servidor. */

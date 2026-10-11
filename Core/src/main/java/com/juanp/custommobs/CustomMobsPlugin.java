@@ -49,6 +49,7 @@ import com.juanp.custommobs.spawner.SpawnerListener;
 import com.juanp.custommobs.spawner.SpawnerRegistry;
 import com.juanp.custommobs.style.StyleRegistry;
 import com.juanp.custommobs.style.StyleService;
+import com.juanp.custommobs.team.FactionTeams;
 import com.juanp.custommobs.team.TeamFactionListener;
 import com.juanp.custommobs.team.TeamLink;
 import com.juanp.custommobs.team.TeamLinkResolver;
@@ -90,6 +91,7 @@ public final class CustomMobsPlugin extends JavaPlugin {
     private EconomyLink economy;
     private ChainService chains;
     private FactionGlowService glow;
+    private FactionTeams factionTeams;
     private DisguiseLink disguiseLink;
     private DropService dropService;
     private StyleService styleService;
@@ -133,6 +135,7 @@ public final class CustomMobsPlugin extends JavaPlugin {
         }
         this.factions = new FactionBook();
         this.factions.reload(this);
+        this.factionTeams = new FactionTeams(this);
         this.playerFactions = new PlayerFactions(this);
         this.playerFactions.load();
 
@@ -370,6 +373,11 @@ public final class CustomMobsPlugin extends JavaPlugin {
     /** Brillo de los jugadores segun su faccion, para cada quien. */
     public FactionGlowService glow() {
         return this.glow;
+    }
+
+    /** Las reglas que mantienen Teams y las facciones de acuerdo. */
+    public FactionTeams factionTeams() {
+        return this.factionTeams;
     }
 
     /** Cobrador de dinero, enganchado a EssentialsX si esta. */
