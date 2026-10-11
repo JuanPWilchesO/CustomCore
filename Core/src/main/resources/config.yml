@@ -161,3 +161,6 @@ teams:
   kick-command: 'team kick {jugador}'
   # Si el jefe del team no tiene faccion, no se saca a nadie.
   kick-if-owner-factionless: false
+  # Y al entrar: si el jefe del team no tiene faccion, se deja entrar a cualquiera.
+  # En true, no deja entrar a quien tenga faccion.
+  block-join-if-owner-factionless: false

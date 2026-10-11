@@ -6,9 +6,11 @@
   gris. Se manda **por espectador** con equipos falsos de **PacketEvents** (no se toca el
   scoreboard de verdad, asi que no interfiere con Teams). Modos en `faction-glow.mode`: `off`,
   `global` o `player` (cada uno lo decide con `/custommobs glowfaccion`). Necesita PacketEvents.
-- **Coherencia con Teams**: cuando a un jugador se le asigna faccion, si esta en un team cuyo
-  jefe es de otra faccion, **sale del team**. La API de Teams solo deja leer, asi que se usa su
-  comando, configurable (`teams.kick-command`).
+- **Coherencia con Teams, por los dos lados**: al **entrar** a un team cuyo jefe es de otra
+  faccion, la entrada se **cancela** (con el `TeamMemberJoinEvent`, que es cancelable: no hace
+  falta tocar Teams). Y al **asignarle faccion** a alguien que ya esta en un team de otra
+  faccion, sale del team — ahi la API de Teams no deja sacar a nadie, asi que se usa su comando,
+  configurable (`teams.kick-command`).
 - **Targeting repasado**: un mob de jugador cuenta con la faccion de su dueno en todo el sistema
   —ataca a los enemigos de su dueno, jugadores y mobs incluidos, y los mobs enemigos van a por
   el—. Y se cierra un hueco: un **jugador aliado** que golpeaba a un mob dejaba puesta la marca de

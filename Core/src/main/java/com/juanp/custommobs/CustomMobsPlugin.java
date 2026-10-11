@@ -49,6 +49,7 @@ import com.juanp.custommobs.spawner.SpawnerListener;
 import com.juanp.custommobs.spawner.SpawnerRegistry;
 import com.juanp.custommobs.style.StyleRegistry;
 import com.juanp.custommobs.style.StyleService;
+import com.juanp.custommobs.team.TeamFactionListener;
 import com.juanp.custommobs.team.TeamLink;
 import com.juanp.custommobs.team.TeamLinkResolver;
 import org.bukkit.command.PluginCommand;
@@ -184,6 +185,11 @@ public final class CustomMobsPlugin extends JavaPlugin {
         pluginManager.registerEvents(new SpawnerListener(this.mobService), this);
         pluginManager.registerEvents(new DropListener(this.mobService, this.dropService), this);
         pluginManager.registerEvents(new MotdListener(this), this);
+        // Con Teams instalado, ademas no se deja entrar a un team de otra faccion. La clase toca
+        // la API de Teams, asi que solo se carga cuando esta: sin el, ni se toca.
+        if (pluginManager.getPlugin("Teams") != null) {
+            pluginManager.registerEvents(new TeamFactionListener(this), this);
+        }
         pluginManager.registerEvents(new SkillInteractListener(this.craftService, this.mobService, this.skillService), this);
         pluginManager.registerEvents(new MobItemListener(this, this.mobService, this.upgradeService, this.book), this);
 

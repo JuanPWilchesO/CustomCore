@@ -219,7 +219,15 @@ verdad** — asi no se rompe Teams ni ningun otro plugin.
 teams:
   kick-command: 'team kick {jugador}'
   kick-if-owner-factionless: false
+  block-join-if-owner-factionless: false
 ```
+
+Y tambien al **entrar**: si el jugador intenta unirse a un team cuyo jefe es de **otra** faccion,
+la entrada se **cancela** y se le avisa. Eso se hace con el `TeamMemberJoinEvent` de Teams
+—que es cancelable—, asi que no hace falta tocar ese plugin.
+
+`kick-if-owner-factionless` decide si se **saca** a alguien cuando el jefe del team no tiene
+faccion; `block-join-if-owner-factionless` decide si se le **deja entrar`.
 
 Cuando un jugador entra en una faccion, si esta en un **team cuyo jefe es de otra faccion**,
 sale del team: un team con dos facciones dentro deja de ser consecuente con las reglas.
