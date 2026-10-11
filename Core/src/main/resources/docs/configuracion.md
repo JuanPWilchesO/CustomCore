@@ -217,25 +217,26 @@ verdad** — asi no se rompe Teams ni ningun otro plugin.
 
 ```yaml
 teams:
-  kick-command: 'team kick {jugador}'
-  kick-if-owner-factionless: false
   block-join-if-owner-factionless: false
 ```
 
-Y tambien al **entrar**: si el jugador intenta unirse a un team cuyo jefe es de **otra** faccion,
-la entrada se **cancela** y se le avisa. Eso se hace con el `TeamMemberJoinEvent` de Teams
-—que es cancelable—, asi que no hace falta tocar ese plugin.
+Las reglas de faccion y los teams tienen que cuadrar. En vez de **sacar** a nadie cuando algo
+no cuadra, el plugin **impide** que la incoherencia llegue a producirse: se rechaza la union.
 
-`kick-if-owner-factionless` decide si se **saca** a alguien cuando el jefe del team no tiene
-faccion; `block-join-if-owner-factionless` decide si se le **deja entrar`.
+Se rechaza **en los dos sentidos**:
 
-Cuando un jugador entra en una faccion, si esta en un **team cuyo jefe es de otra faccion**,
-sale del team: un team con dos facciones dentro deja de ser consecuente con las reglas.
+- Si es **miembro** y su faccion no cuadra con la del jefe del team, no se le deja entrar.
+- Si es **el jefe** y alguno de los suyos es de otra faccion, tampoco se le deja entrar.
 
-La API de Teams solo deja **leer** —no tiene forma de sacar a nadie—, asi que se usa su comando:
-pon en `kick-command` el que sea exacto en tu servidor ({jugador} se sustituye solo).
-Con `kick-if-owner-factionless` decides si tambien se saca a alguien cuando el jefe del team
+`block-join-if-owner-factionless` decide si se **deja entrar** a alguien cuando el jefe del team
 **no tiene** faccion.
+
+Y al **conectarse** (`PlayerJoinEvent`) se repasa el team: si quedo incoherente (por ejemplo,
+alguien que estaba desconectado cuando cambio su faccion), **se avisa en el log**. Ya no se
+expulsa a nadie — no hace falta, porque la entrada ya se bloquea.
+
+No se forkea Teams: sus eventos cubren todo. Lo unico imposible por su API sigue siendo **sacar**
+a alguien, y ya no hace falta.
 
 ## Filtrar mundos (`worlds.enabled`)
 
