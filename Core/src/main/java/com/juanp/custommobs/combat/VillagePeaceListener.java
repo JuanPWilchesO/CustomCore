@@ -9,6 +9,7 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.entity.Snowman;
+import org.bukkit.entity.Wolf;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
@@ -52,7 +53,10 @@ public final class VillagePeaceListener implements Listener {
             return;
         }
         Entity source = event.getEntity();
-        if (source instanceof IronGolem || source instanceof Snowman) {
+        // Golems y munecos de nieve van a por los monstruos, y el lobo va a por los
+        // esqueletos: contra un mob pacifico del pueblo, ninguno de los tres tiene nada
+        // que hacer.
+        if (source instanceof IronGolem || source instanceof Snowman || source instanceof Wolf) {
             event.setCancelled(true);
             event.setTarget(null);
         }

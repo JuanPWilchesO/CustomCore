@@ -84,7 +84,7 @@ public final class TargetPolicy {
             return false;
         }
         // Un mob amistoso con el pueblo no toca a la gente del pueblo.
-        if (soldier.definition().villageFriendly() && VillageFolk.isFolk(candidate)) {
+        if (soldier.definition().villageFriendly() && VillageFolk.isLeftAlone(candidate)) {
             return false;
         }
         return soldier.definition().server()

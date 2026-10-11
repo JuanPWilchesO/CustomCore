@@ -822,7 +822,8 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
      * y despues cualquier mob lo llama desde su tabla de drops con {@code item: <nombre>}.
      */
     private void item(CommandSender sender, String[] args) {
-        String usage = TAG + " Uso: /custommobs item save <nombre> | list | remove <nombre>";
+        String usage = TAG + " Uso: /custommobs item save <nombre> | list | remove <nombre>"
+                + " | faccion <nombre> <faccion|nada>";
         if (args.length < 2) {
             sender.sendMessage(usage);
             return;
@@ -863,6 +864,27 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
                     return;
                 }
                 sender.sendMessage(TAG + " Item '" + args[2].toLowerCase(Locale.ROOT) + "' borrado del catalogo.");
+            }
+            case "faccion" -> {
+                if (args.length < 4) {
+                    sender.sendMessage(TAG + " Uso: /custommobs item faccion <nombre> <faccion|nada>");
+                    return;
+                }
+                String faction = args[3].equalsIgnoreCase("nada") || args[3].equals("-")
+                        ? null : args[3].toLowerCase(Locale.ROOT);
+                if (faction != null && !this.plugin.factions().known().contains(faction)) {
+                    sender.sendMessage(TAG + " Esa faccion no existe. Conocidas: "
+                            + String.join(", ", this.plugin.factions().known()));
+                    return;
+                }
+                String itemName = args[2].toLowerCase(Locale.ROOT);
+                if (!this.plugin.drops().catalog().setFaction(args[2], faction)) {
+                    sender.sendMessage(TAG + " No existe ese item: " + itemName);
+                    return;
+                }
+                sender.sendMessage(TAG + (faction == null
+                        ? " Item '" + itemName + "' liberado: cualquiera puede usarlo."
+                        : " Item '" + itemName + "' reservado a la faccion '" + faction + "'."));
             }
             default -> sender.sendMessage(usage);
         }
@@ -971,6 +993,25 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
             for (var spec : this.plugin.upgrades().all()) {
                 if (spec.id().startsWith(args[2].toLowerCase(Locale.ROOT))) {
                     out.add(spec.id());
+                }
+            }
+            return out;
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("item")) {
+            for (String option : List.of("save", "list", "remove", "faccion")) {
+                if (option.startsWith(args[1].toLowerCase(Locale.ROOT))) {
+                    out.add(option);
+                }
+            }
+            return out;
+        }
+        if (args.length == 4 && args[0].equalsIgnoreCase("item") && args[1].equalsIgnoreCase("faccion")) {
+            if ("nada".startsWith(args[3].toLowerCase(Locale.ROOT))) {
+                out.add("nada");
+            }
+            for (String faction : this.plugin.factions().known()) {
+                if (faction.startsWith(args[3].toLowerCase(Locale.ROOT))) {
+                    out.add(faction);
                 }
             }
             return out;

@@ -33,6 +33,7 @@ ExcellentEnchants, cualquier NBT puesto por otro plugin. Para esos esta el catal
 /custommobs item save <nombre>     guarda el objeto de tu mano
 /custommobs item list              lista los nombres guardados
 /custommobs item remove <nombre>   borra uno
+/custommobs item faccion <nombre> <faccion|nada>   lo reserva a una faccion (o lo libera)
 ```
 
 Cada objeto vive en **`items/<nombre>.yml`**, con su nombre escrito dentro:
@@ -41,11 +42,28 @@ Cada objeto vive en **`items/<nombre>.yml`**, con su nombre escrito dentro:
 nombre: espada_del_sargento
 item: '<base64 con todo el NBT>'
 etiqueta: '&cEspada del Sargento'
+faccion: rojos   # opcional: solo los de esa faccion pueden recogerlo, equiparlo o usarlo
 ```
 
 El nombre se normaliza a minusculas y sin espacios, porque acaba siendo un nombre de
 archivo. Despues lo llamas por ese nombre desde la tabla de drops o desde el
 equipamiento. **Un mismo objeto sirve para varios mobs.**
+
+### Reservar un objeto a una faccion
+
+```
+/custommobs item faccion espada_del_sargento rojos   solo los 'rojos' pueden usarla
+/custommobs item faccion espada_del_sargento nada    la libera: vale para cualquiera
+```
+
+Un objeto reservado solo lo puede **recoger**, **equipar** o **usar** un jugador de esa
+faccion. La marca viaja **dentro del objeto** (su NBT), asi que sigue puesta si lo sueltan, lo
+guardan en un cofre o lo reparte otro plugin — por eso no basta con la clave en el yml: hay
+que ponersela con el comando (o escribirla a mano antes de usarlo). El que no sea de la
+faccion, al intentarlo, recibe el aviso y no pasa nada mas.
+
+> No es una caja fuerte: impide **usarlo**, no quitarselo a quien ya lo tenga. Un objeto ya
+> equipado por alguien de otra faccion no se le arranca.
 
 ## De la mano al mob, en dos pasos
 

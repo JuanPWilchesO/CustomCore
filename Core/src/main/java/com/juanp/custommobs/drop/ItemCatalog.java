@@ -2,8 +2,11 @@ package com.juanp.custommobs.drop;
 
 import com.juanp.custommobs.CustomMobsPlugin;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
 
 import java.io.File;
 import java.io.IOException;
@@ -28,10 +31,12 @@ public final class ItemCatalog {
 
     private final CustomMobsPlugin plugin;
     private final File folder;
+    private final NamespacedKey factionKey;
 
     public ItemCatalog(CustomMobsPlugin plugin) {
         this.plugin = plugin;
         this.folder = new File(plugin.getDataFolder(), "items");
+        this.factionKey = new NamespacedKey(plugin, "item_faccion");
     }
 
     /**
@@ -71,12 +76,25 @@ public final class ItemCatalog {
         if (!file.exists()) {
             return Optional.empty();
         }
-        String data = YamlConfiguration.loadConfiguration(file).getString("item");
+        YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
+        String data = yaml.getString("item");
         if (data == null) {
             return Optional.empty();
         }
         try {
-            return Optional.of(ItemStack.deserializeBytes(Base64.getDecoder().decode(data)));
+            ItemStack item = ItemStack.deserializeBytes(Base64.getDecoder().decode(data));
+            // La exclusividad de faccion viaja DENTRO del objeto: una vez suelto o
+            // entregado, el yml ya no esta a mano, asi que la marca tiene que ir con el.
+            String faction = factionOf(yaml);
+            if (faction != null) {
+                ItemMeta meta = item.getItemMeta();
+                if (meta != null) {
+                    meta.getPersistentDataContainer().set(this.factionKey,
+                            PersistentDataType.STRING, faction);
+                    item.setItemMeta(meta);
+                }
+            }
+            return Optional.of(item);
         } catch (Throwable ex) {
             this.plugin.getLogger().warning("El item '" + name + "' esta corrupto y no se pudo leer.");
             return Optional.empty();
@@ -95,6 +113,54 @@ public final class ItemCatalog {
         }
         Collections.sort(names);
         return List.copyOf(names);
+    }
+
+    /**
+     * Reserva el objeto a una faccion, o lo libera pasando {@code null}.
+     *
+     * @return {@code false} si el objeto no existe o no se pudo escribir
+     */
+    public boolean setFaction(String rawName, String faction) {
+        String name = clean(rawName);
+        if (name == null) {
+            return false;
+        }
+        File file = this.fileOf(name);
+        if (!file.exists()) {
+            return false;
+        }
+        YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
+        yaml.set("faccion", faction == null ? null : faction.trim().toLowerCase(Locale.ROOT));
+        try {
+            yaml.save(file);
+            return true;
+        } catch (IOException ex) {
+            this.plugin.getLogger().warning("No se pudo escribir items/" + name + ".yml: " + ex.getMessage());
+            return false;
+        }
+    }
+
+    /** La faccion a la que el objeto queda reservado, o vacio si es libre. */
+    public Optional<String> factionOf(String rawName) {
+        String name = clean(rawName);
+        if (name == null) {
+            return Optional.empty();
+        }
+        File file = this.fileOf(name);
+        if (!file.exists()) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(factionOf(YamlConfiguration.loadConfiguration(file)));
+    }
+
+    /** Clave con la que se marca, dentro del objeto, su faccion. */
+    public NamespacedKey factionKey() {
+        return this.factionKey;
+    }
+
+    private static String factionOf(YamlConfiguration yaml) {
+        String value = yaml.getString("faccion");
+        return value == null || value.isBlank() ? null : value.trim().toLowerCase(Locale.ROOT);
     }
 
     /** Borra un objeto del catalogo. */

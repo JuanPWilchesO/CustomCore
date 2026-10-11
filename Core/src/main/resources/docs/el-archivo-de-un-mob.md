@@ -283,7 +283,7 @@ immune:
 
 | Clave | Que hace | Por defecto |
 |---|---|---|
-| `village-friendly` | defiende al pueblo: no ataca a aldeanos ni golems, los golems no lo apuntan a el, y va a por quien le pegue a un aldeano | `false` |
+| `village-friendly` | defiende al pueblo: no ataca a aldeanos, golems ni lobos, ni ellos lo apuntan a el, y va a por quien le pegue a un aldeano | `false` |
 | `immune` | lista de causas de dano que ignora | vacia |
 | `attacks-monsters` | ataca a los monstruos hostiles vanilla (`category: server`) | `false` |
 | `transformable` | si el juego puede convertirlo (aldeano -> bruja, zombi -> ahogado...) | `true` |
@@ -322,8 +322,13 @@ el nombre de la causa de Bukkit en minusculas; lo que no se reconoce se avisa y 
 | Comportamiento | Sin la clave | Con la clave |
 |---|---|---|
 | Ataca a aldeanos o golems | si | **no** |
-| Un golem lo ataca a el | si | **no** |
+| Un golem (o un muneco de nieve) lo ataca a el | si | **no** |
+| Un lobo lo ataca a el | si | **no** |
 | Si le pegan a un aldeano cerca | lo ignora | **va a por el agresor** |
+
+El **lobo** merece mencion aparte: caza esqueletos de forma natural, asi que un centinela
+amistoso con forma de esqueleto seria su presa. Con la clave, ni el lobo lo apunta ni el mob
+ataca de vuelta — pero no se sale en defensa del lobo: el lobo no es del pueblo.
 
 Esa ultima es mas radical que un golem: reacciona **cualquier** mob amistoso que lo vea, sea
 cual sea su `attitude` —incluso un `neutral` o un `defender`—, porque la agresion pesa mas que
