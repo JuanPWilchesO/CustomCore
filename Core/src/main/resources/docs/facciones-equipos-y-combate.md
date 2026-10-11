@@ -150,9 +150,11 @@ que no interfiere con Teams). Detalles en `configuracion.md`.
 
 ## Teams y facciones, de acuerdo
 
-Cuando a un jugador se le asigna faccion, si esta en un **team cuyo jefe es de otra faccion**
-**sale del team** automaticamente: si no, el team tendria dentro a gente de dos bandos, y ni el
-fuego amigo ni los colores tendrian sentido. Se configura en `configuracion.md` (`teams`).
+Cuando a un jugador se le asigna faccion, el plugin **impide** que quede en un **team cuyo jefe
+es de otra faccion**: se rechaza la entrada — y tambien la del jefe cuyo team tenga gente de otra
+faccion. No se saca a nadie: la incoherencia se corta antes de producirse. Y al conectarse se
+repasa el team, avisando en el log si quedo incoherente. Se configura en `configuracion.md`
+(`teams`).
 
 ## Teams (opcional)
 
