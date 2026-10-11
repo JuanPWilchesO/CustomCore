@@ -12,6 +12,11 @@
 - **`village-friendly` tambien con los lobos**: el lobo caza esqueletos, asi que un centinela
   amistoso con forma de esqueleto era su presa. Con la clave, ni el lobo lo apunta ni el mob
   ataca de vuelta — sin llegar a defenderlos (el lobo no es del pueblo).
+- **Sin fuego amigo entre jugadores del mismo bando**: dos jugadores de la misma faccion
+  (o de facciones aliadas, o del mismo team) no se hacen dano. Solo dentro de los mundos donde
+  trabaja el plugin.
+- **`worlds.enabled` vale para todo**: un mundo excluido no gestiona mobs, no invoca desde el
+  huevo, no craftea huevos ni mejoras, y ni el libro ni los objetos reservados actuan ahi.
 - **Objetos reservados a una faccion**: `/custommobs item faccion <nombre> <faccion|nada>` deja
   un objeto del catalogo para uso exclusivo de una faccion. Solo ellos pueden **recogerlo del
   suelo**, **sacarlo de un cofre**, **moverlo**, **equiparlo** o **usarlo**. Un admin pasa siempre.

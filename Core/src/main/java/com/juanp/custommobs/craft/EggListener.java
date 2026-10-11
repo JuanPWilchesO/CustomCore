@@ -13,6 +13,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.inventory.CraftItemEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
@@ -50,6 +51,23 @@ public final class EggListener implements Listener {
         this.plugin = plugin;
         this.craft = craft;
         this.service = service;
+    }
+
+    /**
+     * Craftear un huevo (o una mejora) tampoco vale en un mundo excluido: si no, se podria
+     * fabricar aqui lo que luego no se puede usar, y el inventario se llena de objetos
+     * muertos.
+     */
+    @EventHandler(ignoreCancelled = true)
+    public void onCraft(CraftItemEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)
+                || this.service.worldEnabled(player.getWorld())) {
+            return;
+        }
+        if (this.craft.isCustomResult(event.getCurrentItem())) {
+            event.setCancelled(true);
+            player.sendMessage(Texts.color("&cEl plugin no funciona en este mundo."));
+        }
     }
 
     /** Colocar el huevo: despliega el mob, o lo vuelve a traer si estaba guardado. */

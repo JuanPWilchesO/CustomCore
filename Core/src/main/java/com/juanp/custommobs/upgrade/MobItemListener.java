@@ -43,6 +43,10 @@ public final class MobItemListener implements Listener {
         if (event.getHand() != EquipmentSlot.HAND) {
             return;
         }
+        // Fuera de los mundos del plugin, ni el libro ni las mejoras hacen nada.
+        if (!this.service.worldEnabled(event.getPlayer().getWorld())) {
+            return;
+        }
         Action action = event.getAction();
         if (action != Action.RIGHT_CLICK_AIR && action != Action.RIGHT_CLICK_BLOCK) {
             return;
@@ -113,6 +117,9 @@ public final class MobItemListener implements Listener {
      */
     @EventHandler(ignoreCancelled = true)
     public void onDispense(org.bukkit.event.block.BlockDispenseEvent event) {
+        if (!this.service.worldEnabled(event.getBlock().getWorld())) {
+            return;
+        }
         org.bukkit.Material type = event.getItem().getType();
         boolean gear = type == org.bukkit.Material.SADDLE
                 || type.name().endsWith("_HORSE_ARMOR")
@@ -175,6 +182,9 @@ public final class MobItemListener implements Listener {
             return;
         }
         Player player = event.getPlayer();
+        if (!this.service.worldEnabled(player.getWorld())) {
+            return;
+        }
         ItemStack item = player.getInventory().getItemInMainHand();
         if (this.book.isBook(item)) {
             event.setCancelled(true);

@@ -156,6 +156,12 @@ faccion. No se saca a nadie: la incoherencia se corta antes de producirse. Y al 
 repasa el team, avisando en el log si quedo incoherente. Se configura en `configuracion.md`
 (`teams`).
 
+## Fuego amigo entre jugadores
+
+Dos jugadores del **mismo bando** no se hacen dano: ni de la misma faccion, ni de facciones
+**aliadas**, ni companeros del mismo **team**. El golpe se anula sin mas. Solo vale dentro de
+los mundos donde trabaja el plugin; fuera de ellos manda el PvP del servidor.
+
 ## Teams (opcional)
 
 Con **Teams** instalado, los jugadores se agrupan en bandos:

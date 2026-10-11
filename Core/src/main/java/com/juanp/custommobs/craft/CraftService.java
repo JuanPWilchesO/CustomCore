@@ -129,6 +129,20 @@ public final class CraftService {
         }
     }
 
+    /**
+     * {@code true} si el objeto crafteado es del plugin: un huevo (lleva el id de su
+     * definicion) o un item de mejora. Reconocerlo por el resultado evita depender de la
+     * API de recetas, que no expone la clave.
+     */
+    public boolean isCustomResult(ItemStack result) {
+        if (result == null || result.getType().isAir() || !result.hasItemMeta()) {
+            return false;
+        }
+        var data = result.getItemMeta().getPersistentDataContainer();
+        return data.has(this.keys.definition(), PersistentDataType.STRING)
+                || data.has(this.keys.upgrade(), PersistentDataType.STRING);
+    }
+
     /** Firma de una lista de ingredientes, sin importar el orden. */
     public static String signatureOf(List<Material> ingredients) {
         List<String> parts = new ArrayList<>(ingredients.size());

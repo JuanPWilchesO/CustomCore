@@ -248,7 +248,8 @@ worlds:
 ```
 
 - Lista **vacia** = el plugin funciona en todos los mundos.
-- Fuera de la lista, el mob no se gestiona: no cuenta cupo, no recibe IA, y
-  **el huevo no invoca nada**: un mundo excluido tambien bloquea la invocacion.
+- Fuera de la lista, **el plugin no hace nada**: el mob no se gestiona —no cuenta cupo ni
+  recibe IA—, el huevo no invoca nada, no se craftean huevos ni items de mejora, y ni el libro
+  ni los objetos reservados a una faccion actuan. Ese mundo queda como si el plugin no estuviera.
 - Los nombres son los de Bukkit, asi que vale cualquiera, incluidos los de Multiverse-Core
   (mira el nombre exacto con `/mv list`).

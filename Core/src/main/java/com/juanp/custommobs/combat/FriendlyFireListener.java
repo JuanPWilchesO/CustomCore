@@ -41,10 +41,28 @@ public final class FriendlyFireListener implements Listener {
         if (attacker == null || victim.getUniqueId().equals(attacker.getUniqueId())) {
             return;
         }
+        // Dos jugadores del mismo bando (misma faccion, aliada, o mismo team) no se hacen
+        // dano. Solo dentro de los mundos donde trabaja el plugin: fuera de ellos manda el
+        // PvP del servidor.
+        if (victim instanceof Player defender && attacker instanceof Player aggressor
+                && this.service.worldEnabled(defender.getWorld())
+                && this.sameSide(aggressor, defender)) {
+            event.setCancelled(true);
+            return;
+        }
         if (this.blocked(event, victim, attacker)) {
             return;
         }
         this.followOwner(victim, attacker);
+    }
+
+    /** {@code true} si los dos jugadores son del mismo bando (faccion o team). */
+    private boolean sameSide(Player first, Player second) {
+        if (this.service.teamLink().isAlly(first.getUniqueId(), second.getUniqueId())) {
+            return true;
+        }
+        String mine = this.service.factionOf(first);
+        return mine != null && this.service.sameSide(mine, this.service.factionOf(second));
     }
 
     /** {@code true} si el golpe era contra su propio bando y se ha anulado. */
