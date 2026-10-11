@@ -187,24 +187,17 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
                     return;
                 }
                 String faction = args[3].toLowerCase(Locale.ROOT);
-                // Si esta en un team y la faccion nueva no cuadra con la del jefe, no se le deja
-                // entrar: si no, quedaria dentro de un team de otra faccion. Primero sale del team.
-                UUID teamId = this.plugin.teamLink().teamOf(target.getUniqueId()).orElse(null);
-                if (teamId != null) {
-                    UUID ownerId = this.plugin.teamLink().ownerOf(target.getUniqueId()).orElse(null);
-                    if (ownerId != null && !ownerId.equals(target.getUniqueId())) {
-                        String ownerFaction = this.plugin.playerFactions().of(ownerId).orElse(null);
-                        if (ownerFaction != null && !ownerFaction.equals(faction)) {
-                            sender.sendMessage(TAG + " No se puede: " + label + " esta en un team de"
-                                    + " la faccion '" + ownerFaction + "'. Que salga del team primero"
-                                    + " —o dale esa faccion—.");
-                            return;
-                        }
-                    }
+                // No se entra en una faccion que rompa el team: se rechaza el cambio, en vez de
+                // dejar entrar y tener que sacar a nadie despues.
+                String conflict = this.plugin.factionTeams()
+                        .conflictFor(target.getUniqueId(), faction);
+                if (conflict != null) {
+                    sender.sendMessage(TAG + " No se puede: " + label + " " + conflict
+                            + ". Que salga del team primero —o dale esa faccion—.");
+                    return;
                 }
                 this.plugin.playerFactions().set(target.getUniqueId(), faction);
                 sender.sendMessage(TAG + " " + label + " ahora es de la faccion '" + faction + "'.");
-                this.reviewTeams(target, sender);
                 if (!this.knownFaction(faction)) {
                     sender.sendMessage(TAG + " Aviso: '" + faction + "' no sale en factions.yml"
                             + " ni en ningun mob; comprueba la ortografia.");
@@ -233,32 +226,6 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
         }
         boolean on = this.plugin.glow().toggle(player);
         sender.sendMessage(TAG + " Brillo de facciones: " + (on ? "activado" : "desactivado") + ".");
-    }
-
-    /**
-     * Repasa los teams que toca el cambio de faccion de un jugador.
-     *
-     * <p>Dos casos: si el jugador esta en un team ajeno y ya no cuadra, sale; y si es <b>el
-     * jefe</b> de un team, al cambiar su faccion los suyos dejan de cuadrar, asi que se les
-     * repasa tambien. (A los desconectados no se les puede enumerar sin la API de Teams; se les
-     * repasa cuando el team cambie o al reconectarse.)
-     */
-    private void reviewTeams(OfflinePlayer target, CommandSender sender) {
-        TeamLink teams = this.plugin.teamLink();
-        if (!teams.isAvailable() || teams.teamOf(target.getUniqueId()).isEmpty()) {
-            return;
-        }
-        UUID teamId = teams.teamOf(target.getUniqueId()).orElse(null);
-        UUID ownerId = teams.ownerOf(target.getUniqueId()).orElse(null);
-        if (ownerId == null || !ownerId.equals(target.getUniqueId())) {
-            this.plugin.factionTeams().kickIfInconsistent(target.getUniqueId(), ownerId);
-            return;
-        }
-        for (Player online : Bukkit.getOnlinePlayers()) {
-            if (teams.teamOf(online.getUniqueId()).filter(teamId::equals).isPresent()) {
-                this.plugin.factionTeams().kickIfInconsistent(online.getUniqueId(), ownerId);
-            }
-        }
     }
 
     /** Resuelve un jugador por nombre, conectado o no, sin bloquear el servidor. */

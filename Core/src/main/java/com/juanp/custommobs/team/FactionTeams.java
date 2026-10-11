@@ -1,19 +1,21 @@
 package com.juanp.custommobs.team;
 
 import com.juanp.custommobs.CustomMobsPlugin;
-import org.bukkit.Bukkit;
-import org.bukkit.OfflinePlayer;
 
 import java.util.UUID;
 
 /**
- * Las reglas que mantienen Teams y las facciones de acuerdo.
+ * Las reglas que mantienen Teams y las facciones de acuerdo: <b>no se entra en una faccion que
+ * rompa el team</b>.
  *
- * <p>La idea: un team es de una faccion —la de su jefe—, y dentro no deberia haber nadie de otra.
- * Cuando alguien deja de cuadrar, sale del team.
+ * <p>Un team es de la faccion de su jefe, y dentro no deberia haber nadie de otra. En vez de
+ * dejar entrar y luego sacar —que es lo que haciamos antes—, se <b>rechaza la entrada</b>: asi
+ * nunca se llega al estado incoherente, y no hace falta expulsar a nadie.
  *
- * <p>No toca la API de Teams a proposito: solo mira la faccion de cada uno y manda el comando de
- * salida que diga el config. Asi esta clase se puede usar aunque Teams no este instalado.
+ * <p>Mira los dos lados: si el jugador es <b>miembro</b>, manda la faccion del jefe; si es <b>el
+ * jefe</b>, romperia a cualquiera de los suyos que sea de otra faccion.
+ *
+ * <p>No toca la API de Teams: solo mira facciones y pregunta por el team al enlace.
  */
 public final class FactionTeams {
 
@@ -24,36 +26,36 @@ public final class FactionTeams {
     }
 
     /**
-     * Saca del team a un jugador si su faccion no cuadra con la del jefe.
+     * Por que esa faccion romperia el team del jugador, o {@code null} si no rompe nada.
      *
-     * <p>La API de Teams es de solo lectura —no tiene forma de sacar a nadie—, asi que la salida
-     * se hace con su comando: {@code teams.kick-command} del config, donde {@code {jugador}} se
-     * sustituye por el nombre.
-     *
-     * @return {@code true} si se le saco
+     * @return el motivo, ya redactado para ensenarselo al que lo intenta
      */
-    public boolean kickIfInconsistent(UUID playerId, UUID ownerId) {
-        if (ownerId == null || ownerId.equals(playerId)) {
-            return false; // es el jefe: el team es suyo
+    public String conflictFor(UUID playerId, String faction) {
+        if (faction == null || !this.plugin.teamLink().isAvailable()) {
+            return null;
         }
-        String mine = this.plugin.playerFactions().of(playerId).orElse(null);
-        String owner = this.plugin.playerFactions().of(ownerId).orElse(null);
-        boolean inconsistent;
-        if (owner == null) {
-            inconsistent = mine != null && this.plugin.getConfig()
-                    .getBoolean("teams.kick-if-owner-factionless", false);
-        } else {
-            inconsistent = !owner.equals(mine);
+        UUID teamId = this.plugin.teamLink().teamOf(playerId).orElse(null);
+        UUID ownerId = this.plugin.teamLink().ownerOf(playerId).orElse(null);
+        if (teamId == null || ownerId == null) {
+            return null; // sin team no hay nada que romper
         }
-        if (!inconsistent) {
-            return false;
+        if (!ownerId.equals(playerId)) {
+            String owner = this.plugin.playerFactions().of(ownerId).orElse(null);
+            if (owner != null && !owner.equals(faction)) {
+                return "esta en un team de la faccion '" + owner + "'";
+            }
+            return null;
         }
-        OfflinePlayer player = Bukkit.getOfflinePlayer(playerId);
-        String name = player.getName() != null ? player.getName() : "";
-        String command = this.plugin.getConfig()
-                .getString("teams.kick-command", "team kick {jugador}")
-                .replace("{jugador}", name);
-        this.plugin.getServer().dispatchCommand(this.plugin.getServer().getConsoleSender(), command);
-        return true;
+        // Es el jefe: solo rompe si alguno de los suyos es de otra faccion.
+        for (UUID member : this.plugin.teamLink().members(teamId)) {
+            if (member.equals(playerId)) {
+                continue;
+            }
+            String theirs = this.plugin.playerFactions().of(member).orElse(null);
+            if (theirs != null && !theirs.equals(faction)) {
+                return "su team tiene miembros de la faccion '" + theirs + "'";
+            }
+        }
+        return null;
     }
 }

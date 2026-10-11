@@ -1,0 +1,17 @@
+id: prueba_humano
+# Mob de prueba, faccion enemiga de los orcos. NO es contenido de juego.
+category: server
+display-name: '&9Prueba humano'
+type: ZOMBIE
+faction: humanos
+attitude: neutral
+burn-in-daylight: false
+ai: true
+
+attributes:
+  health: 20.0
+  damage: 2.0
+  speed: 0.25
+
+spawn:
+  natural: false

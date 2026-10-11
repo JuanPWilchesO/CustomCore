@@ -69,6 +69,14 @@ public final class TeamsTeamLink implements TeamLink {
     }
 
     @Override
+    public java.util.Set<UUID> members(UUID teamId) {
+        if (teamId == null) {
+            return java.util.Set.of();
+        }
+        return this.api.getTeamById(teamId).map(TeamView::members).orElse(java.util.Set.of());
+    }
+
+    @Override
     public Optional<UUID> ownerOf(UUID player) {
         if (player == null) {
             return Optional.empty();

@@ -32,6 +32,11 @@ public final class SoloTeamLink implements TeamLink {
     }
 
     @Override
+    public java.util.Set<UUID> members(UUID teamId) {
+        return java.util.Set.of(); // sin Teams no hay teams que mirar
+    }
+
+    @Override
     public Optional<UUID> ownerOf(UUID player) {
         // Sin Teams no hay jefe: cada jugador decide lo suyo.
         return Optional.empty();

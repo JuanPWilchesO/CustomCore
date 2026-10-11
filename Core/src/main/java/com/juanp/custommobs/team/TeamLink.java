@@ -1,6 +1,7 @@
 package com.juanp.custommobs.team;
 
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -29,4 +30,12 @@ public interface TeamLink {
      * (por ejemplo, el color de sus player mobs).
      */
     Optional<UUID> ownerOf(UUID player);
+
+    /**
+     * Miembros de un team, si se pueden saber. Sin Teams, o si el team no existe, vacio.
+     *
+     * <p>Sirve para comprobar si cambiar la faccion del <b>jefe</b> dejaria a alguno de los suyos
+     * fuera de sitio.
+     */
+    Set<UUID> members(UUID teamId);
 }

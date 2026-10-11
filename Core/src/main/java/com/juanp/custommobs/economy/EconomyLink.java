@@ -4,7 +4,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
 import java.lang.reflect.Method;
-import java.math.BigDecimal;
 
 /**
  * Cobrar dinero, hablando con la API de <b>EssentialsX</b> por reflexion.
@@ -39,8 +38,11 @@ public final class EconomyLink {
         }
         try {
             Class<?> economy = Class.forName("com.earth2me.essentials.api.Economy");
-            Method hasEnough = economy.getMethod("hasEnough", String.class, BigDecimal.class);
-            Method withdraw = economy.getMethod("subtract", String.class, BigDecimal.class);
+            // Las firmas de EssentialsX son con 'double', no con BigDecimal: buscarlas con
+            // BigDecimal lanzaba NoSuchMethodException y los pagos no funcionaban aunque el
+            // plugin estuviera instalado.
+            Method hasEnough = economy.getMethod("hasEnough", String.class, double.class);
+            Method withdraw = economy.getMethod("subtract", String.class, double.class);
             plugin.getLogger().info("Economia enganchada con EssentialsX: las skills de pago"
                     + " funcionan.");
             return new EconomyLink(true, hasEnough, withdraw);
@@ -66,13 +68,12 @@ public final class EconomyLink {
         if (!this.available || amount <= 0.0D) {
             return false;
         }
-        BigDecimal money = BigDecimal.valueOf(amount);
         try {
             String name = player.getName();
-            if (!(Boolean) this.hasEnough.invoke(null, name, money)) {
+            if (!(Boolean) this.hasEnough.invoke(null, name, amount)) {
                 return false;
             }
-            this.withdraw.invoke(null, name, money);
+            this.withdraw.invoke(null, name, amount);
             return true;
         } catch (Throwable failure) {
             // Sin fondos, o la API no responde: en cualquier caso, no se cobro.

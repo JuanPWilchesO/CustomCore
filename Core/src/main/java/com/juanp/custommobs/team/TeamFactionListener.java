@@ -64,12 +64,25 @@ public final class TeamFactionListener implements Listener {
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
-        UUID teamId = this.plugin.teamLink().teamOf(player.getUniqueId()).orElse(null);
-        if (teamId == null) {
+        if (this.plugin.teamLink().teamOf(player.getUniqueId()).isEmpty()) {
             return;
         }
-        UUID ownerId = this.plugin.teamLink().ownerOf(player.getUniqueId()).orElse(null);
-        this.plugin.factionTeams().kickIfInconsistent(player.getUniqueId(), ownerId);
+        this.warnIfInconsistent(player.getUniqueId(), player.getName());
+    }
+
+    /**
+     * Avisa en el log si un jugador quedo con el team y la faccion descuadrados.
+     *
+     * <p>Ya no se saca a nadie: con la entrada rechazada no deberia pasar, pero puede quedar algo
+     * de antes de esta regla, o venir de un cambio complicado. Se avisa y que decida un admin.
+     */
+    private void warnIfInconsistent(UUID playerId, String name) {
+        String mine = this.plugin.playerFactions().of(playerId).orElse(null);
+        String conflict = this.plugin.factionTeams().conflictFor(playerId, mine);
+        if (conflict != null) {
+            this.plugin.getLogger().warning("[facciones] '" + name + "' " + conflict
+                    + ": su team y su faccion no cuadran.");
+        }
     }
 
     /**
@@ -79,12 +92,12 @@ public final class TeamFactionListener implements Listener {
     @EventHandler
     public void onChanged(TeamChangedEvent event) {
         TeamView team = event.getTeamView();
-        UUID ownerId = team.owner();
-        if (ownerId == null || team.members() == null) {
+        if (team.members() == null) {
             return;
         }
         for (UUID member : team.members()) {
-            this.plugin.factionTeams().kickIfInconsistent(member, ownerId);
+            Player online = this.plugin.getServer().getPlayer(member);
+            this.warnIfInconsistent(member, online != null ? online.getName() : member.toString());
         }
     }
 }
