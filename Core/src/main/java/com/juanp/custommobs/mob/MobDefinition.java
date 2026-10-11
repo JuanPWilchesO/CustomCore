@@ -78,7 +78,8 @@ public record MobDefinition(
         NaturalSpawn spawn,
         boolean villageFriendly,
         Set<EntityDamageEvent.DamageCause> immune,
-        boolean attacksMonsters
+        boolean attacksMonsters,
+        boolean transformable
 ) {
 
     /** Vida maxima configurada, o 20 si no se especifico. */

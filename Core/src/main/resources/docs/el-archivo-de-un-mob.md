@@ -286,6 +286,21 @@ immune:
 | `village-friendly` | defiende al pueblo: no ataca a aldeanos ni golems, los golems no lo apuntan a el, y va a por quien le pegue a un aldeano | `false` |
 | `immune` | lista de causas de dano que ignora | vacia |
 | `attacks-monsters` | ataca a los monstruos hostiles vanilla (`category: server`) | `false` |
+| `transformable` | si el juego puede convertirlo (aldeano -> bruja, zombi -> ahogado...) | `true` |
+
+### Transformaciones
+
+```yaml
+transformable: false
+```
+
+El juego transforma mobs todo el tiempo, y para un mob custom eso es **perder la definicion**:
+un aldeano mordido se vuelve zombi aldeano, a uno le cae un rayo y sale bruja, un zombi que se
+ahoga pasa a ahogado, un cerdo con un rayo se vuelve piglin zombificado...
+
+Con `transformable: false` **ninguna** de esas conversiones le pasa. Por defecto se transforma
+como cualquier otro mob, que es como se ha comportado siempre — asi que nada de lo que ya
+tenias cambia.
 
 ### Atacar monstruos
 

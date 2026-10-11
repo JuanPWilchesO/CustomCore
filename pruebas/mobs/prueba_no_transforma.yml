@@ -1,0 +1,21 @@
+id: prueba_no_transforma
+# Mob de prueba: un aldeano que NO se deja convertir. NO es contenido de juego.
+#   Prueba: dejalo que un zombi le pegue (no debe volverse zombi aldeano) y tirale un
+#   rayo con un canalizador (no debe volverse bruja).
+category: server
+display-name: '&2Aldeano terco'
+type: VILLAGER
+faction: humanos
+attitude: neutral
+burn-in-daylight: false
+ai: true
+
+# Que no lo convierta el juego.
+transformable: false
+
+attributes:
+  health: 20.0
+  speed: 0.0
+
+spawn:
+  natural: false

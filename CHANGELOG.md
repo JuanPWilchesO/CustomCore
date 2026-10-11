@@ -11,6 +11,10 @@
   falta tocar Teams). Y al **asignarle faccion** a alguien que ya esta en un team de otra
   faccion, sale del team — ahi la API de Teams no deja sacar a nadie, asi que se usa su comando,
   configurable (`teams.kick-command`).
+- **`transformable`**: decide si el juego puede convertir al mob (aldeano a bruja, zombi a
+  ahogado, aldeano mordido a zombi aldeano...). Por defecto `true`, como siempre. Se apoya en el
+  `EntityTransformEvent`, que es cancelable y trae el motivo (`INFECTION`, `LIGHTNING`, `DROWNED`,
+  `PIGLIN_ZOMBIFIED`...).
 - **Targeting repasado**: un mob de jugador cuenta con la faccion de su dueno en todo el sistema
   —ataca a los enemigos de su dueno, jugadores y mobs incluidos, y los mobs enemigos van a por
   el—. Y se cierra un hueco: un **jugador aliado** que golpeaba a un mob dejaba puesta la marca de

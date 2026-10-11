@@ -36,6 +36,7 @@ import com.juanp.custommobs.message.MotdListener;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import com.juanp.custommobs.mob.DaylightListener;
+import com.juanp.custommobs.mob.TransformBlockListener;
 import com.juanp.custommobs.mob.MobRegistry;
 import com.juanp.custommobs.mob.MobService;
 import com.juanp.custommobs.mob.MountEffectTask;
@@ -185,6 +186,7 @@ public final class CustomMobsPlugin extends JavaPlugin {
         pluginManager.registerEvents(new DamageImmunityListener(this.mobService), this);
         pluginManager.registerEvents(new SoundListener(this.mobService, this.soundService), this);
         pluginManager.registerEvents(new DaylightListener(this.mobService), this);
+        pluginManager.registerEvents(new TransformBlockListener(this.mobService), this);
         pluginManager.registerEvents(new SpawnerListener(this.mobService), this);
         pluginManager.registerEvents(new DropListener(this.mobService, this.dropService), this);
         pluginManager.registerEvents(new MotdListener(this), this);

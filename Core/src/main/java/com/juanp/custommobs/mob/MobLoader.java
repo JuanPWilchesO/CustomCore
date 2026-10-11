@@ -151,7 +151,10 @@ public final class MobLoader {
                 spawn,
                 cfg.getBoolean("village-friendly", false),
                 parseImmune(cfg),
-                cfg.getBoolean("attacks-monsters", false)
+                cfg.getBoolean("attacks-monsters", false),
+                // Por defecto SI se transforma: es el comportamiento de siempre, y asi no cambia
+                // nada en los mobs que ya existian.
+                cfg.getBoolean("transformable", true)
         ));
     }
 
