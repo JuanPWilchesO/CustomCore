@@ -136,3 +136,28 @@ recall:
   # Segundos que se mantiene cargado su chunk antes de soltarlo.
   # Nunca puede ser menor que mob-seconds.
   chunk-seconds: 120
+
+faction-glow:
+  # Brillo de los jugadores segun su faccion, PARA CADA QUIEN: el color de un brillo sale del
+  # equipo de scoreboard, y los equipos son globales, asi que se le manda a cada jugador un
+  # equipo falso. No se toca el scoreboard de verdad: no rompe Teams ni ningun otro plugin.
+  #
+  #   off    -> nadie ve el brillo
+  #   global -> lo ven todos, siempre
+  #   player -> cada jugador lo decide con /custommobs glowfaccion
+  mode: off
+  # Radio en bloques dentro del cual se pinta. 0 = sin limite.
+  radius: 48.0
+  # Colores por relacion (los nombres de color de Minecraft).
+  enemy: RED
+  ally: GREEN
+  neutral: GRAY
+
+teams:
+  # Que hacer cuando un jugador entra en una faccion: si esta en un team cuyo jefe es de OTRA
+  # faccion, el team deja de ser consecuente con las reglas, asi que sale de el.
+  # La API de Teams solo deja LEER, asi que la salida se hace con su comando: pon aqui el que
+  # sea exacto en tu servidor ({jugador} se sustituye por el nombre).
+  kick-command: 'team kick {jugador}'
+  # Si el jefe del team no tiene faccion, no se saca a nadie.
+  kick-if-owner-factionless: false

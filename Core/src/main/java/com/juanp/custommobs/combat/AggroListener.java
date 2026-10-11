@@ -55,26 +55,38 @@ public final class AggroListener implements Listener {
             }
             // Un golpe entre mobs del mismo bando no cuenta: el fuego amigo lo bloquea, asi que
             // no hay agresion que vengar. Marcarlo dejaba a los aliados apuntandose entre si.
-            if (this.friendlyMobHit(victim, attacker)) {
+            if (this.friendlyHit(victim, attacker)) {
                 continue;
             }
             this.aggro.mark(mob.getUniqueId(), attacker.getUniqueId(), duration);
         }
     }
 
-    /** {@code true} si el que pego es un mob del mismo bando de la victima. */
-    private boolean friendlyMobHit(LivingEntity victim, LivingEntity attacker) {
+    /**
+     * {@code true} si el que pego es del mismo bando de la victima.
+     *
+     * <p>Cuenta tanto un mob del mismo bando o aliado como un <b>jugador</b> de una faccion
+     * aliada. Es el mismo criterio con el que el fuego amigo decide bloquear el golpe: si el
+     * dano no va a contar, tampoco debe quedar la marca de agresion. Cuando esto iba solo con
+     * mobs, un aliado humano dejaba la marca puesta y el estado quedaba sucio.
+     */
+    private boolean friendlyHit(LivingEntity victim, LivingEntity attacker) {
         CustomMob victimMob = this.service.find(victim.getUniqueId()).orElse(null);
-        CustomMob attackerMob = this.service.find(attacker.getUniqueId()).orElse(null);
-        if (victimMob == null || attackerMob == null) {
+        if (victimMob == null) {
             return false;
         }
-        String mine = victimMob.definition().faction();
-        String theirs = attackerMob.definition().faction();
-        if (mine == null || theirs == null) {
+        String mine = this.service.factionOf(victimMob);
+        if (mine == null) {
             return false;
         }
-        return mine.equals(theirs) || this.service.factions().isAlly(mine, theirs);
+        String theirs;
+        if (attacker instanceof Player player) {
+            theirs = this.service.factionOf(player);
+        } else {
+            CustomMob attackerMob = this.service.find(attacker.getUniqueId()).orElse(null);
+            theirs = attackerMob == null ? null : this.service.factionOf(attackerMob);
+        }
+        return this.service.sameSide(mine, theirs);
     }
 
     /**

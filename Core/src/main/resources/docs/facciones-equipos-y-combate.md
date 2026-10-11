@@ -131,6 +131,29 @@ se defiende:
 
 > Un mob de jugador **sin dueno con faccion** no hereda nada: se comporta como antes.
 
+## Ver los bandos de un vistazo (brillo por faccion)
+
+Con `faction-glow.mode` en `global` (o en `player`, y cada quien lo enciende con
+`/custommobs glowfaccion`) cada jugador ve a los demas con el brillo de su relacion:
+
+| Relacion contigo | Brillo |
+|---|---|
+| Facción enemiga | **rojo** |
+| Tu facción o una aliada | **verde** |
+| Sin relacion, o sin faccion | **gris** |
+
+Asi las facciones PvE tienen sentido tambien en el PvP: antes de pegar, se ve a quien.
+
+El color funciona **por espectador**: el mismo jugador puede salirte verde a ti y rojo a otro.
+Se hace mandando equipos falsos con **PacketEvents** (no se toca el scoreboard del servidor, asi
+que no interfiere con Teams). Detalles en `configuracion.md`.
+
+## Teams y facciones, de acuerdo
+
+Cuando a un jugador se le asigna faccion, si esta en un **team cuyo jefe es de otra faccion**
+**sale del team** automaticamente: si no, el team tendria dentro a gente de dos bandos, y ni el
+fuego amigo ni los colores tendrian sentido. Se configura en `configuracion.md` (`teams`).
+
 ## Teams (opcional)
 
 Con **Teams** instalado, los jugadores se agrupan en bandos:

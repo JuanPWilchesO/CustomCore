@@ -27,6 +27,7 @@ import com.juanp.custommobs.drop.DropService;
 import com.juanp.custommobs.economy.EconomyLink;
 import com.juanp.custommobs.faction.FactionBook;
 import com.juanp.custommobs.faction.PlayerFactions;
+import com.juanp.custommobs.glow.FactionGlowService;
 import com.juanp.custommobs.skill.ChainService;
 import com.juanp.custommobs.group.GroupLink;
 import com.juanp.custommobs.group.GroupLinkResolver;
@@ -87,6 +88,7 @@ public final class CustomMobsPlugin extends JavaPlugin {
     private PlayerFactions playerFactions;
     private EconomyLink economy;
     private ChainService chains;
+    private FactionGlowService glow;
     private DisguiseLink disguiseLink;
     private DropService dropService;
     private StyleService styleService;
@@ -225,6 +227,10 @@ public final class CustomMobsPlugin extends JavaPlugin {
         this.ambientTask = new AmbientTask(this.soundService);
         this.ambientTask.runTaskTimer(this, 20L, 20L);
 
+        // Brillo de facciones por espectador: cada segundo basta, y solo manda lo que cambia.
+        this.glow = new FactionGlowService(this, this.mobService);
+        this.glow.runTaskTimer(this, 20L, 20L);
+
         long skillInterval = this.config.skillIntervalTicks();
         this.skillService.runTaskTimer(this, skillInterval, skillInterval);
 
@@ -353,6 +359,11 @@ public final class CustomMobsPlugin extends JavaPlugin {
     /** Conversaciones de las cadenas de interaccion. */
     public ChainService chains() {
         return this.chains;
+    }
+
+    /** Brillo de los jugadores segun su faccion, para cada quien. */
+    public FactionGlowService glow() {
+        return this.glow;
     }
 
     /** Cobrador de dinero, enganchado a EssentialsX si esta. */

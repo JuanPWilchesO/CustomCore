@@ -63,7 +63,9 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
         // '_chain' es el avance de una conversacion: lo manda un boton del chat, en nombre
         // del jugador, asi que tiene que poder usarlo cualquiera.
         boolean ownChain = args.length >= 2 && "_chain".equalsIgnoreCase(args[0]);
-        String needed = (help || ownQuota || ownStyle || ownDismiss || ownChain)
+        // El brillo de facciones, en modo 'player', lo decide cada uno.
+        boolean ownGlow = args.length == 1 && "glowfaccion".equalsIgnoreCase(args[0]);
+        String needed = (help || ownQuota || ownStyle || ownDismiss || ownChain || ownGlow)
                 ? this.plugin.config().playerPermission()
                 : this.plugin.config().adminPermission();
         if (!sender.hasPermission(needed)) {
@@ -100,6 +102,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
             case "upgrade", "mejora" -> this.upgrade(sender, args);
             case "despedir", "dismiss" -> this.dismiss(sender, args);
             case "_chain" -> this.chainStep(sender, args);
+            case "glowfaccion" -> this.factionGlow(sender);
             case "faction", "faccion" -> this.faction(sender, args);
             case "color" -> this.setStyle(sender, args, "name");
             case "glow" -> this.setStyle(sender, args, "glow");
@@ -186,6 +189,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
                 String faction = args[3].toLowerCase(Locale.ROOT);
                 this.plugin.playerFactions().set(target.getUniqueId(), faction);
                 sender.sendMessage(TAG + " " + label + " ahora es de la faccion '" + faction + "'.");
+                this.leaveInconsistentTeam(target);
                 if (!this.knownFaction(faction)) {
                     sender.sendMessage(TAG + " Aviso: '" + faction + "' no sale en factions.yml"
                             + " ni en ningun mob; comprueba la ortografia.");
@@ -193,6 +197,62 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
             }
             default -> sender.sendMessage(TAG + " Uso: /custommobs faction <set|get|clear|list>");
         }
+    }
+
+    /**
+     * Enciende o apaga el brillo de facciones para quien lo pide.
+     *
+     * <p>Solo tiene efecto con {@code faction-glow.mode: player}; si el servidor lo fuerza
+     * ({@code global}) o lo tiene apagado ({@code off}), la decision no es del jugador.
+     */
+    private void factionGlow(CommandSender sender) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(TAG + " 'glowfaccion' solo funciona desde el juego.");
+            return;
+        }
+        String mode = this.plugin.glow().mode();
+        if (!"player".equals(mode)) {
+            sender.sendMessage(TAG + " El brillo de facciones no lo decides tu ahora mismo"
+                    + " (el servidor esta en modo '" + mode + "').");
+            return;
+        }
+        boolean on = this.plugin.glow().toggle(player);
+        sender.sendMessage(TAG + " Brillo de facciones: " + (on ? "activado" : "desactivado") + ".");
+    }
+
+    /**
+     * Si el jugador esta en un team cuyo jefe es de OTRA faccion, lo saca del team.
+     *
+     * <p>Un team con dos facciones dentro deja de ser consecuente con las reglas. La API de
+     * Teams solo deja <b>leer</b> —no tiene forma de sacar a nadie—, asi que la salida se hace
+     * con su comando, configurable en {@code config.yml} para no adivinar la sintaxis.
+     */
+    private void leaveInconsistentTeam(OfflinePlayer target) {
+        TeamLink teams = this.plugin.teamLink();
+        if (!teams.isAvailable() || teams.teamOf(target.getUniqueId()).isEmpty()) {
+            return;
+        }
+        UUID ownerId = teams.ownerOf(target.getUniqueId()).orElse(null);
+        if (ownerId == null || ownerId.equals(target.getUniqueId())) {
+            return; // es el jefe: el team es suyo, y decide el
+        }
+        String ownerFaction = this.plugin.playerFactions().of(ownerId).orElse(null);
+        String mine = this.plugin.playerFactions().of(target.getUniqueId()).orElse(null);
+        boolean inconsistent;
+        if (ownerFaction == null) {
+            inconsistent = mine != null && this.plugin.getConfig()
+                    .getBoolean("teams.kick-if-owner-factionless", false);
+        } else {
+            inconsistent = !ownerFaction.equals(mine);
+        }
+        if (!inconsistent) {
+            return;
+        }
+        String name = target.getName() != null ? target.getName() : "";
+        String command = this.plugin.getConfig()
+                .getString("teams.kick-command", "team kick {jugador}")
+                .replace("{jugador}", name);
+        this.plugin.getServer().dispatchCommand(this.plugin.getServer().getConsoleSender(), command);
     }
 
     /** Resuelve un jugador por nombre, conectado o no, sin bloquear el servidor. */

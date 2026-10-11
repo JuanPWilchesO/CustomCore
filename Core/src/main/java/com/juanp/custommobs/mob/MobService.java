@@ -1230,6 +1230,34 @@ public final class MobService implements Listener {
      * Bando de un mob de servidor: los jugadores si es defensor, y los mobs de su
      * misma faccion o de una aliada.
      */
+    /**
+     * La faccion que cuenta para un mob: la suya, o —si es un mob de jugador— <b>la de su
+     * dueno</b>. Un mob de jugador es una extension del jugador, y su bando es el de el.
+     *
+     * @return la faccion, o {@code null} si no tiene ninguna
+     */
+    public String factionOf(CustomMob customMob) {
+        String own = customMob.definition().faction();
+        if (own != null && !own.isBlank()) {
+            return own;
+        }
+        return customMob.ownerId() == null ? null
+                : this.plugin.playerFactions().of(customMob.ownerId()).orElse(null);
+    }
+
+    /** La faccion de un jugador, o {@code null} si no tiene. */
+    public String factionOf(Player player) {
+        return this.plugin.playerFactions().of(player.getUniqueId()).orElse(null);
+    }
+
+    /** {@code true} si dos facciones son la misma o aliadas. */
+    public boolean sameSide(String first, String second) {
+        if (first == null || second == null) {
+            return false;
+        }
+        return first.equals(second) || this.factions.isAlly(first, second);
+    }
+
     private boolean isProtectedFromServerMob(CustomMob customMob, LivingEntity candidate) {
         String mine = customMob.definition().faction();
         if (candidate instanceof Player player) {

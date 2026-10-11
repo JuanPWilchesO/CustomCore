@@ -121,26 +121,21 @@ public final class TargetPolicy {
      * sistema de facciones vale la faccion de quien lo lleva.
      */
     private String factionOf(CustomMob mob) {
-        String own = mob.definition().faction();
-        if (own != null && !own.isBlank()) {
-            return own;
-        }
-        return mob.ownerId() == null ? null
-                : this.service.plugin().playerFactions().of(mob.ownerId()).orElse(null);
+        return this.service.factionOf(mob);
     }
 
     /** La faccion de un jugador, o {@code null} si no tiene ninguna. */
     private String factionOf(Player player) {
-        return this.service.plugin().playerFactions().of(player.getUniqueId()).orElse(null);
+        return this.service.factionOf(player);
     }
 
     /** La relacion entre dos facciones: la misma o aliadas son amigos; enemigas, enemigos. */
     private Relation relation(String first, String second) {
+        if (this.service.sameSide(first, second)) {
+            return Relation.FRIEND;
+        }
         if (first == null || second == null) {
             return Relation.NEUTRAL;
-        }
-        if (first.equals(second) || this.service.factions().isAlly(first, second)) {
-            return Relation.FRIEND;
         }
         return this.service.factions().isEnemy(first, second) ? Relation.ENEMY : Relation.NEUTRAL;
     }

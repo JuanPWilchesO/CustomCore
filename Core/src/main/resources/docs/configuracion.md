@@ -186,6 +186,49 @@ spawning:
 En el mob se pide con su propia seccion `spawn:` (probabilidad, tamano de grupo, hora, luz,
 altura, distancia al jugador y tope propio). Ver `el-archivo-de-un-mob.md`.
 
+## Brillo de facciones (`faction-glow`)
+
+Pinta el brillo de cada jugador segun su faccion, **para cada quien**: enemigos en rojo,
+aliados en verde, sin relacion o sin faccion en gris.
+
+```yaml
+faction-glow:
+  mode: off        # off | global | player
+  radius: 48.0     # 0 = sin limite
+  enemy: RED
+  ally: GREEN
+  neutral: GRAY
+```
+
+| `mode` | Que pasa |
+|---|---|
+| `off` | nadie ve el brillo |
+| `global` | lo ven todos, siempre |
+| `player` | cada jugador lo decide con `/custommobs glowfaccion` |
+
+El color de un brillo sale del equipo de scoreboard, y los equipos son **globales**: pintarlo
+de una vez no serviria, porque la relacion es distinta para cada espectador. Por eso se le
+manda a cada jugador un **equipo falso** (con PacketEvents) y **no se toca el scoreboard de
+verdad** — asi no se rompe Teams ni ningun otro plugin.
+
+**Necesita PacketEvents.** Sin el, el brillo de facciones no funciona.
+
+## Coherencia con Teams (`teams`)
+
+```yaml
+teams:
+  kick-command: 'team kick {jugador}'
+  kick-if-owner-factionless: false
+```
+
+Cuando un jugador entra en una faccion, si esta en un **team cuyo jefe es de otra faccion**,
+sale del team: un team con dos facciones dentro deja de ser consecuente con las reglas.
+
+La API de Teams solo deja **leer** —no tiene forma de sacar a nadie—, asi que se usa su comando:
+pon en `kick-command` el que sea exacto en tu servidor ({jugador} se sustituye solo).
+Con `kick-if-owner-factionless` decides si tambien se saca a alguien cuando el jefe del team
+**no tiene** faccion.
+
 ## Filtrar mundos (`worlds.enabled`)
 
 ```yaml

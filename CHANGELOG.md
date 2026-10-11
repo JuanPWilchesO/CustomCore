@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.3.6 — brillo de facciones, Teams coherente y targeting repasado
+
+- **Brillo por faccion, para cada quien**: enemigos en rojo, aliados en verde, sin relacion en
+  gris. Se manda **por espectador** con equipos falsos de **PacketEvents** (no se toca el
+  scoreboard de verdad, asi que no interfiere con Teams). Modos en `faction-glow.mode`: `off`,
+  `global` o `player` (cada uno lo decide con `/custommobs glowfaccion`). Necesita PacketEvents.
+- **Coherencia con Teams**: cuando a un jugador se le asigna faccion, si esta en un team cuyo
+  jefe es de otra faccion, **sale del team**. La API de Teams solo deja leer, asi que se usa su
+  comando, configurable (`teams.kick-command`).
+- **Targeting repasado**: un mob de jugador cuenta con la faccion de su dueno en todo el sistema
+  —ataca a los enemigos de su dueno, jugadores y mobs incluidos, y los mobs enemigos van a por
+  el—. Y se cierra un hueco: un **jugador aliado** que golpeaba a un mob dejaba puesta la marca de
+  agresion aunque el dano no contara; ahora no se marca si el que pega es del mismo bando, sea mob
+  o jugador.
+
 ## 0.3.5 — comandos y conversaciones por skills
 
 - **`console_command` y `player_command`**: ejecutar un comando desde consola, o hacer que lo
