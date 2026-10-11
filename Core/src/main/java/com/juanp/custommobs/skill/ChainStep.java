@@ -17,6 +17,8 @@ import java.util.List;
  * @param end             si cierra la conversacion
  * @param pay             cuanto dinero exige para seguir ({@code 0} = nada)
  * @param noPay           a donde va si no puede pagar; {@code null} = cierra
+ * @param faction         faccion exigida al jugador ({@code *} = cualquiera, {@code null} = no se mira)
+ * @param noFaction       a donde va si no cumple la faccion; {@code null} = cierra
  * @param consoleCommand  comando de consola que ejecuta (solo aqui, en una interaccion)
  * @param playerCommand   comando que ejecuta el propio jugador
  */
@@ -28,6 +30,8 @@ public record ChainStep(
         boolean end,
         double pay,
         String noPay,
+        String faction,
+        String noFaction,
         String consoleCommand,
         String playerCommand
 ) {
@@ -40,5 +44,10 @@ public record ChainStep(
     /** {@code true} si pide dinero para seguir. */
     public boolean charges() {
         return this.pay > 0.0D;
+    }
+
+    /** {@code true} si exige pertenecer a una faccion. */
+    public boolean checksFaction() {
+        return this.faction != null && !this.faction.isBlank();
     }
 }

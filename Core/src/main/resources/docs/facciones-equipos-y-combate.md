@@ -106,9 +106,30 @@ El **fuego amigo tambien se bloquea**: un jugador de la misma faccion que un mob
 faccion aliada— no le hace dano, ni el a el ni sus mobs al jugador, y eso vale aunque haya
 agredido antes.
 
+**Un jugador tiene una sola faccion.** Asignarle otra **reemplaza** la anterior; con
+`faction clear` se queda sin ninguna. No hay mas restriccion que el nombre: si no coincide con
+ninguna faccion de `factions.yml` ni de ningun mob, el plugin lo avisa por si es una errata.
+
 Se guarda en `data/player-factions.yml`, un fichero del propio plugin: **no hace falta
 LuckPerms**. `faction get`, `faction clear` y `faction list` completan el manejo, y todo ello
 es de administracion.
+
+## El mob de un jugador es una extension suya
+
+Un mob de `category: player` no vive en su propio bando: **hereda el de su dueno**. Para el
+sistema de facciones vale la faccion de quien lo lleva, y eso decide a quien ataca y de quien
+se defiende:
+
+- **Ataca a los enemigos de su dueno**: jugadores de una faccion enemiga, y los mobs de esos
+  jugadores.
+- **No toca a los de su faccion ni a los aliados** — y tampoco ellos lo tocan a el: el fuego
+  amigo esta bloqueado por faccion, no solo por team.
+- **Los mobs de faccion enemiga van a por el**, igual que irian a por su dueno. Un soldado tuyo
+  es, para un orco hostil, como si fueras tu.
+- Sin faccion asignada a nadie, manda la actitud y el team de siempre: nada de lo que ya
+  funcionaba cambia.
+
+> Un mob de jugador **sin dueno con faccion** no hereda nada: se comporta como antes.
 
 ## Teams (opcional)
 

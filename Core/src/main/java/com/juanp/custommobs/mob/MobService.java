@@ -1208,7 +1208,16 @@ public final class MobService implements Listener {
             return this.isProtectedFromServerMob(customMob, candidate);
         }
         if (candidate instanceof Player player) {
-            return this.teamLink.isAlly(customMob.ownerId(), player.getUniqueId());
+            if (this.teamLink.isAlly(customMob.ownerId(), player.getUniqueId())) {
+                return true;
+            }
+            // Y si comparten faccion —o son aliadas— tambien son de los suyos, aunque no
+            // compartan team: un mob de jugador es una extension de su dueno.
+            String owner = customMob.ownerId() == null ? null
+                    : this.plugin.playerFactions().of(customMob.ownerId()).orElse(null);
+            String theirs = this.plugin.playerFactions().of(player.getUniqueId()).orElse(null);
+            return owner != null && theirs != null
+                    && (owner.equals(theirs) || this.factions.isAlly(owner, theirs));
         }
         Optional<CustomMob> other = this.find(candidate.getUniqueId());
         if (other.isEmpty() || !this.config.aggroOnFriendlyMobs()) {

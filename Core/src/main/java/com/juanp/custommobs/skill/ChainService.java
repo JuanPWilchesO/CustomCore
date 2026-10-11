@@ -113,6 +113,11 @@ public final class ChainService {
             }
             return;
         }
+        // 3b) la faccion: si no la cumple, se va por donde diga 'no-faction'.
+        if (step.checksFaction() && !this.inFaction(player, step.faction())) {
+            this.goTo(mob, player, skill, conversationId, step.noFaction(), depth + 1);
+            return;
+        }
         // 4) la pregunta: se mandan los botones y se espera el clic.
         if (step.asks()) {
             for (int index = 0; index < step.options().size(); index++) {
@@ -137,6 +142,23 @@ public final class ChainService {
             return;
         }
         this.enter(mob, player, skill, conversationId, next, depth);
+    }
+
+    /**
+     * {@code true} si el jugador pertenece a esa faccion.
+     *
+     * <p>{@code *} pide simplemente que tenga alguna. Si se nombra una, valen tambien sus
+     * <b>aliadas</b>: quien sirve a los orcos sirve tambien a los goblins, que son su bando.
+     */
+    private boolean inFaction(Player player, String wanted) {
+        String faction = this.plugin.playerFactions().of(player.getUniqueId()).orElse(null);
+        if (faction == null) {
+            return false;
+        }
+        if ("*".equals(wanted)) {
+            return true;
+        }
+        return faction.equals(wanted) || this.plugin.factions().isAlly(wanted, faction);
     }
 
     private SkillSpec skillOf(CustomMob mob, String skillId) {

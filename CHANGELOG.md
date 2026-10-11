@@ -14,6 +14,13 @@
 - **Economia por EssentialsX, por reflexion**: el plugin no depende de EssentialsX para compilar.
   **Ojo: las skills de pago no funcionan sin un plugin de economia** — sin EssentialsX, todo pago
   falla y la cadena va por `no-pay`. Se avisa en el log al arrancar.
+- **Paso de faccion en las cadenas**: `faction` exige una faccion al jugador (`*` para pedir
+  simplemente que tenga alguna) y `no-faction` decide a donde va si no la cumple.
+- **Targeting integrado**: un mob de jugador **hereda la faccion de su dueno**. Ataca a los
+  enemigos de su dueno —jugadores de faccion enemiga y los mobs de esos jugadores—, no toca a los
+  de su faccion ni a los aliados (el fuego amigo por faccion tambien queda bloqueado), y los mobs
+  de faccion enemiga van a por el como irian a por su dueno. Sin facciones asignadas, todo sigue
+  como estaba.
 
 ## 0.3.4 — skill de invocacion (`summon`)
 

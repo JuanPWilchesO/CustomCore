@@ -184,6 +184,8 @@ public final class MobLoader {
                     Boolean.TRUE.equals(map.get("end")),
                     Math.max(0.0D, asNumber(map.get("pay"), 0.0D)),
                     normalize(asString(map.get("no-pay"))),
+                    normalize(asString(map.get("faction"))),
+                    normalize(asString(map.get("no-faction"))),
                     asString(map.get("console-command")),
                     asString(map.get("player-command"))));
         }

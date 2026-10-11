@@ -1,0 +1,58 @@
+id: prueba_cadena
+# Mob de prueba para las cadenas de interaccion. NO es contenido de juego.
+#   Clic derecho: arranca una conversacion con botones.
+#   Camino A: te da un diamante gratis.
+#   Camino B: te cobra 100 y luego te lo da (necesita EssentialsX; sin el, va por 'sin_dinero').
+category: server
+display-name: '&bCharleton'
+type: VILLAGER
+faction: orcos
+attitude: neutral
+burn-in-daylight: false
+ai: false
+
+attributes:
+  health: 40.0
+  speed: 0.0
+
+skills:
+  - id: mision
+    mode: interaccion
+    effect: chain
+    steps:
+      - id: saludo
+        message: '&b{mob}&f: Buenas, {jugador}. Tengo algo para ti.'
+        next: oferta
+
+      - id: oferta
+        message: '&b{mob}&f: ¿Como lo prefieres?'
+        options:
+          - label: '&a[ Gratis, gracias ]'
+            next: regalo
+          - label: '&e[ Te pago 100 ]'
+            next: cobro
+          - label: '&c[ Me voy ]'
+            end: true
+
+      - id: regalo
+        console-command: 'give {jugador} diamond 1'
+        message: '&a{mob}&f: Toma. Que te aproveche.'
+        end: true
+
+      - id: cobro
+        pay: 100
+        message: '&e{mob}&f: Son 100 monedas, si no te importa.'
+        next: pagado
+        no-pay: sin_dinero
+
+      - id: pagado
+        console-command: 'give {jugador} diamond 3'
+        message: '&a{mob}&f: Un placer. Aqui tienes tres.'
+        end: true
+
+      - id: sin_dinero
+        message: '&c{mob}&f: Vaya... pues vuelve cuando tengas. O pide el gratis.'
+        end: true
+
+spawn:
+  natural: false

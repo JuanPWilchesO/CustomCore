@@ -111,6 +111,40 @@ public final class TargetPolicy {
         return false;
     }
 
+    /** Como se llevan dos facciones. */
+    private enum Relation { FRIEND, ENEMY, NEUTRAL }
+
+    /**
+     * La faccion de un mob: la suya, o —si es un mob de jugador— <b>la de su dueno</b>.
+     *
+     * <p>Es lo que hace que un mob de jugador cuente como una extension del jugador: para el
+     * sistema de facciones vale la faccion de quien lo lleva.
+     */
+    private String factionOf(CustomMob mob) {
+        String own = mob.definition().faction();
+        if (own != null && !own.isBlank()) {
+            return own;
+        }
+        return mob.ownerId() == null ? null
+                : this.service.plugin().playerFactions().of(mob.ownerId()).orElse(null);
+    }
+
+    /** La faccion de un jugador, o {@code null} si no tiene ninguna. */
+    private String factionOf(Player player) {
+        return this.service.plugin().playerFactions().of(player.getUniqueId()).orElse(null);
+    }
+
+    /** La relacion entre dos facciones: la misma o aliadas son amigos; enemigas, enemigos. */
+    private Relation relation(String first, String second) {
+        if (first == null || second == null) {
+            return Relation.NEUTRAL;
+        }
+        if (first.equals(second) || this.service.factions().isAlly(first, second)) {
+            return Relation.FRIEND;
+        }
+        return this.service.factions().isEnemy(first, second) ? Relation.ENEMY : Relation.NEUTRAL;
+    }
+
     /**
      * Decide si un jugador es objetivo, segun la politica efectiva del mob.
      * Companeros y aliados nunca son objetivo, en ningun modo.
@@ -123,7 +157,22 @@ public final class TargetPolicy {
             return false;
         }
 
-        return switch (this.modeFor(soldier)) {
+        // La faccion del dueno manda, igual que en los mobs de servidor: un jugador de faccion
+        // enemiga es objetivo, y uno de la misma faccion o de una aliada es intocable. Un mob
+        // de jugador es una extension de su dueno, y hereda sus amigos y sus enemigos.
+        PlayerTargetMode mode = this.modeFor(soldier);
+        if (mode == PlayerTargetMode.NEVER) {
+            return false;
+        }
+        Relation faction = this.relation(this.factionOf(soldier), this.factionOf(player));
+        if (faction == Relation.FRIEND) {
+            return false;
+        }
+        if (faction == Relation.ENEMY) {
+            return true;
+        }
+
+        return switch (mode) {
             case NEVER -> false;
             case ENEMIES -> soldier.teamId() != null
                     && this.service.teamLink().isEnemyTeam(soldier.teamId(), player.getUniqueId());
@@ -150,6 +199,14 @@ public final class TargetPolicy {
         // Companeros y aliados siguen siendo intocables, aunque hayan agredido.
         if (other.ownerId() != null && this.service.teamLink().isAlly(soldier.ownerId(), other.ownerId())) {
             return false;
+        }
+        // Y las facciones, antes que la agresion: mismo bando o aliados nunca; enemigos, siempre.
+        Relation faction = this.relation(this.factionOf(soldier), this.factionOf(other));
+        if (faction == Relation.FRIEND) {
+            return false;
+        }
+        if (faction == Relation.ENEMY) {
+            return true;
         }
         // Venganza: si ese mob agredio a nuestro bando, pasa a ser objetivo.
         if (this.service.aggro().isHostile(soldier.entity().getUniqueId(), other.entity().getUniqueId())) {
@@ -187,8 +244,10 @@ public final class TargetPolicy {
      * las enemigas son objetivo; entre neutrales solo cuenta la agresion recibida.
      */
     private boolean isHostileFactionMob(CustomMob soldier, CustomMob other) {
-        String mine = soldier.definition().faction();
-        String theirs = other.definition().faction();
+        // Un mob de jugador cuenta por la faccion de su dueno: asi un mob de faccion enemiga va
+        // a por el y por los suyos, que es lo que se pidio.
+        String mine = this.factionOf(soldier);
+        String theirs = this.factionOf(other);
         // Mismo bando o aliados: intocables, pase lo que pase, y se mira ANTES que la agresion.
         // Cuando iba despues, dos mobs del mismo bando que se habian marcado agresion se
         // quedaban atacandose sin poder hacerse dano —el dano si esta bloqueado—, trabados
@@ -210,17 +269,12 @@ public final class TargetPolicy {
         // La faccion del jugador manda sobre la actitud: los suyos y los aliados son
         // intocables, los enemigos son objetivo. Si el jugador no tiene faccion, o su
         // faccion es neutral con la del mob, decide la actitud de siempre.
-        String mine = soldier.definition().faction();
-        Optional<String> theirs = this.service.plugin().playerFactions()
-                .of(player.getUniqueId());
-        if (mine != null && theirs.isPresent()) {
-            String other = theirs.get();
-            if (mine.equals(other) || this.service.factions().isAlly(mine, other)) {
-                return false;
-            }
-            if (this.service.factions().isEnemy(mine, other)) {
-                return true;
-            }
+        Relation faction = this.relation(this.factionOf(soldier), this.factionOf(player));
+        if (faction == Relation.FRIEND) {
+            return false;
+        }
+        if (faction == Relation.ENEMY) {
+            return true;
         }
         return switch (this.attitudeOf(soldier)) {
             case HOSTILE -> true;

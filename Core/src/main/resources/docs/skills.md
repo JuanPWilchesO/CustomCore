@@ -170,12 +170,29 @@ skills:
 | `end` | cierra la conversacion |
 | `pay` | cuanto dinero exige para seguir |
 | `no-pay` | a donde va si **no** puede pagar (o `end: true` por otro lado) |
+| `faction` | faccion que se le exige al jugador (`*` = que tenga cualquiera) |
+| `no-faction` | a donde va si **no** cumple la faccion |
 | `console-command` / `player-command` | lo que ejecuta el paso |
 
 - El jugador avanza **pulsando los botones** del chat.
 - El **paso no viaja en el clic**: se usa el que el servidor tiene apuntado para ese jugador, asi
   que nadie puede saltarse un paso —ni un pago— escribiendo el comando a mano.
 - Una conversacion es de un jugador: empezar otra cierra la anterior. No sobrevive a un reinicio.
+
+### Comprobar la faccion del jugador
+
+```yaml
+      - id: solo_del_bando
+        faction: orcos        # o '*' para exigir simplemente que tenga alguna
+        message: '&eVeo que eres de los nuestros...'
+        next: mision
+        no-faction: forastero # ← que pasa si no la cumple
+```
+
+- `faction: '*'` pide **que tenga alguna**, sea la que sea.
+- Con una faccion concreta, valen tambien sus **aliadas**: quien sirve a los orcos sirve a los
+goblins.
+- `no-faction` sin poner, o apuntando a un paso que no existe, **cierra la conversacion**.
 
 > **Aviso sobre los pagos.** Las skills de pago (`pay`) **no funcionan sin un plugin de
 economia**. El plugin se engancha a **EssentialsX** (por reflexion, asi no depende de el para
