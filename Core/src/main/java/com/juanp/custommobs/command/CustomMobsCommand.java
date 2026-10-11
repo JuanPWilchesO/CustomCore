@@ -187,6 +187,21 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
                     return;
                 }
                 String faction = args[3].toLowerCase(Locale.ROOT);
+                // Si esta en un team y la faccion nueva no cuadra con la del jefe, no se le deja
+                // entrar: si no, quedaria dentro de un team de otra faccion. Primero sale del team.
+                UUID teamId = this.plugin.teamLink().teamOf(target.getUniqueId()).orElse(null);
+                if (teamId != null) {
+                    UUID ownerId = this.plugin.teamLink().ownerOf(target.getUniqueId()).orElse(null);
+                    if (ownerId != null && !ownerId.equals(target.getUniqueId())) {
+                        String ownerFaction = this.plugin.playerFactions().of(ownerId).orElse(null);
+                        if (ownerFaction != null && !ownerFaction.equals(faction)) {
+                            sender.sendMessage(TAG + " No se puede: " + label + " esta en un team de"
+                                    + " la faccion '" + ownerFaction + "'. Que salga del team primero"
+                                    + " —o dale esa faccion—.");
+                            return;
+                        }
+                    }
+                }
                 this.plugin.playerFactions().set(target.getUniqueId(), faction);
                 sender.sendMessage(TAG + " " + label + " ahora es de la faccion '" + faction + "'.");
                 this.reviewTeams(target, sender);

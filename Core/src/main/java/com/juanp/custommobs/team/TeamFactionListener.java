@@ -8,6 +8,7 @@ import com.juanp.custommobs.mob.Texts;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerJoinEvent;
 
 import java.util.UUID;
 
@@ -53,6 +54,22 @@ public final class TeamFactionListener implements Listener {
         event.setCancelled(true);
         player.sendMessage(Texts.color("&cEse team es de otra faccion; la tuya es '" + mine
                 + "'. Sal de ella, o busca un team de los tuyos."));
+    }
+
+    /**
+     * Al conectarse, se repasa su team: si quedo incoherente mientras estaba fuera —porque el
+     * jefe cambio de faccion, por ejemplo—, sale. Esto cierra el hueco de los desconectados, que
+     * desde el comando no se pueden enumerar.
+     */
+    @EventHandler
+    public void onJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+        UUID teamId = this.plugin.teamLink().teamOf(player.getUniqueId()).orElse(null);
+        if (teamId == null) {
+            return;
+        }
+        UUID ownerId = this.plugin.teamLink().ownerOf(player.getUniqueId()).orElse(null);
+        this.plugin.factionTeams().kickIfInconsistent(player.getUniqueId(), ownerId);
     }
 
     /**
