@@ -339,7 +339,15 @@ public final class MobLoader {
         Set<String> seen = new HashSet<>();
         for (Map<?, ?> entry : raw) {
             SkillSpec skill = parseSkill(entry);
-            if (skill != null && seen.add(skill.id())) {
+            if (skill == null) {
+                // Una skill que no se puede leer se descartaba en silencio, y eso es una trampa:
+                // la definicion carga, pero la skill no existe y nada lo dice. Que se sepa.
+                Bukkit.getLogger().warning("[CustomMobs] Una skill no se pudo leer y se descarta:"
+                        + " id=" + entry.get("id") + " effect=" + entry.get("effect")
+                        + " target=" + entry.get("target") + " mode=" + entry.get("mode"));
+                continue;
+            }
+            if (seen.add(skill.id())) {
                 skills.add(skill);
             }
         }
@@ -389,8 +397,21 @@ public final class MobLoader {
         String id = normalize(asString(entry.get("id")));
         SkillEffect effect = SkillEffect.parse(asString(entry.get("effect")));
         SkillTarget target = SkillTarget.parse(asString(entry.get("target")));
-        if (id == null || effect == null || target == null) {
+        if (id == null || effect == null) {
             return null;
+        }
+        if (target == null) {
+            // Una cadena, una invocacion o un comando no van contra un objetivo: si el yml no
+            // dice 'target', se toma 'self'. Antes la skill se descartaba EN SILENCIO, y era una
+            // trampa: la definicion cargaba, pero la skill no existia y nada avisaba.
+            boolean sinObjetivo = effect == SkillEffect.CHAIN || effect == SkillEffect.SUMMON
+                    || effect == SkillEffect.CONSOLE_COMMAND || effect == SkillEffect.PLAYER_COMMAND;
+            if (!sinObjetivo) {
+                Bukkit.getLogger().warning("[CustomMobs] La skill '" + id + "' no dice 'target';"
+                        + " se descarta. Con este efecto hace falta un objetivo.");
+                return null;
+            }
+            target = SkillTarget.SELF;
         }
         String message = asString(entry.get("message"));
         // Si el yml no dice nada, la skill es pasiva: el comportamiento de siempre.

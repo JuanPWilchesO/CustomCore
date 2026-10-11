@@ -43,7 +43,7 @@ skills:
 |---|---|---|
 | `id` | texto unico dentro del mob | — |
 | `effect` | `damage` \| `heal` \| `message` \| `potion` \| `summon` | — |
-| `target` | `self` \| `owner` \| `target` \| `enemies` \| `allies` | — |
+| `target` | `self` \| `owner` \| `target` \| `enemies` \| `allies` | `self` en cadenas, invocaciones y comandos; obligatorio en el resto |
 | `mode` | `pasiva` \| `activa` \| `interaccion` | `pasiva` |
 | `range` | bloques (tope 32) | `8.0` |
 | `cooldown-seconds` | entero | `5` |
@@ -132,6 +132,7 @@ skills:
   - id: mision
     mode: interaccion          # una cadena SIEMPRE nace de un clic
     effect: chain
+    target: self        # opcional aqui: una cadena no va contra nadie
     steps:
       - id: saludo
         message: '&e{mob}: Buenas, {jugador}.'

@@ -18,6 +18,7 @@ attributes:
 skills:
   - id: mision
     mode: interaccion
+    target: self
     effect: chain
     steps:
       - id: saludo
