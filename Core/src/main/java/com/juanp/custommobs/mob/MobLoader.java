@@ -4,6 +4,9 @@ import com.juanp.custommobs.combat.PlayerTargetMode;
 import com.juanp.custommobs.item.EquipItem;
 import com.juanp.custommobs.item.RecipeSpec;
 import com.juanp.custommobs.drop.DropSpec;
+import com.juanp.custommobs.skill.ChainOption;
+import com.juanp.custommobs.skill.ChainSpec;
+import com.juanp.custommobs.skill.ChainStep;
 import com.juanp.custommobs.skill.SkillEffect;
 import com.juanp.custommobs.skill.SkillSpec;
 import com.juanp.custommobs.skill.SkillTarget;
@@ -150,6 +153,61 @@ public final class MobLoader {
                 parseImmune(cfg),
                 cfg.getBoolean("attacks-monsters", false)
         ));
+    }
+
+    /**
+     * Lee la seccion {@code steps} de una cadena: la conversacion, paso a paso.
+     *
+     * <p>Cada paso es un mapa con su {@code id} y, segun lo que haga, {@code message},
+     * {@code options}, {@code next}, {@code end}, {@code pay}, {@code no-pay},
+     * {@code console-command} o {@code player-command}. Un paso sin id se descarta.
+     */
+    private static ChainSpec parseChain(Map<?, ?> entry) {
+        Object raw = entry.get("steps");
+        if (!(raw instanceof List<?> list)) {
+            return ChainSpec.EMPTY;
+        }
+        List<ChainStep> steps = new ArrayList<>();
+        for (Object item : list) {
+            if (!(item instanceof Map<?, ?> map)) {
+                continue;
+            }
+            String stepId = normalize(asString(map.get("id")));
+            if (stepId == null) {
+                continue;
+            }
+            steps.add(new ChainStep(
+                    stepId,
+                    asString(map.get("message")),
+                    parseChainOptions(map.get("options")),
+                    normalize(asString(map.get("next"))),
+                    Boolean.TRUE.equals(map.get("end")),
+                    Math.max(0.0D, asNumber(map.get("pay"), 0.0D)),
+                    normalize(asString(map.get("no-pay"))),
+                    asString(map.get("console-command")),
+                    asString(map.get("player-command"))));
+        }
+        return new ChainSpec(List.copyOf(steps));
+    }
+
+    /** Los botones clicables de un paso: etiqueta y a donde llevan. */
+    private static List<ChainOption> parseChainOptions(Object raw) {
+        if (!(raw instanceof List<?> list)) {
+            return List.of();
+        }
+        List<ChainOption> options = new ArrayList<>();
+        for (Object item : list) {
+            if (!(item instanceof Map<?, ?> map)) {
+                continue;
+            }
+            String label = asString(map.get("label"));
+            if (label == null || label.isBlank()) {
+                continue;
+            }
+            options.add(new ChainOption(label, normalize(asString(map.get("next"))),
+                    Boolean.TRUE.equals(map.get("end"))));
+        }
+        return List.copyOf(options);
     }
 
     /**
@@ -333,6 +391,22 @@ public final class MobLoader {
         // Si el yml no dice nada, la skill es pasiva: el comportamiento de siempre.
         SkillTrigger parsed = SkillTrigger.parse(asString(entry.get("mode")));
         SkillTrigger trigger = parsed == null ? SkillTrigger.DEFAULT : parsed;
+
+        // Los comandos y las cadenas solo valen en una interaccion. Un mob que ejecuta comandos
+        // por su cuenta —en pasiva, o en mitad de un combate— es un agujero de seguridad: se
+        // descarta la skill y se avisa, sin tumbar la carga del mob.
+        if ((effect == SkillEffect.CONSOLE_COMMAND || effect == SkillEffect.PLAYER_COMMAND)
+                && trigger != SkillTrigger.INTERACT) {
+            Bukkit.getLogger().warning("[CustomMobs] La skill '" + id + "' usa " + effect
+                    + " pero no es de interaccion; se descarta. Los comandos solo van con"
+                    + " 'mode: interaccion' o dentro de una cadena de interaccion.");
+            return null;
+        }
+        if (effect == SkillEffect.CHAIN && trigger != SkillTrigger.INTERACT) {
+            Bukkit.getLogger().warning("[CustomMobs] La skill '" + id + "' es una cadena pero no"
+                    + " es de interaccion; se descarta. Una cadena empieza con un clic.");
+            return null;
+        }
         return new SkillSpec(
                 id,
                 effect,
@@ -346,7 +420,9 @@ public final class MobLoader {
                 normalize(asString(entry.get("potion"))),
                 (int) Math.max(1L, Math.round(asNumber(entry.get("potion-duration-seconds"), 5.0D))),
                 (int) Math.max(0L, Math.round(asNumber(entry.get("potion-amplifier"), 0.0D))),
-                normalize(asString(entry.get("summon")))
+                normalize(asString(entry.get("summon"))),
+                asString(entry.get("command")),
+                effect == SkillEffect.CHAIN ? parseChain(entry) : ChainSpec.EMPTY
         );
     }
 

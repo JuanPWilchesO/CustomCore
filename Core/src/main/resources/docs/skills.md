@@ -94,6 +94,94 @@ En las skills de **interaccion**, `effect: message` va **solo a quien hizo clic*
 el que este cerca), y el texto admite `{jugador}` ademas de `{mob}`. Si el jugador trae un
 huevo custom en la mano, ese clic es del huevo: la interaccion no se dispara.
 
+## Comandos (`console_command`, `player_command`)
+
+```yaml
+skills:
+  - id: menu
+    mode: interaccion
+    effect: player_command
+    command: 'menu'
+
+  - id: premio
+    mode: interaccion
+    effect: console_command
+    command: 'give {jugador} diamond 1'
+    message: '&aToma, te lo ganaste.'
+```
+
+| Campo | Que hace |
+|---|---|
+| `command` | el comando, sin la barra. Admite `{mob}` y `{jugador}` |
+
+**Solo funcionan con `mode: interaccion`.** En `pasiva` o `activa` (combate) la skill **se
+descarta al cargar**, con un aviso en el log: un mob que ejecuta comandos por su cuenta —y mas
+en mitad de una pelea— es un agujero de seguridad, no una funcion. Dentro de una cadena
+tambien valen, porque una cadena entera nace de un clic.
+
+Con un clic, **el actor es quien hace clic**: `{jugador}` es el, aunque el `target` diga otra
+cosa.
+
+## Cadenas de interaccion (`effect: chain`)
+
+Una conversacion por pasos. Cada paso dice algo, pregunta con botones, cobra o ejecuta un
+comando, y decide a donde sigue.
+
+```yaml
+skills:
+  - id: mision
+    mode: interaccion          # una cadena SIEMPRE nace de un clic
+    effect: chain
+    steps:
+      - id: saludo
+        message: '&e{mob}: Buenas, {jugador}.'
+        next: pregunta
+
+      - id: pregunta
+        message: '&e¿Me ayudas?'
+        options:               # botones clicables
+          - label: '&a[ Claro ]'
+            next: pago
+          - label: '&c[ Ahora no ]'
+            end: true
+
+      - id: pago
+        pay: 100               # exige 100 monedas para seguir
+        message: '&eNecesito 100 monedas.'
+        next: premio           # si las tiene
+        no-pay: sin_dinero     # si no las tiene
+
+      - id: premio
+        console-command: 'give {jugador} diamond 1'
+        message: '&aHecho.'
+        end: true
+
+      - id: sin_dinero
+        message: '&cVuelve cuando tengas.'
+        end: true
+```
+
+| Campo del paso | Que hace |
+|---|---|
+| `id` | nombre del paso, unico en la cadena |
+| `message` | lo que dice al llegar |
+| `options` | botones: `label`, `next`, `end` |
+| `next` | a donde sigue sin preguntar |
+| `end` | cierra la conversacion |
+| `pay` | cuanto dinero exige para seguir |
+| `no-pay` | a donde va si **no** puede pagar (o `end: true` por otro lado) |
+| `console-command` / `player-command` | lo que ejecuta el paso |
+
+- El jugador avanza **pulsando los botones** del chat.
+- El **paso no viaja en el clic**: se usa el que el servidor tiene apuntado para ese jugador, asi
+  que nadie puede saltarse un paso —ni un pago— escribiendo el comando a mano.
+- Una conversacion es de un jugador: empezar otra cierra la anterior. No sobrevive a un reinicio.
+
+> **Aviso sobre los pagos.** Las skills de pago (`pay`) **no funcionan sin un plugin de
+economia**. El plugin se engancha a **EssentialsX** (por reflexion, asi no depende de el para
+compilar). Sin EssentialsX, **todo pago falla**: la cadena tomara siempre la rama de `no-pay` y
+el jugador no pagara nada. El plugin lo avisa en el log al arrancar.
+
 ## Invocar (`effect: summon`)
 
 El mob **invoca copias de otra definicion a su alrededor**. No va contra un objetivo: usa
@@ -127,6 +215,9 @@ skills:
 | `message` | manda un texto a los jugadores en rango |
 | `potion` | aplica `potion` durante `potion-duration-seconds`, a nivel `potion-amplifier` |
 | `summon` | invoca copias de otra definicion alrededor del mob |
+| `console_command` | ejecuta un comando desde la consola (**solo interaccion**) |
+| `player_command` | el jugador ejecuta un comando (**solo interaccion**) |
+| `chain` | una conversacion por pasos, a base de clics (**solo interaccion**) |
 
 ## Los cinco objetivos
 

@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.3.5 — comandos y conversaciones por skills
+
+- **`console_command` y `player_command`**: ejecutar un comando desde consola, o hacer que lo
+  ejecute el jugador. Con `command:` y los marcadores `{mob}` y `{jugador}`. **Solo valen con
+  `mode: interaccion`** —o dentro de una cadena—: en pasiva o en combate la skill se descarta al
+  cargar, con aviso, porque un mob que ejecuta comandos por su cuenta es un agujero de
+  seguridad.
+- **Cadenas de interaccion (`effect: chain`)**: una conversacion por pasos que el jugador
+  recorre pulsando botones en el chat. Cada paso puede decir algo (`message`), preguntar
+  (`options` con `label` y `next`), cobrar (`pay`) o ejecutar un comando, y decide a donde sigue
+  (`next`, `end`). Si el jugador **no puede pagar**, la rama `no-pay` decide que pasa.
+- **Economia por EssentialsX, por reflexion**: el plugin no depende de EssentialsX para compilar.
+  **Ojo: las skills de pago no funcionan sin un plugin de economia** — sin EssentialsX, todo pago
+  falla y la cadena va por `no-pay`. Se avisa en el log al arrancar.
+
+## 0.3.4 — skill de invocacion (`summon`)
+
+- **Nuevo efecto de skill `summon`**: el mob invoca copias de otra definicion a su alrededor.
+  Se declara con `effect: summon`, `summon: <id>` (la definicion que aparece), `amount`
+  (cuantas, tope 10 por uso) y `range` (el radio donde aparecen). Los invocados toman el dueno
+  del invocador, y aparecen sobre el suelo mas alto de su columna si hay hueco. El `target` se
+  ignora: siempre es alrededor del propio mob.
+
 ## 0.3.3 — arreglo: aliados que se peleaban sin hacerse dano
 
 - **Los mobs del mismo bando —o de facciones aliadas— ya no se apuntan entre si, pase lo que

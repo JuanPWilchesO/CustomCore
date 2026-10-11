@@ -69,6 +69,36 @@ skills:
 | `message` | manda un texto a los jugadores en rango |
 | `potion` | aplica `potion` durante `potion-duration-seconds` |
 
+## Conversaciones y comandos
+
+Con `mode: interaccion` puedes montar un **menu**: el jugador hace clic derecho en el mob y
+arranca una conversacion con botones, que puede cobrar o ejecutar comandos.
+
+```yaml
+skills:
+  - id: mision
+    mode: interaccion
+    effect: chain
+    steps:
+      - id: saludo
+        message: '&e{mob}: Buenas, {jugador}.'
+        next: pregunta
+      - id: pregunta
+        message: '&e¿Te doy la llave?'
+        options:
+          - label: '&a[ Si ]'
+            next: entrega
+          - label: '&c[ No ]'
+            end: true
+      - id: entrega
+        console-command: 'give {jugador} tripwire_hook 1'
+        message: '&aToma.'
+        end: true
+```
+
+Los comandos (`console_command`, `player_command`) **solo** valen con `mode: interaccion`:
+fuera de ahi se descartan y el log lo avisa.
+
 ## Invocar a otros
 
 Un mob puede **traer refuerzos**: con `effect: summon` invoca copias de otra definicion a su

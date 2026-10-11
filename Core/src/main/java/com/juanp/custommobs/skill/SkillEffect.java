@@ -14,7 +14,13 @@ public enum SkillEffect {
     /** Aplica un efecto de pocion a cada objetivo. */
     POTION,
     /** Invoca copias de otra definicion alrededor del mob. */
-    SUMMON;
+    SUMMON,
+    /** Ejecuta un comando desde la consola. */
+    CONSOLE_COMMAND,
+    /** Hace que el jugador ejecute un comando, como si lo escribiera el. */
+    PLAYER_COMMAND,
+    /** Cadena de interaccion: una conversacion por pasos, a base de clics. */
+    CHAIN;
 
     public static SkillEffect parse(String raw) {
         if (raw == null || raw.isBlank()) {

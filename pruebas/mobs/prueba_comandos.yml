@@ -1,0 +1,24 @@
+id: prueba_comandos
+# Mob de prueba para las skills de comando. NO es contenido de juego.
+category: server
+display-name: '&6Prueba comandos'
+type: ZOMBIE
+faction: orcos
+attitude: neutral
+burn-in-daylight: false
+ai: true
+
+attributes:
+  health: 20.0
+  speed: 0.25
+
+skills:
+  # Comando desde consola, cada 15 segundos.
+  - id: aviso
+    mode: pasiva
+    effect: console_command
+    command: 'say [prueba] {mob} al habla'
+    cooldown-seconds: 15
+
+spawn:
+  natural: false

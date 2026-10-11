@@ -166,8 +166,18 @@ public final class SkillService extends BukkitRunnable {
             case DAMAGE -> target.damage(skill.amount(), customMob.entity());
             case HEAL -> this.heal(target, skill.amount());
             case POTION -> this.potion(target, skill);
+            case CONSOLE_COMMAND -> this.consoleCommand(customMob, skill,
+                    target instanceof Player player ? player : this.onlineOwner(customMob));
+            case PLAYER_COMMAND -> {
+                if (target instanceof Player player) {
+                    this.playerCommand(customMob, skill, player);
+                }
+            }
             case MESSAGE -> {
                 // Resuelto aparte: un mensaje no tiene un unico destinatario.
+            }
+            case SUMMON -> {
+                // Resuelto aparte: la invocacion se maneja antes de resolver objetivos.
             }
         }
         // Aviso opcional: en dano o curacion se le dice al jugador afectado.
@@ -251,10 +261,71 @@ public final class SkillService extends BukkitRunnable {
             clicker.sendMessage(text);
             return;
         }
-        // Los demas efectos se resuelven igual que una skill normal: el clic es el gatillo.
-        for (LivingEntity target : this.resolve(customMob, skill)) {
-            this.apply(customMob, skill, target);
+        // Con un clic, el actor es quien hizo clic: los comandos y la invocacion van por ahi,
+        // sin pasar por los objetivos declarados.
+        switch (skill.effect()) {
+            case CONSOLE_COMMAND -> this.consoleCommand(customMob, skill, clicker);
+            case PLAYER_COMMAND -> this.playerCommand(customMob, skill, clicker);
+            case SUMMON -> this.summon(customMob, skill);
+            case CHAIN -> this.service.plugin().chains().start(customMob, clicker, skill);
+            default -> {
+                // Los demas efectos se resuelven igual que una skill normal: el clic es el gatillo.
+                for (LivingEntity target : this.resolve(customMob, skill)) {
+                    this.apply(customMob, skill, target);
+                }
+            }
         }
+        if (skill.hasMessage()) {
+            clicker.sendMessage(skill.message());
+        }
+    }
+
+    // ------------------------------------------------------------------ comandos
+
+    /**
+     * Ejecuta el comando de la skill como si lo escribiera la consola.
+     *
+     * <p>El texto admite {@code {mob}} y {@code {jugador}}: el segundo se sustituye por el
+     * jugador que disparo la skill —quien hizo clic, el objetivo, o el dueno—. Si no hay
+     * jugador al que referirse, el comando igual sale, con {@code {jugador}} sin sustituir.
+     */
+    private void consoleCommand(CustomMob customMob, SkillSpec skill, Player player) {
+        String text = this.commandText(customMob, skill, player);
+        if (text == null) {
+            return;
+        }
+        this.service.plugin().getServer().dispatchCommand(
+                this.service.plugin().getServer().getConsoleSender(), text);
+    }
+
+    /** Hace que el jugador ejecute el comando de la skill, como si lo hubiera escrito el. */
+    private void playerCommand(CustomMob customMob, SkillSpec skill, Player player) {
+        if (player == null) {
+            return;
+        }
+        String text = this.commandText(customMob, skill, player);
+        if (text == null) {
+            return;
+        }
+        player.performCommand(text);
+    }
+
+    /** El comando con los marcadores sustituidos, o {@code null} si la skill no trae ninguno. */
+    private String commandText(CustomMob customMob, SkillSpec skill, Player player) {
+        if (skill.command() == null || skill.command().isBlank()) {
+            return null;
+        }
+        String text = skill.command().replace("{mob}", customMob.definition().displayName());
+        return player == null ? text : text.replace("{jugador}", player.getName());
+    }
+
+    /** El dueno del mob, si esta conectado; si no, {@code null}. */
+    private Player onlineOwner(CustomMob customMob) {
+        if (customMob.ownerId() == null) {
+            return null;
+        }
+        Player owner = this.service.plugin().getServer().getPlayer(customMob.ownerId());
+        return owner != null && owner.isOnline() ? owner : null;
     }
 
     // ------------------------------------------------------------------ invocacion

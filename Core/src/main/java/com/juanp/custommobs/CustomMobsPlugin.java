@@ -24,8 +24,10 @@ import com.juanp.custommobs.disguise.DisguiseLinkResolver;
 import com.juanp.custommobs.docs.DocsInstaller;
 import com.juanp.custommobs.drop.DropListener;
 import com.juanp.custommobs.drop.DropService;
+import com.juanp.custommobs.economy.EconomyLink;
 import com.juanp.custommobs.faction.FactionBook;
 import com.juanp.custommobs.faction.PlayerFactions;
+import com.juanp.custommobs.skill.ChainService;
 import com.juanp.custommobs.group.GroupLink;
 import com.juanp.custommobs.group.GroupLinkResolver;
 import com.juanp.custommobs.impl.CustomMobsApiImpl;
@@ -83,6 +85,8 @@ public final class CustomMobsPlugin extends JavaPlugin {
     private GroupLink groupLink;
     private FactionBook factions;
     private PlayerFactions playerFactions;
+    private EconomyLink economy;
+    private ChainService chains;
     private DisguiseLink disguiseLink;
     private DropService dropService;
     private StyleService styleService;
@@ -158,6 +162,9 @@ public final class CustomMobsPlugin extends JavaPlugin {
 
         // Se crea aqui, y no mas abajo, porque el listener del clic derecho lo necesita.
         this.skillService = new SkillService(this.mobService);
+        // La economia, por reflexion: sin EssentialsX los pagos no funcionan y se avisa.
+        this.economy = EconomyLink.create(this);
+        this.chains = new ChainService(this, this.mobService, this.economy);
 
         this.api = new CustomMobsApiImpl(this.mobService, this.registry);
         this.getServer().getServicesManager().register(CustomMobsApi.class, this.api, this, ServicePriority.Normal);
@@ -341,6 +348,16 @@ public final class CustomMobsPlugin extends JavaPlugin {
 
     public FactionBook factions() {
         return this.factions;
+    }
+
+    /** Conversaciones de las cadenas de interaccion. */
+    public ChainService chains() {
+        return this.chains;
+    }
+
+    /** Cobrador de dinero, enganchado a EssentialsX si esta. */
+    public EconomyLink economy() {
+        return this.economy;
     }
 
     /** Facciones asignadas a jugadores, para las reglas de ataque por faccion. */
