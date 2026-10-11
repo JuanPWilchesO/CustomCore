@@ -45,7 +45,7 @@ public final class FriendlyFireListener implements Listener {
         // dano. Solo dentro de los mundos donde trabaja el plugin: fuera de ellos manda el
         // PvP del servidor.
         if (victim instanceof Player defender && attacker instanceof Player aggressor
-                && this.service.worldEnabled(defender.getWorld())
+                && this.service.playerPvpRules(defender.getWorld())
                 && this.sameSide(aggressor, defender)) {
             event.setCancelled(true);
             return;

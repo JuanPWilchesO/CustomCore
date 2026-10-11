@@ -72,7 +72,7 @@ public final class ItemFactionLock implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onPickup(EntityPickupItemEvent event) {
         if (!(event.getEntity() instanceof Player player)
-                || !this.service.worldEnabled(player.getWorld())) {
+                || !this.service.itemLockActive(player.getWorld())) {
             return;
         }
         String faction = this.factionOf(event.getItem().getItemStack());
@@ -87,7 +87,7 @@ public final class ItemFactionLock implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onUse(PlayerInteractEvent event) {
         if (event.getHand() != EquipmentSlot.HAND
-                || !this.service.worldEnabled(event.getPlayer().getWorld())) {
+                || !this.service.itemLockActive(event.getPlayer().getWorld())) {
             return;
         }
         Action action = event.getAction();
@@ -111,7 +111,7 @@ public final class ItemFactionLock implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)
-                || !this.service.worldEnabled(player.getWorld())) {
+                || !this.service.itemLockActive(player.getWorld())) {
             return;
         }
         String faction = this.lockedFor(player, event.getCurrentItem(), event.getCursor());
@@ -125,7 +125,7 @@ public final class ItemFactionLock implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onDrag(InventoryDragEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)
-                || !this.service.worldEnabled(player.getWorld())) {
+                || !this.service.itemLockActive(player.getWorld())) {
             return;
         }
         for (ItemStack stack : event.getNewItems().values()) {

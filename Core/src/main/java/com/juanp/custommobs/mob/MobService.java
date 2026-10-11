@@ -217,6 +217,24 @@ public final class MobService implements Listener {
         return enabled.isEmpty() || enabled.contains(world.getName().toLowerCase(java.util.Locale.ROOT));
     }
 
+    /**
+     * Las tres funciones que pueden desligarse de {@code worlds.enabled}.
+     *
+     * <p>Cuando su interruptor en el config esta encendido, valen en <b>todos</b> los
+     * mundos aunque la lista las excluya; si no, solo donde trabaja el plugin.
+     */
+    public boolean itemLockActive(World world) {
+        return this.config.itemLockAnyWorld() || this.worldEnabled(world);
+    }
+
+    public boolean playerPvpRules(World world) {
+        return this.config.playerPvpAnyWorld() || this.worldEnabled(world);
+    }
+
+    public boolean factionGlowActive(World world) {
+        return this.config.factionGlowAnyWorld() || this.worldEnabled(world);
+    }
+
     /** Lee los grupos del jugador (LuckPerms, o el respaldo sin el). */
     public GroupLink groupLink() {
         return this.groupLink;

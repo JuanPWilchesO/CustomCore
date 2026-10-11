@@ -122,6 +122,15 @@ worlds:
   # Los nombres son los de Bukkit, asi que sirve cualquiera, incluidos los de
   # Multiverse-Core (mira el nombre exacto con /mv list).
   enabled: []
+  # Estas tres funciones pueden valer en TODOS los mundos aunque la lista de arriba las
+  # excluya. Cada una se decide aparte. En 'false', siguen la lista de 'enabled'.
+  anywhere:
+    # El bloqueo por faccion de un objeto del catalogo: solo lo usa su faccion.
+    item-faction-lock: false
+    # Que dos jugadores del mismo bando (misma faccion, aliada o team) no se hagan dano.
+    player-friendly-fire: false
+    # El brillo de facciones entre jugadores (necesita PacketEvents).
+    faction-glow: false
 
 recall:
   # Ventana de abandono: que pasa cuando dejas atras un mob anclado a ti.

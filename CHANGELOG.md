@@ -17,6 +17,9 @@
   trabaja el plugin.
 - **`worlds.enabled` vale para todo**: un mundo excluido no gestiona mobs, no invoca desde el
   huevo, no craftea huevos ni mejoras, y ni el libro ni los objetos reservados actuan ahi.
+- **Tres funciones se pueden desligar de la lista**, cada una aparte, en `worlds.anywhere`:
+  `item-faction-lock`, `player-friendly-fire` y `faction-glow`. En `true`, valen en todos los
+  mundos; en `false` (por defecto), siguen `worlds.enabled`.
 - **Objetos reservados a una faccion**: `/custommobs item faccion <nombre> <faccion|nada>` deja
   un objeto del catalogo para uso exclusivo de una faccion. Solo ellos pueden **recogerlo del
   suelo**, **sacarlo de un cofre**, **moverlo**, **equiparlo** o **usarlo**. Un admin pasa siempre.

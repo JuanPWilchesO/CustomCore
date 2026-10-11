@@ -251,5 +251,20 @@ worlds:
 - Fuera de la lista, **el plugin no hace nada**: el mob no se gestiona —no cuenta cupo ni
   recibe IA—, el huevo no invoca nada, no se craftean huevos ni items de mejora, y ni el libro
   ni los objetos reservados a una faccion actuan. Ese mundo queda como si el plugin no estuviera.
+
+Tres funciones pueden **desligarse** de esa lista, cada una por su cuenta:
+
+```yaml
+worlds:
+  enabled:
+    - world
+  anywhere:
+    item-faction-lock: false
+    player-friendly-fire: false
+    faction-glow: false
+```
+
+En `true`, la funcion vale en **todos** los mundos, aunque `enabled` la excluya; en `false`,
+sigue la lista. Sirve para tener, por ejemplo, PvP con facciones en un mundo y sin ellas en otro.
 - Los nombres son los de Bukkit, asi que vale cualquiera, incluidos los de Multiverse-Core
   (mira el nombre exacto con `/mv list`).

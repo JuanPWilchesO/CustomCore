@@ -94,7 +94,8 @@ public final class FactionGlowService extends BukkitRunnable {
         for (Player viewer : Bukkit.getOnlinePlayers()) {
             Map<UUID, String> seen = this.teams.computeIfAbsent(viewer.getUniqueId(),
                     id -> new ConcurrentHashMap<>());
-            boolean wants = this.enabledFor(viewer);
+            boolean wants = this.enabledFor(viewer)
+                    && this.service.factionGlowActive(viewer.getWorld());
             for (Player target : Bukkit.getOnlinePlayers()) {
                 if (target.getUniqueId().equals(viewer.getUniqueId())) {
                     continue;
@@ -102,7 +103,7 @@ public final class FactionGlowService extends BukkitRunnable {
                 boolean near = radius <= 0.0D
                         || (viewer.getWorld().equals(target.getWorld())
                         && viewer.getLocation().distanceSquared(target.getLocation()) <= radius * radius);
-                if (!wants || !near) {
+                if (!wants || !near || !this.service.factionGlowActive(target.getWorld())) {
                     this.forget(viewer, target, seen);
                     continue;
                 }

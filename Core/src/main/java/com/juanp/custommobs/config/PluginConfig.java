@@ -78,7 +78,10 @@ public record PluginConfig(
         boolean spawnEnabled,
         long spawnIntervalSeconds,
         int spawnAttempts,
-        int spawnGlobalCap
+        int spawnGlobalCap,
+        boolean itemLockAnyWorld,
+        boolean playerPvpAnyWorld,
+        boolean factionGlowAnyWorld
 ) {
 
     public static PluginConfig load(FileConfiguration cfg) {
@@ -123,7 +126,10 @@ public record PluginConfig(
                 cfg.getBoolean("spawning.enabled", true),
                 Math.max(1L, cfg.getLong("spawning.interval-seconds", 10L)),
                 Math.max(1, cfg.getInt("spawning.attempts", 2)),
-                Math.max(1, cfg.getInt("spawning.global-cap", 80))
+                Math.max(1, cfg.getInt("spawning.global-cap", 80)),
+                cfg.getBoolean("worlds.anywhere.item-faction-lock", false),
+                cfg.getBoolean("worlds.anywhere.player-friendly-fire", false),
+                cfg.getBoolean("worlds.anywhere.faction-glow", false)
         );
     }
 
