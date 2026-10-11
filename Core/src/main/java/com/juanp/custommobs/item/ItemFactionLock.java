@@ -54,6 +54,11 @@ public final class ItemFactionLock implements Listener {
         if (faction == null) {
             return true;
         }
+        // Un admin pasa siempre: reservar un objeto no puede dejarle sin poder moverlo ni
+        // revisarlo. Un op tiene todos los permisos, asi que cae aqui solo.
+        if (player.hasPermission(this.service.config().adminPermission())) {
+            return true;
+        }
         String own = this.service.factionOf(player);
         return own != null && own.equalsIgnoreCase(faction);
     }

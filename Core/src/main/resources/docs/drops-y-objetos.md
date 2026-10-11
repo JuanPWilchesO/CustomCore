@@ -62,6 +62,9 @@ guardan en un cofre o lo reparte otro plugin — por eso no basta con la clave e
 que ponersela con el comando (o escribirla a mano antes de usarlo). El que no sea de la
 faccion, al intentarlo, recibe el aviso y no pasa nada mas.
 
+Un **admin** (quien tenga el permiso de administracion) pasa siempre: reservar un objeto no
+puede dejarle sin poder revisarlo ni moverlo. Como un op tiene todos los permisos, cae ahi solo.
+
 > No es una caja fuerte: impide **usarlo**, no quitarselo a quien ya lo tenga. Un objeto ya
 > equipado por alguien de otra faccion no se le arranca.
 
