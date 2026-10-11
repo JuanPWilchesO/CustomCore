@@ -13,8 +13,8 @@
   amistoso con forma de esqueleto era su presa. Con la clave, ni el lobo lo apunta ni el mob
   ataca de vuelta — sin llegar a defenderlos (el lobo no es del pueblo).
 - **Objetos reservados a una faccion**: `/custommobs item faccion <nombre> <faccion|nada>` deja
-  un objeto del catalogo para uso exclusivo de una faccion. Solo ellos pueden **recogerlo**,
-  **equiparlo** o **usarlo**. La marca viaja dentro del objeto (su NBT), asi que aguanta que lo
+  un objeto del catalogo para uso exclusivo de una faccion. Solo ellos pueden **recogerlo del
+  suelo**, **sacarlo de un cofre**, **moverlo**, **equiparlo** o **usarlo**. La marca viaja dentro del objeto (su NBT), asi que aguanta que lo
   suelten o lo guarde otro. No es una caja fuerte: impide **usarlo**, no arrebatarlo.
 - **Teams ya no expulsa**: se cae lo del `teams.kick-command`. La incoherencia se **impide** (se
   rechaza la entrada, en los dos sentidos); al conectarse solo se **avisa en el log**.

@@ -56,8 +56,8 @@ equipamiento. **Un mismo objeto sirve para varios mobs.**
 /custommobs item faccion espada_del_sargento nada    la libera: vale para cualquiera
 ```
 
-Un objeto reservado solo lo puede **recoger**, **equipar** o **usar** un jugador de esa
-faccion. La marca viaja **dentro del objeto** (su NBT), asi que sigue puesta si lo sueltan, lo
+Un objeto reservado solo lo puede **recoger del suelo**, **sacar de un cofre**, **mover en su
+inventario**, **equipar** o **usar** un jugador de esa faccion. La marca viaja **dentro del objeto** (su NBT), asi que sigue puesta si lo sueltan, lo
 guardan en un cofre o lo reparte otro plugin — por eso no basta con la clave en el yml: hay
 que ponersela con el comando (o escribirla a mano antes de usarlo). El que no sea de la
 faccion, al intentarlo, recibe el aviso y no pasa nada mas.

@@ -9,7 +9,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
@@ -95,26 +95,48 @@ public final class ItemFactionLock implements Listener {
         this.deny(event.getPlayer(), faction);
     }
 
-    /** No puede ponerselo en una ranura de armadura desde el inventario. */
+    /**
+     * No lo puede mover ni sacarlo de un cofre: si no es suyo, no lo toca.
+     *
+     * <p>Se mira lo que hay bajo el cursor y en la ranura; con eso quedan cubiertos el
+     * inventario propio, los cofres y las ranuras de armadura de una sola vez.
+     */
     @EventHandler(ignoreCancelled = true)
-    public void onEquip(InventoryClickEvent event) {
+    public void onClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) {
             return;
         }
-        ItemStack moving = event.getCursor();
-        if (moving == null || moving.getType().isAir()) {
-            moving = event.getCurrentItem();
-        }
-        String faction = this.factionOf(moving);
-        if (faction == null || this.mayUse(player, faction)) {
-            return;
-        }
-        boolean armorSlot = event.getClickedInventory() != null
-                && event.getClickedInventory().getHolder() instanceof Player
-                && event.getSlotType() == InventoryType.SlotType.ARMOR;
-        if (armorSlot) {
+        String faction = this.lockedFor(player, event.getCurrentItem(), event.getCursor());
+        if (faction != null) {
             event.setCancelled(true);
             this.deny(player, faction);
         }
+    }
+
+    /** Tampoco puede arrastrarlo por encima de varias ranuras. */
+    @EventHandler(ignoreCancelled = true)
+    public void onDrag(InventoryDragEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)) {
+            return;
+        }
+        for (ItemStack stack : event.getNewItems().values()) {
+            String faction = this.lockedFor(player, stack);
+            if (faction != null) {
+                event.setCancelled(true);
+                this.deny(player, faction);
+                return;
+            }
+        }
+    }
+
+    /** La faccion del objeto si el jugador NO puede usarlo; {@code null} si puede o es libre. */
+    private String lockedFor(Player player, ItemStack... items) {
+        for (ItemStack item : items) {
+            String faction = this.factionOf(item);
+            if (faction != null && !this.mayUse(player, faction)) {
+                return faction;
+            }
+        }
+        return null;
     }
 }
