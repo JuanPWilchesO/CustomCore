@@ -30,14 +30,4 @@ public interface DisguiseLink {
     /** {@code true} si la entidad ya lleva un disfraz aplicado. */
     boolean isDisguised(LivingEntity entity);
 
-    /**
-     * Nombre con el que el cliente conoce a esa entidad en el scoreboard.
-     *
-     * <p>Un mob disfrazado de jugador lo pinta el cliente <b>como un jugador</b>, y a los
-     * jugadores los casa con su equipo por el <b>nombre del perfil</b>, no por el uuid. Sin
-     * esto, ni el brillo ni el color del nombre de faccion se le pegan al disfraz.
-     *
-     * @return el nombre del perfil, o {@code null} si la entidad no se pinta como jugador
-     */
-    String scoreboardEntry(LivingEntity entity);
 }

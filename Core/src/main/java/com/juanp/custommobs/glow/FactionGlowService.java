@@ -130,6 +130,14 @@ public final class FactionGlowService extends BukkitRunnable {
                 if (!entity.isValid() || entity.isDead()) {
                     continue;
                 }
+                // A un mob disfrazado no se le pinta: LibsDisguises dibuja el nombre (y su
+                // equipo) por su cuenta, asi que nuestros equipos no llegan y solo añadian
+                // paquetes raros con el nombre del perfil. Se deja su color de faccion, que va
+                // dentro del nombre del disfraz.
+                if (this.service.disguiseLink().isDisguised(entity)) {
+                    this.forget(viewer, entity, seen);
+                    continue;
+                }
                 if (!wants || !this.near(viewer, entity, radius)
                         || !this.service.factionGlowActive(entity.getWorld())) {
                     this.forget(viewer, entity, seen);

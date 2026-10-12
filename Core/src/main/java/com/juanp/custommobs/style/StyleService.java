@@ -164,8 +164,10 @@ public final class StyleService {
      * normal es su uuid; para un mob disfrazado de jugador, el nombre del perfil del disfraz.
      */
     private String entryOf(LivingEntity entity) {
-        String disguised = this.service.disguiseLink().scoreboardEntry(entity);
-        return disguised != null ? disguised : entity.getScoreboardEntryName();
+        // El uuid: es lo que el cliente usa para casar un mob con su equipo. A los disfraces el
+        // equipo no les llega (LibsDisguises pinta el nombre por su cuenta), asi que no hay caso
+        // especial que valga — y mandar otro nombre solo daba problemas.
+        return entity.getScoreboardEntryName();
     }
 
     private void clearGlow(LivingEntity entity) {

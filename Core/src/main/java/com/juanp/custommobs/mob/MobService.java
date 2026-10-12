@@ -1183,6 +1183,12 @@ public final class MobService implements Listener {
         // Se retira YA (diferirlo un tick lo empeoraba), y un segundo despues se le re-manda el
         // "borrar entidad" a quien pudiera verlo: al cliente terco se le cae asi la placa
         // fantasma. A esa altura la animacion de muerte ya paso, asi que no se nota.
+        // A un disfrazado no se le barre: LibsDisguises maneja su retirada (y sus entidades
+        // de apoyo), y meterle un "borrar entidad" a mano puede descolocarle el cliente.
+        if (this.disguiseLink != null && entity instanceof LivingEntity living
+                && this.disguiseLink.isDisguised(living)) {
+            return;
+        }
         int entityId = entity.getEntityId();
         String world = entity.getWorld().getName();
         org.bukkit.Location where = entity.getLocation().clone();

@@ -79,28 +79,6 @@ public final class LibsDisguisesLink implements DisguiseLink {
     }
 
     @Override
-    public String scoreboardEntry(LivingEntity entity) {
-        try {
-            Disguise disguise = DisguiseAPI.getDisguise(entity);
-            if (disguise instanceof PlayerDisguise playerDisguise) {
-                // El nombre del PERFIL, no el que le pusimos: un nombre de jugador no admite
-                // espacios ni caracteres raros, asi que LibsDisguises lo reescribe, y el cliente
-                // casa al "jugador" con su equipo por ese nombre y no por el nuestro.
-                String profile = playerDisguise.getProfileName();
-                if (profile == null || profile.isBlank()) {
-                    profile = playerDisguise.getName();
-                }
-                if (profile != null && !profile.isBlank()) {
-                    return org.bukkit.ChatColor.stripColor(profile);
-                }
-            }
-        } catch (Throwable ignored) {
-            // Sin disfraz o sin API: se usa el camino normal (el uuid de la entidad).
-        }
-        return null;
-    }
-
-    @Override
     public boolean isDisguised(LivingEntity entity) {
         try {
             return DisguiseAPI.isDisguised(entity);
