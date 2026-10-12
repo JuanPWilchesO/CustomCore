@@ -132,9 +132,8 @@ public final class FactionGlowService extends BukkitRunnable {
                     this.forget(viewer, entity, seen);
                     continue;
                 }
-                this.paint(viewer, entity,
-                        this.colorFor(viewer, this.service.factionOf(customMob)),
-                        seen, entity.isGlowing());
+                String team = this.colorFor(viewer, this.service.factionOf(customMob));
+                this.paint(viewer, entity, team, seen, entity.isGlowing());
             }
         }
     }

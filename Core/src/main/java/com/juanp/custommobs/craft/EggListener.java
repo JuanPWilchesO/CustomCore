@@ -196,6 +196,24 @@ public final class EggListener implements Listener {
                     + link.definitionId() + "': no coincide.");
             return;
         }
+        // Y no vale cualquier huevo de la MISMA definicion: cada mob esta ligado a su
+        // vinculo. Antes bastaba con que coincidiera el tipo de mob, asi que el huevo de un
+        // mercenario recogia a otro mercenario, y encima se re-apuntaba al golpeado: los dos
+        // huevos acababan intercambiados.
+        Optional<UUID> mark = this.craft.linkOf(item);
+        if (mark.isEmpty()) {
+            this.debug("Huevo sin vinculo para el mob " + link.linkId() + ": no se recoge.");
+            player.sendMessage(Texts.color("&cEse huevo aun no representa a ningun mob:"
+                    + " colocalo para invocar uno nuevo."));
+            return;
+        }
+        if (!mark.get().equals(link.linkId())) {
+            this.debug("Huevo del vinculo " + mark.get() + " para el mob " + link.linkId()
+                    + ": no es el suyo.");
+            player.sendMessage(Texts.color("&cEste huevo es de otro mob. Usa el huevo de ese otro,"
+                    + " o golpea a este con el suyo."));
+            return;
+        }
         event.setCancelled(true);
         // El huevo pasa a representar a este mob, aunque su marca se hubiera perdido.
         this.craft.bind(item, link.linkId());
