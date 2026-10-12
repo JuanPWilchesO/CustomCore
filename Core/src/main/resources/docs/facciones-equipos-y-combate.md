@@ -156,17 +156,26 @@ faccion. No se saca a nadie: la incoherencia se corta antes de producirse. Y al 
 repasa el team, avisando en el log si quedo incoherente. Se configura en `configuracion.md`
 (`teams`).
 
-## Como se ve un mob segun quien lo mire
+## Como se ven los mobs
 
-Un mob custom se pinta por su **estado de PvP con quien lo mira**: si su faccion (o la de su
-dueno, si es un mob de jugador) es **enemiga** del espectador, sale **rojo**; si es aliada o la
-misma, **verde**; y si no hay relacion, **gris**. Ese color manda sobre el que haya elegido su
-dueno o su team con `/cm color` y `/cm glow`.
+Depende de quien sea el mob:
 
-> **Disfraces.** Un mob disfrazado de jugador (LibsDisguises) lo pinta el cliente **como un
-> jugador**, y a los jugadores los casa con su equipo por el **nombre del perfil** de la skin, no
-> por el uuid. El plugin lo tiene en cuenta: cuando el mob va disfrazado asi, el equipo va con ese
-> nombre y el perfil se deja sin color. Por eso el color de faccion llega tambien a los disfraces.
+- **De jugador**: llevan el color que elija su dueno o su team con `/cm color` y `/cm glow`.
+- **De servidor**: el color que `factions.yml` le declare a su faccion.
+
+```yaml
+orcos:
+  allies: [goblins]
+  enemies: [humanos, enanos]
+  color: DARK_GREEN   # color del nombre de sus mobs
+  glow: GREEN         # color del brillo; ademas lo enciende
+```
+
+Los dos son opcionales.
+
+> **Disfraces.** Un mob disfrazado no muestra este color: LibsDisguises dibuja el nombre por su
+> cuenta (armor stands y equipos propios, sin color) y se queda con el. Para un mob que deba
+> lucir su color de faccion, **quitale el disfraz**.
 
 ## Fuego amigo entre jugadores
 

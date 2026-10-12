@@ -7,13 +7,14 @@
 - **Craftear tambien respeta la faccion**: un objeto reservado solo lo craftea quien es de esa
   faccion. La receta puede salir en el libro de recetas de cualquiera —eso no se puede esconder
   por jugador—, pero el crafteo no se completa.
-- **El estado de PvP pinta tambien los mobs**: un mob custom sale rojo, verde o gris segun su
-  relacion de faccion **con quien lo mira**, y ese color gana al que hayan elegido su dueno o su
-  team (`/cm color`, `/cm glow`). Con `/cm glow <color>` el dueno puede darle brillo propio: el
-  color de faccion lo repinta, pero el brillo lo decide el dueno.
-- **Funciona con disfraces**: a un mob disfrazado de jugador el cliente lo casa con su equipo por
-  el **nombre del perfil** de la skin, no por su uuid. El plugin usa ese nombre, asi que el color
-  de PvP llega tambien a los mobs disfrazados (y el perfil se deja sin color para que se vea).
+- **Color de faccion para los mobs de servidor**: cada faccion puede declarar en `factions.yml`
+  su `color` (nombre) y su `glow` (brillo, y lo enciende), y sus mobs de categoria `server` se
+  distinguen de un vistazo. Los mobs de **jugador** siguen con el color que elija su dueno o su
+  team (`/cm color`, `/cm glow`). El color por faccion **entre jugadores** (enemigo rojo / aliado
+  verde / neutral gris) no cambia.
+- **Los disfraces no se colorean**: LibsDisguises dibuja el nombre por su cuenta —con armor
+  stands y equipos propios, sin color— y se queda con el. Un mob que deba lucir color de faccion
+  va **sin disfraz**; queda documentado.
 - **Brillo por faccion, con refresco**: `faction-glow.refresh-seconds` (5 por defecto; `0` = en
   cada pasada). Antes el brillo se mandaba una sola vez y el cliente lo soltaba al moverse o al
   reaparecer —por eso desaparecia y la placa se quedaba—. Ahora se repite.
