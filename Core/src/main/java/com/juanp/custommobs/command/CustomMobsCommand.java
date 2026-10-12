@@ -37,7 +37,9 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
      *
      * <p>Aqui si vale el '&'/'\u00a7': los mensajes de chat los renderiza el cliente.
      */
-    private static final String TAG = com.juanp.custommobs.mob.Texts.color("&0[&cCustomMobs&0]");
+    // El color del cierre manda: lo que venga despues del prefijo hereda ese color. En negro
+    // (&0) los mensajes no se leian en el chat, asi que va en gris (&8).
+    private static final String TAG = com.juanp.custommobs.mob.Texts.color("&8[&cCustomMobs&8]");
 
     private final CustomMobsPlugin plugin;
 
