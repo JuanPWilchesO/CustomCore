@@ -219,6 +219,11 @@ sola vez dura poco. La **placa** si aguanta sola, porque va dentro del equipo fa
 El que va **agachado** no muestra **ni placa ni brillo** hasta que se levante: se le mete en un
 equipo que oculta el nombre. Asi el agachado sirve para esconderse de verdad.
 
+La faccion tambien pinta a los **mobs custom**, para cada espectador: mob de faccion enemiga en
+**rojo**, aliada en **verde**, sin relacion en **gris**. Y **manda sobre el color del nombre y del
+brillo** que hayan elegido su dueno o su team (`/cm color`, `/cm glow`): la faccion gana. Con
+`faction-glow.recolor-name: false` se deja el nombre como estaba y solo se pinta el brillo.
+
 **Necesita PacketEvents.** Sin el, el brillo de facciones no funciona.
 
 ## Coherencia con Teams (`teams`)

@@ -7,13 +7,18 @@ import com.github.retrooper.packetevents.wrapper.PacketWrapper;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerEntityMetadata;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerTeams;
 import com.juanp.custommobs.CustomMobsPlugin;
+import com.juanp.custommobs.mob.CustomMob;
 import com.juanp.custommobs.mob.MobService;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -104,20 +109,41 @@ public final class FactionGlowService extends BukkitRunnable {
                 if (target.getUniqueId().equals(viewer.getUniqueId())) {
                     continue;
                 }
-                boolean near = radius <= 0.0D
-                        || (viewer.getWorld().equals(target.getWorld())
-                        && viewer.getLocation().distanceSquared(target.getLocation()) <= radius * radius);
-                if (!wants || !near || !this.service.factionGlowActive(target.getWorld())) {
+                if (!wants || !this.near(viewer, target, radius)
+                        || !this.service.factionGlowActive(target.getWorld())) {
                     this.forget(viewer, target, seen);
                     continue;
                 }
                 // Agachado, ni placa ni brillo: se le mete en un equipo que oculta el nombre.
                 boolean sneaking = target.isSneaking();
                 this.paint(viewer, target,
-                        sneaking ? HIDDEN_TEAM : this.colorFor(viewer, target, enemy, ally, neutral),
+                        sneaking ? HIDDEN_TEAM
+                                : this.colorFor(viewer, this.service.factionOf(target)),
                         seen, !sneaking);
             }
+            // Mobs custom: la faccion manda sobre el color que hayan elegido su dueno o su team.
+            for (CustomMob customMob : this.service.active()) {
+                LivingEntity entity = customMob.entity();
+                if (!entity.isValid() || entity.isDead()) {
+                    continue;
+                }
+                if (!wants || !this.near(viewer, entity, radius)
+                        || !this.service.factionGlowActive(entity.getWorld())) {
+                    this.forget(viewer, entity, seen);
+                    continue;
+                }
+                this.paint(viewer, entity,
+                        this.colorFor(viewer, this.service.factionOf(customMob)),
+                        seen, entity.isGlowing());
+            }
         }
+    }
+
+    /** {@code true} si el espectador y la entidad estan lo bastante cerca para pintarla. */
+    private boolean near(Player viewer, LivingEntity target, double radius) {
+        return radius <= 0.0D
+                || (viewer.getWorld().equals(target.getWorld())
+                && viewer.getLocation().distanceSquared(target.getLocation()) <= radius * radius);
     }
 
     // ------------------------------------------------------------------ pintar
@@ -132,11 +158,11 @@ public final class FactionGlowService extends BukkitRunnable {
      *
      * @param glowing {@code false} para el que va agachado: ni placa ni brillo
      */
-    private void paint(Player viewer, Player target, String team, Map<UUID, String> seen,
+    private void paint(Player viewer, LivingEntity target, String team, Map<UUID, String> seen,
                        boolean glowing) {
         UUID targetId = target.getUniqueId();
         String previous = seen.get(targetId);
-        String entry = target.getName();
+        String entry = entryOf(target);
         Map<UUID, Long> sent = this.glowAt.computeIfAbsent(viewer.getUniqueId(),
                 id -> new ConcurrentHashMap<>());
         boolean changed = !team.equals(previous);
@@ -165,22 +191,25 @@ public final class FactionGlowService extends BukkitRunnable {
             seen.put(targetId, team);
             sent.remove(targetId);
         }
-        if (!glowing) {
-            if (changed || sent.remove(targetId) != null) {
-                this.send(viewer, this.glow(target, false));
-            }
-            return;
-        }
+        // Se re-manda cada refresh-seconds: el cliente pierde el brillo cuando el servidor le
+        // manda los datos de verdad de la entidad (al moverse, al reaparecer...).
         long now = System.currentTimeMillis();
         Long last = sent.get(targetId);
-        if (last == null || now - last >= this.refreshMillis()) {
-            this.send(viewer, this.glow(target, true));
-            sent.put(targetId, now);
+        if (last != null && now - last < this.refreshMillis()) {
+            return;
         }
+        NamedTextColor nameColor = HIDDEN_TEAM.equals(team) ? null : this.colorOf(team);
+        this.send(viewer, this.metadata(target, glowing, nameColor));
+        sent.put(targetId, now);
     }
 
-    /** Deja de pintar a ese jugador para ese espectador, y le quita el brillo. */
-    private void forget(Player viewer, Player target, Map<UUID, String> seen) {
+    /** El nombre que usa el scoreboard para esta entidad (su uuid, salvo jugadores). */
+    private static String entryOf(LivingEntity target) {
+        return target instanceof Player player ? player.getName() : target.getScoreboardEntryName();
+    }
+
+    /** Deja de pintar a esa entidad para ese espectador, y le devuelve su aspecto real. */
+    private void forget(Player viewer, LivingEntity target, Map<UUID, String> seen) {
         String team = seen.remove(target.getUniqueId());
         if (team == null) {
             return;
@@ -191,12 +220,23 @@ public final class FactionGlowService extends BukkitRunnable {
         }
         this.send(viewer, new WrapperPlayServerTeams(team,
                 WrapperPlayServerTeams.TeamMode.REMOVE_ENTITIES, Optional.empty(),
-                target.getName()));
-        this.send(viewer, this.glow(target, false));
+                entryOf(target)));
+        // Sin color de faccion: el brillo real de la entidad y su nombre tal cual.
+        this.send(viewer, this.metadata(target, target.isGlowing(), null));
     }
 
-    /** Los flags de la entidad con el brillo puesto o quitado, sin tocar los demas. */
-    private WrapperPlayServerEntityMetadata glow(Player target, boolean glowing) {
+    /**
+     * Los datos de la entidad: los flags (con el brillo puesto o quitado) y, en los mobs, el
+     * nombre en el color de la faccion.
+     *
+     * <p>El nombre va aqui y <b>no</b> solo en el equipo porque un nombre que ya trae color
+     * propio —el del yml, o el que eligio el dueno con {@code /cm color}— no lo tapa el color
+     * del equipo. Mandandolo en el color de la faccion, la faccion gana de verdad.
+     *
+     * @param nameColor color de la placa; {@code null} deja el nombre real de la entidad
+     */
+    private WrapperPlayServerEntityMetadata metadata(LivingEntity target, boolean glowing,
+                                                     NamedTextColor nameColor) {
         byte flags = 0;
         if (target.getFireTicks() > 0) {
             flags |= 0x01;
@@ -204,7 +244,7 @@ public final class FactionGlowService extends BukkitRunnable {
         if (target.isSneaking()) {
             flags |= 0x02;
         }
-        if (target.isSprinting()) {
+        if (target instanceof Player player && player.isSprinting()) {
             flags |= 0x08;
         }
         if (target.isInvisible()) {
@@ -213,8 +253,17 @@ public final class FactionGlowService extends BukkitRunnable {
         if (glowing) {
             flags |= GLOW_FLAG;
         }
-        return new WrapperPlayServerEntityMetadata(target.getEntityId(),
-                List.of(new EntityData<>(0, EntityDataTypes.BYTE, flags)));
+        List<EntityData<?>> data = new ArrayList<>();
+        data.add(new EntityData<>(0, EntityDataTypes.BYTE, flags));
+        String custom = target.getCustomName();
+        if (!(target instanceof Player) && custom != null
+                && this.plugin.getConfig().getBoolean("faction-glow.recolor-name", true)) {
+            Component name = nameColor == null
+                    ? LegacyComponentSerializer.legacySection().deserialize(custom)
+                    : Component.text(ChatColor.stripColor(custom)).color(nameColor);
+            data.add(new EntityData<>(2, EntityDataTypes.OPTIONAL_ADV_COMPONENT, Optional.of(name)));
+        }
+        return new WrapperPlayServerEntityMetadata(target.getEntityId(), data);
     }
 
     private void send(Player viewer, PacketWrapper<?> packet) {
@@ -224,10 +273,9 @@ public final class FactionGlowService extends BukkitRunnable {
     // ------------------------------------------------------------------ relaciones
 
     /** El equipo que le toca a ese jugador, visto por ese espectador. */
-    private String colorFor(Player viewer, Player target, NamedTextColor enemy,
-                            NamedTextColor ally, NamedTextColor neutral) {
+    /** El equipo que le toca a una faccion, visto por ese espectador. */
+    private String colorFor(Player viewer, String theirs) {
         String mine = this.service.factionOf(viewer);
-        String theirs = this.service.factionOf(target);
         if (mine == null || theirs == null) {
             return NEUTRAL_TEAM;
         }

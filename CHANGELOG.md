@@ -7,6 +7,10 @@
 - **Craftear tambien respeta la faccion**: un objeto reservado solo lo craftea quien es de esa
   faccion. La receta puede salir en el libro de recetas de cualquiera —eso no se puede esconder
   por jugador—, pero el crafteo no se completa.
+- **La faccion manda sobre el color de los mobs**: los mobs custom se pintan **para cada
+  espectador** por la relacion con su faccion (enemiga rojo, aliada verde, sin relacion gris),
+  igual que los jugadores, y ese color **gana** al que hayan elegido su dueno o su team con
+  `/cm color` y `/cm glow`. `faction-glow.recolor-name: false` deja los nombres en paz.
 - **Brillo por faccion, con refresco**: `faction-glow.refresh-seconds` (5 por defecto; `0` = en
   cada pasada). Antes el brillo se mandaba una sola vez y el cliente lo soltaba al moverse o al
   reaparecer —por eso desaparecia y la placa se quedaba—. Ahora se repite.

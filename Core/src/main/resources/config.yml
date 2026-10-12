@@ -161,6 +161,9 @@ faction-glow:
   # manda los datos de verdad de la entidad (al moverse, al reaparecer...), asi que hay que
   # repetirlo. 0 = en cada pasada (cada segundo). La placa no lo necesita: va en el equipo falso.
   refresh-seconds: 5
+  # La faccion tambien manda sobre el NOMBRE de los mobs custom (no solo el brillo), y gana al
+  # color que haya elegido su dueno o su team. Ponlo en false para no tocar los nombres.
+  recolor-name: true
   # Colores por relacion (los nombres de color de Minecraft).
   enemy: RED
   ally: GREEN
