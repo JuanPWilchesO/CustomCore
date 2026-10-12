@@ -121,20 +121,8 @@ public final class FactionGlowService extends BukkitRunnable {
                                 : this.colorFor(viewer, this.service.factionOf(target)),
                         seen, !sneaking);
             }
-            // Mobs custom: la faccion manda sobre el color que hayan elegido su dueno o su team.
-            for (CustomMob customMob : this.service.active()) {
-                LivingEntity entity = customMob.entity();
-                if (!entity.isValid() || entity.isDead()) {
-                    continue;
-                }
-                if (!wants || !this.near(viewer, entity, radius)
-                        || !this.service.factionGlowActive(entity.getWorld())) {
-                    this.forget(viewer, entity, seen);
-                    continue;
-                }
-                String team = this.colorFor(viewer, this.service.factionOf(customMob));
-                this.paint(viewer, entity, team, seen, entity.isGlowing());
-            }
+            // Los mobs NO se pintan aqui: los de jugador siguen con el estilo de su dueno o su
+            // team, y los de servidor llevan el color de su faccion, que sale de factions.yml.
         }
     }
 
@@ -254,14 +242,6 @@ public final class FactionGlowService extends BukkitRunnable {
         }
         List<EntityData<?>> data = new ArrayList<>();
         data.add(new EntityData<>(0, EntityDataTypes.BYTE, flags));
-        String custom = target.getCustomName();
-        if (!(target instanceof Player) && custom != null
-                && this.plugin.getConfig().getBoolean("faction-glow.recolor-name", true)) {
-            Component name = nameColor == null
-                    ? LegacyComponentSerializer.legacySection().deserialize(custom)
-                    : Component.text(ChatColor.stripColor(custom)).color(nameColor);
-            data.add(new EntityData<>(2, EntityDataTypes.OPTIONAL_ADV_COMPONENT, Optional.of(name)));
-        }
         return new WrapperPlayServerEntityMetadata(target.getEntityId(), data);
     }
 

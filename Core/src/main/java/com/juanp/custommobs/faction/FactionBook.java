@@ -23,11 +23,17 @@ public final class FactionBook {
 
     private final Map<String, Set<String>> allies = new LinkedHashMap<>();
     private final Map<String, Set<String>> enemies = new LinkedHashMap<>();
+    /** Color del nombre de los mobs de esa faccion, tal como se escribio. */
+    private final Map<String, String> nameColors = new LinkedHashMap<>();
+    /** Color del brillo de los mobs de esa faccion, tal como se escribio. */
+    private final Map<String, String> glowColors = new LinkedHashMap<>();
 
     /** Recarga las relaciones desde {@code factions.yml}. */
     public void reload(Plugin plugin) {
         this.allies.clear();
         this.enemies.clear();
+        this.nameColors.clear();
+        this.glowColors.clear();
 
         File file = new File(plugin.getDataFolder(), "factions.yml");
         if (!file.exists()) {
@@ -41,6 +47,14 @@ public final class FactionBook {
             }
             this.allies.put(faction, normalize(cfg.getStringList(rawFaction + ".allies"), faction));
             this.enemies.put(faction, normalize(cfg.getStringList(rawFaction + ".enemies"), faction));
+            String name = cfg.getString(rawFaction + ".color");
+            if (name != null && !name.isBlank()) {
+                this.nameColors.put(faction, name.trim());
+            }
+            String glow = cfg.getString(rawFaction + ".glow");
+            if (glow != null && !glow.isBlank()) {
+                this.glowColors.put(faction, glow.trim());
+            }
         }
         plugin.getLogger().info("Facciones cargadas: " + this.allies.size() + ".");
     }
@@ -53,6 +67,20 @@ public final class FactionBook {
     /** {@code true} si ambas facciones existen y estan declaradas como enemigas. */
     public boolean isEnemy(String first, String second) {
         return this.declared(this.enemies, first, second);
+    }
+
+    /** Color del nombre de los mobs de esa faccion, si lo declara. */
+    public java.util.Optional<String> nameColor(String faction) {
+        String key = normalize(faction);
+        return key == null ? java.util.Optional.empty()
+                : java.util.Optional.ofNullable(this.nameColors.get(key));
+    }
+
+    /** Color del brillo de los mobs de esa faccion, si lo declara. */
+    public java.util.Optional<String> glowColor(String faction) {
+        String key = normalize(faction);
+        return key == null ? java.util.Optional.empty()
+                : java.util.Optional.ofNullable(this.glowColors.get(key));
     }
 
     /** Facciones conocidas (las que aparecen en {@code factions.yml}). */

@@ -156,6 +156,25 @@ faccion. No se saca a nadie: la incoherencia se corta antes de producirse. Y al 
 repasa el team, avisando en el log si quedo incoherente. Se configura en `configuracion.md`
 (`teams`).
 
+## Como se ven los mobs de servidor
+
+Cada faccion puede declarar en `factions.yml` como se ven **sus mobs de categoria `server`**:
+
+```yaml
+orcos:
+  allies: [goblins]
+  enemies: [humanos, enanos]
+  color: DARK_GREEN   # color del nombre
+  glow: GREEN         # color del brillo; ademas lo enciende
+```
+
+Los dos son opcionales. Los mobs de **jugador** no los usan: esos llevan el color que elija su
+dueno o su team con `/cm color` y `/cm glow`.
+
+> Los mobs **disfrazados** (LibsDisguises) no muestran estos colores: con un disfraz, el cliente
+> pinta otra entidad y nuestros datos no llegan. Para un mob que tenga que lucir su color de
+> faccion, quitale el disfraz.
+
 ## Fuego amigo entre jugadores
 
 Dos jugadores del **mismo bando** no se hacen dano: ni de la misma faccion, ni de facciones

@@ -52,15 +52,41 @@ public final class StyleService {
         this.applyGlow(entity, definition, ownerId, teamId);
     }
 
-    /** Tine el nombre si el dueno (o su team) eligio color. */
+    /**
+     * Tine el nombre: los mobs de jugador segun lo que eligio su dueno (o su team); los de
+     * servidor, segun el color que {@code factions.yml} le declare a su faccion.
+     */
     public void applyName(LivingEntity entity, MobDefinition definition, UUID ownerId, UUID teamId) {
         MobStyle style = this.resolve(ownerId, teamId);
         String name = definition.displayName();
         if (style != null && style.name() != null) {
             name = style.name() + ChatColor.stripColor(name);
+        } else {
+            ChatColor faction = this.factionNameColor(definition);
+            if (faction != null) {
+                name = faction + ChatColor.stripColor(name);
+            }
         }
         entity.setCustomName(name);
         entity.setCustomNameVisible(true);
+    }
+
+    /** Color del nombre que la faccion de un mob de servidor declare en {@code factions.yml}. */
+    private ChatColor factionNameColor(MobDefinition definition) {
+        if (!definition.server() || definition.faction() == null) {
+            return null;
+        }
+        String raw = this.service.factions().nameColor(definition.faction()).orElse(null);
+        return raw == null ? null : MobStyle.color(raw);
+    }
+
+    /** Color del brillo que la faccion de un mob de servidor declare en {@code factions.yml}. */
+    private ChatColor factionGlowColor(MobDefinition definition) {
+        if (!definition.server() || definition.faction() == null) {
+            return null;
+        }
+        String raw = this.service.factions().glowColor(definition.faction()).orElse(null);
+        return raw == null ? null : MobStyle.color(raw);
     }
 
     /**
@@ -72,6 +98,13 @@ public final class StyleService {
         this.clearGlow(entity);
 
         if (style == null || style.glowColor() == null) {
+            // Mobs de servidor: si su faccion declara brillo, se enciende en ese color.
+            ChatColor factionGlow = this.factionGlowColor(definition);
+            if (factionGlow != null) {
+                this.glowTeam(factionGlow).ifPresent(team -> team.addEntry(entity.getScoreboardEntryName()));
+                entity.setGlowing(true);
+                return;
+            }
             entity.setGlowing(definition.glow());
             return;
         }

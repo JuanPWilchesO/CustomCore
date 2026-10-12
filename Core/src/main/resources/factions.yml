@@ -6,19 +6,31 @@
 #
 # Fuera de las facciones, la actitud frente a JUGADORES se define en cada mob
 # (campo 'attitude': hostile | neutral | defender).
+#
+# Cada faccion puede declarar ademas como se ven sus mobs de categoria 'server':
+#   color: color del NOMBRE (un nombre de color de Minecraft)
+#   glow:  color del BRILLO; ademas lo enciende
+# Los dos son opcionales. Los mobs de JUGADOR no los usan: esos llevan el color que
+# elija su dueno o su team con /custommobs color y /custommobs glow.
 
 orcos:
   allies: [goblins]
   enemies: [humanos, enanos]
+  # color: DARK_GREEN
+  # glow: GREEN
 
 goblins:
   allies: [orcos]
   enemies: [humanos, enanos]
+  # color: GREEN
 
 humanos:
   allies: [enanos]
   enemies: [orcos, goblins]
+  # color: BLUE
+  # glow: AQUA
 
 enanos:
   allies: [humanos]
   enemies: [orcos, goblins]
+  # color: GOLD
