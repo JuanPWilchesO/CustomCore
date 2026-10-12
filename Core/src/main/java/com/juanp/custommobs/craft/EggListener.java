@@ -79,14 +79,28 @@ public final class EggListener implements Listener {
         }
     }
 
-    /** {@code true} si en la rejilla hay algun objeto guardado del catalogo del plugin. */
+    /**
+     * {@code true} si en la rejilla hay algun objeto guardado del catalogo del plugin.
+     *
+     * <p>Se mira de dos formas: la marca que llevan dentro las copias nuevas, y la **etiqueta**
+     * para las copias repartidas antes de que existiera esa marca.
+     */
     private boolean hasCatalogIngredient(CraftItemEvent event) {
+        var catalog = this.plugin.drops().catalog();
+        java.util.Set<String> labels = null;
         for (ItemStack item : event.getInventory().getMatrix()) {
             if (item == null || item.getType().isAir() || !item.hasItemMeta()) {
                 continue;
             }
             if (item.getItemMeta().getPersistentDataContainer()
-                    .has(this.plugin.drops().catalog().nameKey(), PersistentDataType.STRING)) {
+                    .has(catalog.nameKey(), PersistentDataType.STRING)) {
+                return true;
+            }
+            if (labels == null) {
+                labels = catalog.labels();
+            }
+            if (item.getItemMeta().hasDisplayName()
+                    && labels.contains(item.getItemMeta().getDisplayName())) {
                 return true;
             }
         }

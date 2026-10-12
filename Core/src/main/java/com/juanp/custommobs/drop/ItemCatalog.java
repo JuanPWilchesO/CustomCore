@@ -121,6 +121,27 @@ public final class ItemCatalog {
         }
     }
 
+    /**
+     * Las etiquetas de los objetos guardados (su nombre visible).
+     *
+     * <p>Sirve para reconocer las copias que se repartieron **antes** de que los objetos
+     * llevaran la marca dentro: a esas solo se las distingue por el nombre.
+     */
+    public java.util.Set<String> labels() {
+        java.util.Set<String> labels = new java.util.LinkedHashSet<>();
+        File[] files = this.folder.listFiles((dir, name) -> name.endsWith(".yml"));
+        if (files == null) {
+            return labels;
+        }
+        for (File file : files) {
+            String label = YamlConfiguration.loadConfiguration(file).getString("etiqueta");
+            if (label != null && !label.isBlank()) {
+                labels.add(label);
+            }
+        }
+        return labels;
+    }
+
     /** Nombres guardados, ordenados. */
     public List<String> names() {
         File[] files = this.folder.listFiles((dir, name) -> name.endsWith(".yml"));
