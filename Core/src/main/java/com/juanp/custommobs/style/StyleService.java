@@ -61,6 +61,10 @@ public final class StyleService {
         String name = definition.displayName();
         if (style != null && style.name() != null) {
             name = style.name() + ChatColor.stripColor(name);
+        } else if (this.factionNameColor(definition) != null) {
+            // Mobs de servidor: el color lo pone el EQUIPO de la faccion, asi que el nombre va
+            // sin color — si llevara el suyo, taparia el del equipo.
+            name = ChatColor.stripColor(name);
         }
         entity.setCustomName(name);
         entity.setCustomNameVisible(true);
@@ -93,7 +97,18 @@ public final class StyleService {
         this.clearGlow(entity);
 
         if (style == null || style.glowColor() == null) {
-            // Mobs de servidor: si su faccion declara brillo, se enciende en ese color.
+            // Mobs de servidor: su faccion puede dar color al nombre y/o al brillo.
+            ChatColor factionGlow = this.factionGlowColor(definition);
+            if (factionGlow != null) {
+                this.glowTeam(factionGlow).ifPresent(team -> team.addEntry(this.entryOf(entity)));
+                entity.setGlowing(true);
+                return;
+            }
+            ChatColor factionName = this.factionNameColor(definition);
+            if (factionName != null) {
+                // Solo el nombre: el equipo le da el color sin encender el brillo.
+                this.glowTeam(factionName).ifPresent(team -> team.addEntry(this.entryOf(entity)));
+            }
             entity.setGlowing(definition.glow());
             return;
         }

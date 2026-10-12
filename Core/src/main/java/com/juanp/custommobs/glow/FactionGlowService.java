@@ -121,24 +121,11 @@ public final class FactionGlowService extends BukkitRunnable {
                                 : this.colorFor(viewer, this.service.factionOf(target)),
                         seen, !sneaking);
             }
-            // Mobs custom: por el ESTADO DE PVP con este espectador (enemigo, aliado, neutral),
-            // y ese color gana al que haya elegido su dueno o su team. El equipo va con el nombre
-            // del perfil cuando el mob va disfrazado de jugador: a los "jugadores" el cliente los
-            // casa por el nombre, no por el uuid — y ese era el impasse de LibsDisguises.
-            for (CustomMob customMob : this.service.active()) {
-                LivingEntity entity = customMob.entity();
-                if (!entity.isValid() || entity.isDead()) {
-                    continue;
-                }
-                if (!wants || !this.near(viewer, entity, radius)
-                        || !this.service.factionGlowActive(entity.getWorld())) {
-                    this.forget(viewer, entity, seen);
-                    continue;
-                }
-                this.paint(viewer, entity,
-                        this.colorFor(viewer, this.service.factionOf(customMob)),
-                        seen, entity.isGlowing());
-            }
+            // Los mobs NO se pintan aqui: los de jugador llevan el color de su dueno o su team
+            // (y por eso no deben ir disfrazados), y los de servidor el de su faccion, que sale
+            // de factions.yml. A los disfraces no llega este color: LibsDisguises pinta el nombre
+            // por su cuenta (armor stand o su propio equipo) y no hay forma de colorearlo por
+            // espectador sin pelearse con el.
         }
     }
 
@@ -258,17 +245,6 @@ public final class FactionGlowService extends BukkitRunnable {
         }
         List<EntityData<?>> data = new ArrayList<>();
         data.add(new EntityData<>(0, EntityDataTypes.BYTE, flags));
-        // En los mobs, el nombre va en el color del estado de PvP. Hace falta mandarlo aqui y no
-        // solo por el equipo, porque un nombre con color propio (el del yml, o el que eligio el
-        // dueno) no lo tapa el equipo. En un disfraz de jugador el cliente usa el nombre del
-        // perfil, asi que alli manda el equipo (y el perfil va sin color).
-        String custom = target.getCustomName();
-        if (!(target instanceof Player) && custom != null) {
-            Component name = nameColor == null
-                    ? LegacyComponentSerializer.legacySection().deserialize(custom)
-                    : Component.text(ChatColor.stripColor(custom)).color(nameColor);
-            data.add(new EntityData<>(2, EntityDataTypes.OPTIONAL_ADV_COMPONENT, Optional.of(name)));
-        }
         return new WrapperPlayServerEntityMetadata(target.getEntityId(), data);
     }
 
