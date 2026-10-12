@@ -368,7 +368,7 @@ public final class MobService implements Listener {
         }
         for (LivingEntity entity : doomed) {
             this.active.remove(entity.getUniqueId());
-            entity.remove();
+            this.removeCleaned(entity);
         }
         // Borra tambien los vinculos: los huevos que los llevaban quedan inertes.
         int forgotten = this.playerMobs.resetOwner(ownerId);
@@ -831,7 +831,7 @@ public final class MobService implements Listener {
             if (this.styles != null) {
                 this.styles.clear(entity);
             }
-            entity.remove();
+            this.removeCleaned(entity);
             return;
         }
         this.read(entity).ifPresent(customMob -> {
@@ -1129,7 +1129,7 @@ public final class MobService implements Listener {
                 this.styles.clear(customMob.entity());
             }
             this.active.remove(link.entityId());
-            customMob.entity().remove();
+            this.removeCleaned(customMob.entity());
         } else {
             // El vinculo decia "desplegado" pero la entidad no estaba en la lista de
             // activos. Antes se dejaba viva y quedaba un mob huerfano que su huevo ya no
@@ -1141,7 +1141,7 @@ public final class MobService implements Listener {
                 if (this.styles != null) {
                     this.styles.clear(living);
                 }
-                orphan.remove();
+                this.removeCleaned(orphan);
             }
         }
         this.playerMobs.store(linkId);
@@ -1162,7 +1162,25 @@ public final class MobService implements Listener {
             this.spawners.save();
         }
         this.active.remove(customMob.entity().getUniqueId());
-        customMob.entity().remove();
+        this.removeCleaned(customMob.entity());
+    }
+
+    /**
+     * Retira una entidad un tick despues de limpiarle el estilo.
+     *
+     * <p>Si el "el nombre ya no va" y el "borra la entidad" salen en el MISMO tick, el cliente a
+     * veces se queda con la placa colgando —sobre todo cuando el mob se retira de golpe, como al
+     * despedirlo o al guardarlo en su huevo—. Mandando el borrado un tick despues, el cliente ya
+     * ha procesado lo primero y no le queda nada que dibujar.
+     */
+    private void removeCleaned(Entity entity) {
+        if (entity == null) {
+            return;
+        }
+        if (this.styles != null && entity instanceof LivingEntity living) {
+            this.styles.clear(living);
+        }
+        this.plugin.getServer().getScheduler().runTask(this.plugin, entity::remove);
     }
 
     /** Si el mob pertenecia a un spawner, programa su reaparicion. */
