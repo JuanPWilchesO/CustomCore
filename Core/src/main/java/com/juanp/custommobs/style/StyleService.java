@@ -62,9 +62,9 @@ public final class StyleService {
         if (style != null && style.name() != null) {
             name = style.name() + ChatColor.stripColor(name);
         } else if (this.factionNameColor(definition) != null) {
-            // Mobs de servidor: el color lo pone el EQUIPO de la faccion, asi que el nombre va
-            // sin color — si llevara el suyo, taparia el del equipo.
-            name = ChatColor.stripColor(name);
+            // Mobs de servidor: su faccion les da el color. Va dentro del nombre (y no solo por
+            // el equipo) para que tambien lo respete un disfraz, que lo dibuja LibsDisguises.
+            name = this.factionNameColor(definition) + ChatColor.stripColor(name);
         }
         entity.setCustomName(name);
         entity.setCustomNameVisible(true);

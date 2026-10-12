@@ -127,15 +127,9 @@ public final class LibsDisguisesLink implements DisguiseLink {
             if (spec.showName()) {
                 // Si su faccion le da color al nombre (factions.yml), el nombre se deja SIN
                 // color: asi el color de la faccion se ve de verdad, tambien en el disfraz.
-                // Con el brillo de facciones activo, el nombre del perfil va SIN color: el
-                // equipo falso le da el color por espectador, y un nombre con color propio
-                // taparia el del equipo (en un "jugador" el cliente usa el nombre del perfil).
-                boolean repainted = definition.server() && definition.faction() != null
-                        && !"off".equalsIgnoreCase(
-                                this.plugin.getConfig().getString("faction-glow.mode", "off"));
-                disguise.setName(repainted
-                        ? org.bukkit.ChatColor.stripColor(definition.displayName())
-                        : definition.displayName());
+                // A un disfraz no llega el color por espectador (LibsDisguises dibuja el nombre
+                // por su cuenta), asi que el color de faccion se mete DENTRO del nombre.
+                disguise.setName(this.factionName(definition));
             }
             disguise.setNameVisible(spec.showName());
             // La skin se fija al final: setName no debe alterarla.
@@ -152,6 +146,21 @@ public final class LibsDisguisesLink implements DisguiseLink {
             this.warn("Tipo de disfraz desconocido '" + spec.type() + "' en " + definition.id() + ".");
             return null;
         }
+    }
+
+    /** El nombre que se le pone al disfraz: con el color de su faccion, si lo declara. */
+    private String factionName(MobDefinition definition) {
+        String name = definition.displayName();
+        if (!definition.server() || definition.faction() == null
+                || !(this.plugin instanceof com.juanp.custommobs.CustomMobsPlugin owner)) {
+            return name;
+        }
+        java.util.Optional<String> raw = owner.factions().nameColor(definition.faction());
+        if (raw.isEmpty()) {
+            return name;
+        }
+        org.bukkit.ChatColor color = com.juanp.custommobs.style.MobStyle.color(raw.get());
+        return color == null ? name : color + org.bukkit.ChatColor.stripColor(name);
     }
 
     private void warn(String message) {
