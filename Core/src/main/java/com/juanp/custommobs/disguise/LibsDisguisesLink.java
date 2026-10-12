@@ -122,10 +122,13 @@ public final class LibsDisguisesLink implements DisguiseLink {
             if (spec.showName()) {
                 // Si su faccion le da color al nombre (factions.yml), el nombre se deja SIN
                 // color: asi el color de la faccion se ve de verdad, tambien en el disfraz.
-                boolean factionColor = definition.server() && definition.faction() != null
-                        && this.plugin instanceof com.juanp.custommobs.CustomMobsPlugin owner
-                        && owner.factions().nameColor(definition.faction()).isPresent();
-                disguise.setName(factionColor
+                // Con el brillo de facciones activo, el nombre del perfil va SIN color: el
+                // equipo falso le da el color por espectador, y un nombre con color propio
+                // taparia el del equipo (en un "jugador" el cliente usa el nombre del perfil).
+                boolean repainted = definition.server() && definition.faction() != null
+                        && !"off".equalsIgnoreCase(
+                                this.plugin.getConfig().getString("faction-glow.mode", "off"));
+                disguise.setName(repainted
                         ? org.bukkit.ChatColor.stripColor(definition.displayName())
                         : definition.displayName());
             }

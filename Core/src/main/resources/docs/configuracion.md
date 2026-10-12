@@ -219,9 +219,13 @@ sola vez dura poco. La **placa** si aguanta sola, porque va dentro del equipo fa
 El que va **agachado** no muestra **ni placa ni brillo** hasta que se levante: se le mete en un
 equipo que oculta el nombre. Asi el agachado sirve para esconderse de verdad.
 
-Esto vale para los **jugadores**. Los **mobs** no se pintan por espectador, y cada uno tiene su
-sitio: los de **jugador** llevan el color que elija su dueno o su team (`/cm color`, `/cm glow`),
-y los de **servidor** el color que `factions.yml` le declare a su faccion (`color` y `glow`).
+Vale para los **jugadores** y tambien para los **mobs custom**: un mob de faccion enemiga sale
+**rojo**, uno aliado **verde** y uno sin relacion **gris**, para cada espectador. Ese color
+**gana** al que hayan elegido su dueno o su team con `/cm color` y `/cm glow`.
+
+Y funciona tambien con **mobs disfrazados** (LibsDisguises): a un mob pintado como jugador el
+cliente lo casa con su equipo por el **nombre del perfil** de la skin, no por su uuid, asi que el
+plugin usa ese nombre cuando hay disfraz de jugador.
 
 **Necesita PacketEvents.** Sin el, el brillo de facciones no funciona.
 
