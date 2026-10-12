@@ -139,5 +139,9 @@ receta:
 - Si un nombre no es ni objeto del catalogo ni material, o la rejilla no cuadra, la receta se
   **omite y avisa en el log** — no rompe el arranque.
 - Dos recetas con la misma forma e ingredientes **chocan**: la segunda se omite con aviso.
+- **Cuidado con las recetas vanilla**: un objeto del catalogo sigue siendo su material base (el
+  hierro fantasma es un lingote), asi que una receta tuya que solape **exactamente** una vanilla
+  —misma forma y mismo material— puede resolverse con la vanilla. Y entonces
+  [el crafteo se cancela](#). Anade un ingrediente o cambia la forma para que no choquen.
 - Los cambios no se aplican solos: hace falta **`/custommobs reload`** (o reiniciar).
 - `item list` marca los objetos que ya tienen receta: `[crafteable]`.
