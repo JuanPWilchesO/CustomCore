@@ -94,3 +94,45 @@ drops:
   - item: mi_espada
     chance: 0.3
 ```
+
+## Recetas de un objeto del catalogo
+
+Un objeto guardado puede traer su **propia receta**, en el mismo `items/<nombre>.yml`. Un
+ingrediente puede ser **otro objeto guardado** (por su nombre) o un **material** vanilla.
+
+### Con forma: el orden importa
+
+```yaml
+receta:
+  forma:            # la rejilla: hasta 3 filas de hasta 3 caracteres. El espacio es un hueco.
+    - "ABA"
+    - " C "
+    - " C "
+  ingredientes:     # letra -> objeto del catalogo (por su nombre) o material vanilla
+    A: espada_anduin
+    B: DIAMOND
+    C: mango_runico
+  cantidad: 1       # cuantos salen (1-8)
+```
+
+La misma pieza en otra casilla es **otra receta**: eso es lo que fija el orden.
+
+### Sin forma: da igual donde
+
+```yaml
+receta:
+  ingredientes: [espada_anduin, DIAMOND, DIAMOND]
+  cantidad: 2
+```
+
+### Reglas y avisos
+
+- El resultado **es el objeto de ese yml**, con su NBT y su faccion si la tiene.
+- Un ingrediente que sea **otro objeto del catalogo** se compara por su **NBT exacto**: no vale
+  cualquier cuchillo del mismo material. Por eso conviene repartir copias con
+  `/custommobs item give`.
+- Si un nombre no es ni objeto del catalogo ni material, o la rejilla no cuadra, la receta se
+  **omite y avisa en el log** — no rompe el arranque.
+- Dos recetas con la misma forma e ingredientes **chocan**: la segunda se omite con aviso.
+- Los cambios no se aplican solos: hace falta **`/custommobs reload`** (o reiniciar).
+- `item list` marca los objetos que ya tienen receta: `[crafteable]`.

@@ -909,14 +909,18 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
                 String name = args[2].toLowerCase(Locale.ROOT).trim().replace(' ', '_');
                 sender.sendMessage(TAG + " Item guardado como '" + name + "' en items/" + name + ".yml.");
                 sender.sendMessage(TAG + " Para que caiga, en el yml del mob: drops: - item: '" + name + "'");
+                sender.sendMessage(TAG + " Para craftearlo, anade 'receta:' a items/" + name
+                        + ".yml y /custommobs reload.");
             }
             case "list" -> {
                 var names = this.plugin.drops().catalog().names();
                 sender.sendMessage(TAG + " Items guardados (" + names.size() + "):");
                 for (String name : names) {
                     String faction = this.plugin.drops().catalog().factionOf(name).orElse(null);
+                    boolean craftable = this.plugin.drops().catalog().recipeOf(name).isPresent();
                     sender.sendMessage(" - " + name
-                            + (faction == null ? "" : " &7[faccion: " + faction + "]"));
+                            + (faction == null ? "" : " &7[faccion: " + faction + "]")
+                            + (craftable ? " &7[crafteable]" : ""));
                 }
             }
             case "give" -> {

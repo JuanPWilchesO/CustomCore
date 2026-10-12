@@ -1,6 +1,8 @@
 package com.juanp.custommobs.craft;
 
 import com.juanp.custommobs.CustomMobsPlugin;
+import com.juanp.custommobs.drop.ItemCatalog;
+import com.juanp.custommobs.item.ItemRecipe;
 import com.juanp.custommobs.item.RecipeSpec;
 import com.juanp.custommobs.mob.MobDefinition;
 import com.juanp.custommobs.mob.MobKeys;
@@ -11,13 +13,16 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.RecipeChoice;
+import org.bukkit.inventory.ShapedRecipe;
 import org.bukkit.inventory.ShapelessRecipe;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -48,6 +53,125 @@ public final class CraftService {
         for (MobDefinition definition : this.registry.all()) {
             this.register(definition);
         }
+        this.registerItemRecipes();
+    }
+
+    /**
+     * Registra las recetas de los objetos del catalogo que traigan una en su yml.
+     *
+     * <p>Un ingrediente puede ser <b>otro objeto guardado</b> (se compara con su NBT, no
+     * solo por material) o un <b>material</b> vanilla. Las recetas con {@code forma} fijan
+     * el orden.
+     */
+    public void registerItemRecipes() {
+        ItemCatalog catalog = this.plugin.drops().catalog();
+        for (String name : catalog.names()) {
+            ItemRecipe spec = catalog.recipeOf(name).orElse(null);
+            if (spec == null) {
+                continue;
+            }
+            ItemStack result = catalog.get(name).orElse(null);
+            if (result == null) {
+                continue;
+            }
+            result.setAmount(spec.amount());
+            NamespacedKey key = new NamespacedKey(this.plugin, "item_" + name);
+            String trouble = spec.shaped()
+                    ? this.registerShaped(key, result, spec)
+                    : this.registerItemShapeless(key, result, spec.loose());
+            if (trouble != null) {
+                this.plugin.getLogger().warning("Receta de '" + name + "' omitida: " + trouble);
+            }
+        }
+    }
+
+    /** Registra una receta con forma (el orden importa). Devuelve el motivo del fallo, o {@code null}. */
+    private String registerShaped(NamespacedKey key, ItemStack result, ItemRecipe spec) {
+        List<String> shape = spec.shape();
+        if (shape.size() > 3) {
+            return "la forma pasa de 3 filas";
+        }
+        int width = shape.get(0).length();
+        if (width > 3) {
+            return "la forma pasa de 3 columnas";
+        }
+        for (String row : shape) {
+            if (row.length() != width) {
+                return "las filas de la forma no miden lo mismo";
+            }
+        }
+        Map<Character, RecipeChoice> choices = new LinkedHashMap<>();
+        for (Map.Entry<Character, String> slot : spec.slots().entrySet()) {
+            RecipeChoice choice = this.choiceFor(slot.getValue());
+            if (choice == null) {
+                return "'" + slot.getValue() + "' no es un objeto del catalogo ni un material";
+            }
+            choices.put(slot.getKey(), choice);
+        }
+        for (String row : shape) {
+            for (char letter : row.toCharArray()) {
+                if (letter != ' ' && !choices.containsKey(letter)) {
+                    return "la letra '" + letter + "' no esta en 'ingredientes'";
+                }
+            }
+        }
+        java.util.TreeSet<String> parts = new java.util.TreeSet<>();
+        spec.slots().forEach((letter, token) -> parts.add(letter + "=" + token));
+        String signature = "shaped::" + String.join("|", shape) + "::" + String.join(",", parts);
+        if (!this.ingredientPairs.add(signature)) {
+            return "choca con otra receta identica";
+        }
+        ShapedRecipe recipe = new ShapedRecipe(key, result);
+        recipe.shape(shape.toArray(new String[0]));
+        choices.forEach(recipe::setIngredient);
+        try {
+            Bukkit.addRecipe(recipe);
+            this.recipeKeys.add(key.toString());
+            return null;
+        } catch (Throwable throwable) {
+            this.ingredientPairs.remove(signature);
+            return String.valueOf(throwable.getMessage());
+        }
+    }
+
+    /** Registra una receta sin forma de un objeto del catalogo. Devuelve el motivo del fallo, o {@code null}. */
+    private String registerItemShapeless(NamespacedKey key, ItemStack result, List<String> ingredients) {
+        List<RecipeChoice> choices = new ArrayList<>(ingredients.size());
+        for (String token : ingredients) {
+            RecipeChoice choice = this.choiceFor(token);
+            if (choice == null) {
+                return "'" + token + "' no es un objeto del catalogo ni un material";
+            }
+            choices.add(choice);
+        }
+        String signature = "shapeless-item::" + String.join("+", new java.util.TreeSet<>(ingredients));
+        if (!this.ingredientPairs.add(signature)) {
+            return "choca con otra receta identica";
+        }
+        ShapelessRecipe recipe = new ShapelessRecipe(key, result);
+        choices.forEach(recipe::addIngredient);
+        try {
+            Bukkit.addRecipe(recipe);
+            this.recipeKeys.add(key.toString());
+            return null;
+        } catch (Throwable throwable) {
+            this.ingredientPairs.remove(signature);
+            return String.valueOf(throwable.getMessage());
+        }
+    }
+
+    /** Objeto del catalogo por su nombre, o material vanilla; {@code null} si no es ninguno. */
+    private RecipeChoice choiceFor(String token) {
+        if (token == null || token.isBlank()) {
+            return null;
+        }
+        ItemStack stored = this.plugin.drops().catalog().get(token).orElse(null);
+        if (stored != null) {
+            stored.setAmount(1);
+            return new RecipeChoice.ExactChoice(stored);
+        }
+        Material material = Material.matchMaterial(token);
+        return material == null ? null : new RecipeChoice.MaterialChoice(material);
     }
 
     public void unregisterAll() {
@@ -140,7 +264,8 @@ public final class CraftService {
         }
         var data = result.getItemMeta().getPersistentDataContainer();
         return data.has(this.keys.definition(), PersistentDataType.STRING)
-                || data.has(this.keys.upgrade(), PersistentDataType.STRING);
+                || data.has(this.keys.upgrade(), PersistentDataType.STRING)
+                || data.has(this.plugin.drops().catalog().nameKey(), PersistentDataType.STRING);
     }
 
     /** Firma de una lista de ingredientes, sin importar el orden. */

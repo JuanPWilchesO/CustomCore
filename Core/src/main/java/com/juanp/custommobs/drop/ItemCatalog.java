@@ -32,11 +32,13 @@ public final class ItemCatalog {
     private final CustomMobsPlugin plugin;
     private final File folder;
     private final NamespacedKey factionKey;
+    private final NamespacedKey nameKey;
 
     public ItemCatalog(CustomMobsPlugin plugin) {
         this.plugin = plugin;
         this.folder = new File(plugin.getDataFolder(), "items");
         this.factionKey = new NamespacedKey(plugin, "item_faccion");
+        this.nameKey = new NamespacedKey(plugin, "item_catalogo");
     }
 
     /**
@@ -57,9 +59,15 @@ public final class ItemCatalog {
         // catalogo, no del NBT del objeto en la mano.
         File file = this.fileOf(name);
         if (file.exists()) {
-            String previous = factionOf(YamlConfiguration.loadConfiguration(file));
+            YamlConfiguration previousYaml = YamlConfiguration.loadConfiguration(file);
+            String previous = factionOf(previousYaml);
             if (previous != null) {
                 yaml.set("faccion", previous);
+            }
+            // La receta tambien es del catalogo: re-guardar el objeto no debe borrarla.
+            Object previousRecipe = previousYaml.get("receta");
+            if (previousRecipe != null) {
+                yaml.set("receta", previousRecipe);
             }
         }
         try {
@@ -92,16 +100,19 @@ public final class ItemCatalog {
         }
         try {
             ItemStack item = ItemStack.deserializeBytes(Base64.getDecoder().decode(data));
-            // La exclusividad de faccion viaja DENTRO del objeto: una vez suelto o
-            // entregado, el yml ya no esta a mano, asi que la marca tiene que ir con el.
-            String faction = factionOf(yaml);
-            if (faction != null) {
-                ItemMeta meta = item.getItemMeta();
-                if (meta != null) {
+            // Dos marcas viajan DENTRO del objeto: de que catalogo salio, y a que faccion
+            // esta reservado. Una vez suelto o entregado, el yml ya no esta a mano, asi
+            // que las marcas tienen que ir con el.
+            ItemMeta meta = item.getItemMeta();
+            if (meta != null) {
+                meta.getPersistentDataContainer().set(this.nameKey,
+                        PersistentDataType.STRING, name);
+                String faction = factionOf(yaml);
+                if (faction != null) {
                     meta.getPersistentDataContainer().set(this.factionKey,
                             PersistentDataType.STRING, faction);
-                    item.setItemMeta(meta);
                 }
+                item.setItemMeta(meta);
             }
             return Optional.of(item);
         } catch (Throwable ex) {
@@ -165,6 +176,57 @@ public final class ItemCatalog {
     /** Clave con la que se marca, dentro del objeto, su faccion. */
     public NamespacedKey factionKey() {
         return this.factionKey;
+    }
+
+    /** Clave con la que se marca, dentro del objeto, de que catalogo salio. */
+    public NamespacedKey nameKey() {
+        return this.nameKey;
+    }
+
+    /**
+     * Receta del objeto, si su yml trae una.
+     *
+     * @see com.juanp.custommobs.item.ItemRecipe
+     */
+    public Optional<com.juanp.custommobs.item.ItemRecipe> recipeOf(String rawName) {
+        String name = clean(rawName);
+        if (name == null) {
+            return Optional.empty();
+        }
+        File file = this.fileOf(name);
+        if (!file.exists()) {
+            return Optional.empty();
+        }
+        return recipeOf(YamlConfiguration.loadConfiguration(file));
+    }
+
+    private static Optional<com.juanp.custommobs.item.ItemRecipe> recipeOf(YamlConfiguration yaml) {
+        var section = yaml.getConfigurationSection("receta");
+        if (section == null) {
+            return Optional.empty();
+        }
+        int amount = Math.max(1, Math.min(8, section.getInt("cantidad", 1)));
+        java.util.List<String> shape = section.getStringList("forma");
+        if (!shape.isEmpty()) {
+            var ingredients = section.getConfigurationSection("ingredientes");
+            if (ingredients == null) {
+                return Optional.empty();
+            }
+            java.util.Map<Character, String> slots = new java.util.LinkedHashMap<>();
+            for (String letter : ingredients.getKeys(false)) {
+                if (letter.isEmpty()) {
+                    continue;
+                }
+                slots.put(letter.charAt(0), ingredients.getString(letter));
+            }
+            return slots.isEmpty() ? Optional.empty()
+                    : Optional.of(new com.juanp.custommobs.item.ItemRecipe(amount,
+                            java.util.List.copyOf(shape), java.util.Map.copyOf(slots), java.util.List.of()));
+        }
+        java.util.List<String> loose = section.getStringList("ingredientes");
+        return loose.isEmpty() ? Optional.empty()
+                : Optional.of(new com.juanp.custommobs.item.ItemRecipe(amount,
+                        java.util.List.of(), java.util.Map.of(), java.util.List.copyOf(loose)));
     }
 
     private static String factionOf(YamlConfiguration yaml) {
