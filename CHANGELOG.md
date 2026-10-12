@@ -4,6 +4,9 @@
 
 - **Autocompletado de `despedir`**: al escribir `/cm despedir ` ya se ofrecen `todos` y los ids
   de **tus** mobs (los desplegados y los que guardas en huevos). Antes habia que saberse el id.
+- **Craftear tambien respeta la faccion**: un objeto reservado solo lo craftea quien es de esa
+  faccion. La receta puede salir en el libro de recetas de cualquiera —eso no se puede esconder
+  por jugador—, pero el crafteo no se completa.
 - **Brillo por faccion, con refresco**: `faction-glow.refresh-seconds` (5 por defecto; `0` = en
   cada pasada). Antes el brillo se mandaba una sola vez y el cliente lo soltaba al moverse o al
   reaparecer —por eso desaparecia y la placa se quedaba—. Ahora se repite.

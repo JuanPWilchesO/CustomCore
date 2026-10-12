@@ -57,7 +57,7 @@ equipamiento. **Un mismo objeto sirve para varios mobs.**
 ```
 
 Un objeto reservado solo lo puede **recoger del suelo**, **sacar de un cofre**, **mover en su
-inventario**, **equipar** o **usar** un jugador de esa faccion. La marca viaja **dentro del objeto** (su NBT), asi que sigue puesta si lo sueltan, lo
+inventario**, **equipar**, **usar** o **craftear** un jugador de esa faccion. La marca viaja **dentro del objeto** (su NBT), asi que sigue puesta si lo sueltan, lo
 guardan en un cofre o lo reparte otro plugin — por eso no basta con la clave en el yml: hay
 que ponersela con el comando (o escribirla a mano antes de usarlo). El que no sea de la
 faccion, al intentarlo, recibe el aviso y no pasa nada mas.
@@ -127,7 +127,8 @@ receta:
 
 ### Reglas y avisos
 
-- El resultado **es el objeto de ese yml**, con su NBT y su faccion si la tiene.
+- El resultado **es el objeto de ese yml**, con su NBT y su faccion si la tiene. Si el objeto
+  esta **reservado a una faccion**, solo lo pueden craftear los jugadores de esa faccion.
 - Un ingrediente que sea **otro objeto del catalogo** se compara por su **NBT exacto**: no vale
   cualquier cuchillo del mismo material. Por eso conviene repartir copias con
   `/custommobs item give`.

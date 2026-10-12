@@ -8,6 +8,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityPickupItemEvent;
+import org.bukkit.event.inventory.CraftItemEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -80,6 +81,26 @@ public final class ItemFactionLock implements Listener {
         this.lastNotice.put(player.getUniqueId(), now);
         player.sendMessage(Texts.color("&cEse objeto es de la faccion &f" + faction
                 + "&c: no es la tuya."));
+    }
+
+    /**
+     * Un objeto reservado solo lo <b>craftea</b> quien es de esa faccion.
+     *
+     * <p>La receta puede salir en el libro de recetas de cualquiera —eso no se puede
+     * esconder por jugador—, pero el crafteo no se completa.
+     */
+    @EventHandler(ignoreCancelled = true)
+    public void onCraft(CraftItemEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)
+                || !this.service.itemLockActive(player.getWorld())) {
+            return;
+        }
+        String faction = this.factionOf(event.getCurrentItem());
+        if (faction == null || this.mayUse(player, faction)) {
+            return;
+        }
+        event.setCancelled(true);
+        this.deny(player, faction);
     }
 
     /** Lo suelta en el suelo: el objeto no es suyo, asi que no le ocupa el inventario. */
