@@ -38,6 +38,8 @@ public final class FactionGlowService extends BukkitRunnable {
     private static final String ENEMY_TEAM = "cmglow_enemy";
     private static final String ALLY_TEAM = "cmglow_ally";
     private static final String NEUTRAL_TEAM = "cmglow_neutral";
+    /** Equipo sin color y con la placa oculta: el que va agachado. */
+    private static final String HIDDEN_TEAM = "cmglow_hidden";
     /** El bit de "resplandece" dentro de los flags compartidos de la entidad. */
     private static final byte GLOW_FLAG = 0x40;
 
@@ -50,6 +52,8 @@ public final class FactionGlowService extends BukkitRunnable {
     private final Map<UUID, Set<String>> created = new ConcurrentHashMap<>();
     /** Quienes se han apartado del brillo por su cuenta. */
     private final Set<UUID> optedOut = ConcurrentHashMap.newKeySet();
+    /** Cuando se le mando el brillo a cada pareja (espectador -&gt; visto), en millis. */
+    private final Map<UUID, Map<UUID, Long>> glowAt = new ConcurrentHashMap<>();
 
     public FactionGlowService(CustomMobsPlugin plugin, MobService service) {
         this.plugin = plugin;
@@ -107,40 +111,72 @@ public final class FactionGlowService extends BukkitRunnable {
                     this.forget(viewer, target, seen);
                     continue;
                 }
-                this.paint(viewer, target, this.colorFor(viewer, target, enemy, ally, neutral), seen);
+                // Agachado, ni placa ni brillo: se le mete en un equipo que oculta el nombre.
+                boolean sneaking = target.isSneaking();
+                this.paint(viewer, target,
+                        sneaking ? HIDDEN_TEAM : this.colorFor(viewer, target, enemy, ally, neutral),
+                        seen, !sneaking);
             }
         }
     }
 
     // ------------------------------------------------------------------ pintar
 
-    private void paint(Player viewer, Player target, String team, Map<UUID, String> seen) {
-        if (team.equals(seen.get(target.getUniqueId()))) {
+    /**
+     * Pinta (o deja de pintar) a un jugador para un espectador.
+     *
+     * <p>El brillo se <b>refresca</b> cada {@code faction-glow.refresh-seconds}: el cliente
+     * lo pierde en cuanto el servidor le manda los datos de verdad de la entidad —al moverse,
+     * al reaparecer, al cambiar de mundo—, asi que mandarlo una sola vez dura poco. La placa
+     * si aguanta, porque va en el equipo falso.
+     *
+     * @param glowing {@code false} para el que va agachado: ni placa ni brillo
+     */
+    private void paint(Player viewer, Player target, String team, Map<UUID, String> seen,
+                       boolean glowing) {
+        UUID targetId = target.getUniqueId();
+        String previous = seen.get(targetId);
+        String entry = target.getName();
+        Map<UUID, Long> sent = this.glowAt.computeIfAbsent(viewer.getUniqueId(),
+                id -> new ConcurrentHashMap<>());
+        boolean changed = !team.equals(previous);
+        if (changed) {
+            if (previous != null) {
+                this.send(viewer, new WrapperPlayServerTeams(previous,
+                        WrapperPlayServerTeams.TeamMode.REMOVE_ENTITIES, Optional.empty(), entry));
+            }
+            Set<String> known = this.created.computeIfAbsent(viewer.getUniqueId(),
+                    id -> ConcurrentHashMap.newKeySet());
+            if (known.add(team)) {
+                boolean hidden = HIDDEN_TEAM.equals(team);
+                WrapperPlayServerTeams.ScoreBoardTeamInfo info =
+                        new WrapperPlayServerTeams.ScoreBoardTeamInfo(Component.text(team),
+                                Component.empty(), Component.empty(),
+                                hidden ? WrapperPlayServerTeams.NameTagVisibility.NEVER
+                                        : WrapperPlayServerTeams.NameTagVisibility.ALWAYS,
+                                WrapperPlayServerTeams.CollisionRule.ALWAYS, this.colorOf(team),
+                                WrapperPlayServerTeams.OptionData.NONE);
+                this.send(viewer, new WrapperPlayServerTeams(team,
+                        WrapperPlayServerTeams.TeamMode.CREATE, info, entry));
+            } else {
+                this.send(viewer, new WrapperPlayServerTeams(team,
+                        WrapperPlayServerTeams.TeamMode.ADD_ENTITIES, Optional.empty(), entry));
+            }
+            seen.put(targetId, team);
+            sent.remove(targetId);
+        }
+        if (!glowing) {
+            if (changed || sent.remove(targetId) != null) {
+                this.send(viewer, this.glow(target, false));
+            }
             return;
         }
-        String previous = seen.get(target.getUniqueId());
-        String entry = target.getName();
-        if (previous != null) {
-            this.send(viewer, new WrapperPlayServerTeams(previous,
-                    WrapperPlayServerTeams.TeamMode.REMOVE_ENTITIES, Optional.empty(), entry));
+        long now = System.currentTimeMillis();
+        Long last = sent.get(targetId);
+        if (last == null || now - last >= this.refreshMillis()) {
+            this.send(viewer, this.glow(target, true));
+            sent.put(targetId, now);
         }
-        Set<String> known = this.created.computeIfAbsent(viewer.getUniqueId(),
-                id -> ConcurrentHashMap.newKeySet());
-        if (known.add(team)) {
-            WrapperPlayServerTeams.ScoreBoardTeamInfo info =
-                    new WrapperPlayServerTeams.ScoreBoardTeamInfo(Component.text(team),
-                            Component.empty(), Component.empty(),
-                            WrapperPlayServerTeams.NameTagVisibility.ALWAYS,
-                            WrapperPlayServerTeams.CollisionRule.ALWAYS, this.colorOf(team),
-                            WrapperPlayServerTeams.OptionData.NONE);
-            this.send(viewer, new WrapperPlayServerTeams(team,
-                    WrapperPlayServerTeams.TeamMode.CREATE, info, entry));
-        } else {
-            this.send(viewer, new WrapperPlayServerTeams(team,
-                    WrapperPlayServerTeams.TeamMode.ADD_ENTITIES, Optional.empty(), entry));
-        }
-        this.send(viewer, this.glow(target, true));
-        seen.put(target.getUniqueId(), team);
     }
 
     /** Deja de pintar a ese jugador para ese espectador, y le quita el brillo. */
@@ -148,6 +184,10 @@ public final class FactionGlowService extends BukkitRunnable {
         String team = seen.remove(target.getUniqueId());
         if (team == null) {
             return;
+        }
+        Map<UUID, Long> sent = this.glowAt.get(viewer.getUniqueId());
+        if (sent != null) {
+            sent.remove(target.getUniqueId());
         }
         this.send(viewer, new WrapperPlayServerTeams(team,
                 WrapperPlayServerTeams.TeamMode.REMOVE_ENTITIES, Optional.empty(),
@@ -197,12 +237,21 @@ public final class FactionGlowService extends BukkitRunnable {
         return this.service.plugin().factions().isEnemy(mine, theirs) ? ENEMY_TEAM : NEUTRAL_TEAM;
     }
 
+    /** Cada cuanto se re-manda el brillo, en milisegundos ({@code 0} = en cada pasada). */
+    private long refreshMillis() {
+        return Math.max(0L, this.plugin.getConfig().getLong("faction-glow.refresh-seconds", 5L))
+                * 1000L;
+    }
+
     private NamedTextColor colorOf(String team) {
         if (ENEMY_TEAM.equals(team)) {
             return this.color("faction-glow.enemy", NamedTextColor.RED);
         }
         if (ALLY_TEAM.equals(team)) {
             return this.color("faction-glow.ally", NamedTextColor.GREEN);
+        }
+        if (HIDDEN_TEAM.equals(team)) {
+            return NamedTextColor.WHITE;
         }
         return this.color("faction-glow.neutral", NamedTextColor.GRAY);
     }

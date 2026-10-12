@@ -1023,7 +1023,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
             List<String> options = admin
                     ? List.of("reload", "list", "give", "spawn", "remove", "active", "kill",
                             "enchants", "cuota", "item", "color", "glow", "spawner", "book", "upgrade",
-                            "despedir")
+                            "despedir", "faction")
                     : List.of("cuota", "color", "glow", "despedir");
             for (String option : options) {
                 if (option.startsWith(args[0].toLowerCase(Locale.ROOT))) {
@@ -1090,6 +1090,32 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
             for (var spec : this.plugin.upgrades().all()) {
                 if (spec.id().startsWith(args[2].toLowerCase(Locale.ROOT))) {
                     out.add(spec.id());
+                }
+            }
+            return out;
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("faction")) {
+            for (String option : List.of("set", "get", "clear", "list")) {
+                if (option.startsWith(args[1].toLowerCase(Locale.ROOT))) {
+                    out.add(option);
+                }
+            }
+            return out;
+        }
+        if (args.length == 3 && args[0].equalsIgnoreCase("faction")
+                && (args[1].equalsIgnoreCase("set") || args[1].equalsIgnoreCase("get")
+                || args[1].equalsIgnoreCase("clear"))) {
+            for (Player online : Bukkit.getOnlinePlayers()) {
+                if (online.getName().toLowerCase(Locale.ROOT).startsWith(args[2].toLowerCase(Locale.ROOT))) {
+                    out.add(online.getName());
+                }
+            }
+            return out;
+        }
+        if (args.length == 4 && args[0].equalsIgnoreCase("faction") && args[1].equalsIgnoreCase("set")) {
+            for (String faction : this.plugin.factions().known()) {
+                if (faction.startsWith(args[3].toLowerCase(Locale.ROOT))) {
+                    out.add(faction);
                 }
             }
             return out;

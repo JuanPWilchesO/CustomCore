@@ -157,6 +157,10 @@ faction-glow:
   mode: off
   # Radio en bloques dentro del cual se pinta. 0 = sin limite.
   radius: 48.0
+  # Cada cuantos segundos se re-manda el brillo. El cliente lo pierde en cuanto el servidor le
+  # manda los datos de verdad de la entidad (al moverse, al reaparecer...), asi que hay que
+  # repetirlo. 0 = en cada pasada (cada segundo). La placa no lo necesita: va en el equipo falso.
+  refresh-seconds: 5
   # Colores por relacion (los nombres de color de Minecraft).
   enemy: RED
   ally: GREEN

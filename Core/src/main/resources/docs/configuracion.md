@@ -211,6 +211,14 @@ de una vez no serviria, porque la relacion es distinta para cada espectador. Por
 manda a cada jugador un **equipo falso** (con PacketEvents) y **no se toca el scoreboard de
 verdad** — asi no se rompe Teams ni ningun otro plugin.
 
+El **brillo se re-manda** cada `faction-glow.refresh-seconds` (por defecto 5, y `0` = en cada
+pasada). No es capricho: el cliente suelta el brillo en cuanto el servidor le manda los datos
+de verdad de la entidad —al moverse, al reaparecer, al cambiar de mundo—, asi que mandarlo una
+sola vez dura poco. La **placa** si aguanta sola, porque va dentro del equipo falso.
+
+El que va **agachado** no muestra **ni placa ni brillo** hasta que se levante: se le mete en un
+equipo que oculta el nombre. Asi el agachado sirve para esconderse de verdad.
+
 **Necesita PacketEvents.** Sin el, el brillo de facciones no funciona.
 
 ## Coherencia con Teams (`teams`)

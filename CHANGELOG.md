@@ -4,6 +4,12 @@
 
 - **Autocompletado de `despedir`**: al escribir `/cm despedir ` ya se ofrecen `todos` y los ids
   de **tus** mobs (los desplegados y los que guardas en huevos). Antes habia que saberse el id.
+- **Brillo por faccion, con refresco**: `faction-glow.refresh-seconds` (5 por defecto; `0` = en
+  cada pasada). Antes el brillo se mandaba una sola vez y el cliente lo soltaba al moverse o al
+  reaparecer —por eso desaparecia y la placa se quedaba—. Ahora se repite.
+- **El que va agachado no muestra ni placa ni brillo**: se le oculta hasta que se levante.
+- **Autocompletado de `faction`**: faltaba en la lista de administracion. Ademas completa sus
+  subcomandos (`set`, `get`, `clear`, `list`), los jugadores conectados y los nombres de faccion.
 - **`despedir`, ahora por mob**: con varios iguales, el tabulador ofrece cada uno con una marca
   corta (`mercenario_basico#a1b2c3d4`) y `despedir <id>#<marca>` retira **solo ese**. El id suelto
   deja de llevarse todos: si hay varios, lo dice y pide elegir. Antes se manejaba por definicion y
