@@ -79,6 +79,23 @@ public final class LibsDisguisesLink implements DisguiseLink {
     }
 
     @Override
+    public String scoreboardEntry(LivingEntity entity) {
+        try {
+            Disguise disguise = DisguiseAPI.getDisguise(entity);
+            if (disguise instanceof PlayerDisguise playerDisguise) {
+                String name = playerDisguise.getName();
+                if (name != null && !name.isBlank()) {
+                    // El cliente casa al "jugador" por el nombre del perfil: sin color.
+                    return org.bukkit.ChatColor.stripColor(name);
+                }
+            }
+        } catch (Throwable ignored) {
+            // Sin disfraz o sin API: se usa el camino normal (el uuid de la entidad).
+        }
+        return null;
+    }
+
+    @Override
     public boolean isDisguised(LivingEntity entity) {
         try {
             return DisguiseAPI.isDisguised(entity);
@@ -103,7 +120,14 @@ public final class LibsDisguisesLink implements DisguiseLink {
             // Un disfraz de jugador usa el nombre de la skin en el cartel; sin esto
             // taparia el display-name del mob.
             if (spec.showName()) {
-                disguise.setName(definition.displayName());
+                // Si su faccion le da color al nombre (factions.yml), el nombre se deja SIN
+                // color: asi el color de la faccion se ve de verdad, tambien en el disfraz.
+                boolean factionColor = definition.server() && definition.faction() != null
+                        && this.plugin instanceof com.juanp.custommobs.CustomMobsPlugin owner
+                        && owner.factions().nameColor(definition.faction()).isPresent();
+                disguise.setName(factionColor
+                        ? org.bukkit.ChatColor.stripColor(definition.displayName())
+                        : definition.displayName());
             }
             disguise.setNameVisible(spec.showName());
             // La skin se fija al final: setName no debe alterarla.

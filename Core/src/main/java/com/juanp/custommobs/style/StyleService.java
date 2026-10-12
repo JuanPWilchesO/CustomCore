@@ -61,11 +61,10 @@ public final class StyleService {
         String name = definition.displayName();
         if (style != null && style.name() != null) {
             name = style.name() + ChatColor.stripColor(name);
-        } else {
-            ChatColor faction = this.factionNameColor(definition);
-            if (faction != null) {
-                name = faction + ChatColor.stripColor(name);
-            }
+        } else if (this.factionNameColor(definition) != null) {
+            // El color lo pone el EQUIPO de la faccion, asi que el nombre va sin color: si
+            // llevara el suyo, taparia el del equipo (y en un disfraz de jugador, tambien).
+            name = ChatColor.stripColor(name);
         }
         entity.setCustomName(name);
         entity.setCustomNameVisible(true);
@@ -101,9 +100,14 @@ public final class StyleService {
             // Mobs de servidor: si su faccion declara brillo, se enciende en ese color.
             ChatColor factionGlow = this.factionGlowColor(definition);
             if (factionGlow != null) {
-                this.glowTeam(factionGlow).ifPresent(team -> team.addEntry(entity.getScoreboardEntryName()));
+                this.glowTeam(factionGlow).ifPresent(team -> team.addEntry(this.entryOf(entity)));
                 entity.setGlowing(true);
                 return;
+            }
+            ChatColor factionName = this.factionNameColor(definition);
+            if (factionName != null) {
+                // Solo el nombre: el equipo le da el color sin encender el brillo.
+                this.glowTeam(factionName).ifPresent(team -> team.addEntry(this.entryOf(entity)));
             }
             entity.setGlowing(definition.glow());
             return;
@@ -155,8 +159,17 @@ public final class StyleService {
         return this.registry.playerStyle(ownerId);
     }
 
+    /**
+     * Nombre con el que el cliente conoce a la entidad en el scoreboard: para una entidad
+     * normal es su uuid; para un mob disfrazado de jugador, el nombre del perfil del disfraz.
+     */
+    private String entryOf(LivingEntity entity) {
+        String disguised = this.service.disguiseLink().scoreboardEntry(entity);
+        return disguised != null ? disguised : entity.getScoreboardEntryName();
+    }
+
     private void clearGlow(LivingEntity entity) {
-        String entry = entity.getScoreboardEntryName();
+        String entry = this.entryOf(entity);
         for (Team team : new ArrayList<>(this.scoreboard().getTeams())) {
             if (team.getName().startsWith(TEAM_PREFIX)) {
                 team.removeEntry(entry);

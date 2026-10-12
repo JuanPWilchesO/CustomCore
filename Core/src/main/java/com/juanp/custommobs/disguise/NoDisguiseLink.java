@@ -27,6 +27,11 @@ public final class NoDisguiseLink implements DisguiseLink {
     }
 
     @Override
+    public String scoreboardEntry(LivingEntity entity) {
+        return null;
+    }
+
+    @Override
     public boolean isDisguised(LivingEntity entity) {
         return false;
     }
