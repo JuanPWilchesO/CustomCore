@@ -914,8 +914,30 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
                 var names = this.plugin.drops().catalog().names();
                 sender.sendMessage(TAG + " Items guardados (" + names.size() + "):");
                 for (String name : names) {
-                    sender.sendMessage(" - " + name);
+                    String faction = this.plugin.drops().catalog().factionOf(name).orElse(null);
+                    sender.sendMessage(" - " + name
+                            + (faction == null ? "" : " &7[faccion: " + faction + "]"));
                 }
+            }
+            case "give" -> {
+                if (args.length < 3) {
+                    sender.sendMessage(TAG + " Uso: /custommobs item give <nombre> [jugador]");
+                    return;
+                }
+                Player target = this.targetPlayer(sender, args, 3);
+                if (target == null) {
+                    return;
+                }
+                // Sale del catalogo, asi que es una copia NUEVA: lleva la marca de faccion
+                // si el objeto esta reservado. Es la via para repartir objetos bloqueados.
+                var stored = this.plugin.drops().catalog().get(args[2]);
+                if (stored.isEmpty()) {
+                    sender.sendMessage(TAG + " No existe ese item: " + args[2].toLowerCase(Locale.ROOT));
+                    return;
+                }
+                this.deliver(target, stored.get());
+                sender.sendMessage(TAG + " Entregado '" + args[2].toLowerCase(Locale.ROOT)
+                        + "' a " + target.getName() + ".");
             }
             case "remove" -> {
                 if (args.length < 3 || !this.plugin.drops().catalog().remove(args[2])) {
@@ -944,6 +966,12 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(TAG + (faction == null
                         ? " Item '" + itemName + "' liberado: cualquiera puede usarlo."
                         : " Item '" + itemName + "' reservado a la faccion '" + faction + "'."));
+                if (faction != null) {
+                    // La marca solo la llevan las copias que salen del catalogo: las que ya
+                    // estan repartidas por el mundo no cambian.
+                    sender.sendMessage(TAG + " Las copias ya repartidas no cambian. Reparte copias"
+                            + " marcadas con /custommobs item give " + itemName + " [jugador].");
+                }
             }
             default -> sender.sendMessage(usage);
         }
@@ -1063,7 +1091,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
             return out;
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("item")) {
-            for (String option : List.of("save", "list", "remove", "faccion")) {
+            for (String option : List.of("save", "list", "remove", "faccion", "give")) {
                 if (option.startsWith(args[1].toLowerCase(Locale.ROOT))) {
                     out.add(option);
                 }

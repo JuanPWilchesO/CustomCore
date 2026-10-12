@@ -53,12 +53,21 @@ public final class ItemCatalog {
         yaml.set("nombre", name);
         yaml.set("item", Base64.getEncoder().encodeToString(item.serializeAsBytes()));
         yaml.set("etiqueta", labelOf(item));
+        // Volver a guardar un objeto no debe soltarlo de su faccion: la reserva es del
+        // catalogo, no del NBT del objeto en la mano.
+        File file = this.fileOf(name);
+        if (file.exists()) {
+            String previous = factionOf(YamlConfiguration.loadConfiguration(file));
+            if (previous != null) {
+                yaml.set("faccion", previous);
+            }
+        }
         try {
             if (!this.folder.exists() && !this.folder.mkdirs()) {
                 this.plugin.getLogger().warning("No se pudo crear la carpeta items/");
                 return false;
             }
-            yaml.save(this.fileOf(name));
+            yaml.save(file);
             return true;
         } catch (IOException ex) {
             this.plugin.getLogger().warning("No se pudo guardar el item '" + name + "': " + ex.getMessage());
