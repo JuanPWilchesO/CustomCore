@@ -15,7 +15,7 @@ Todos bajo `/custommobs` (alias `cmobs`, `cm`).
 | `cuota [jugador]` | consulta el cupo y **lista tus mobs** con su id y ubicacion |
 | `cuota recontar <jugador>` | rehace la cuenta **sin tocar mobs** |
 | `cuota retirar <jugador>` | retira sus mobs y deja el cupo en cero (**destructivo**) |
-| `despedir <id\|todos>` | retira **tus** mobs; lo usa cualquier jugador con los suyos, y el id se autocompleta |
+| `despedir <todos\|id\|id#marca>` | retira **tus** mobs, de uno en uno o todos; el tabulador ofrece cada mob con su marca |
 | `faction set <jugador> <faccion>` | asigna faccion a un jugador (solo admin) |
 | `faction get <jugador>` | consulta su faccion |
 | `faction clear <jugador>` | se la quita |
@@ -57,7 +57,7 @@ Un jugador raso puede hacer **cuatro cosas** por su cuenta, y nada mas:
 - `cuota` **sin argumentos** — ver **su propio** cupo.
 - `color <color|nada>` — el color del nombre de **sus** mobs.
 - `glow <color|nada>` — el brillo de **sus** mobs.
-- `despedir <id|todos>` — retirar **sus** mobs. Es su via para deshacerse de ellos: si no,
+- `despedir <todos|id|id#marca>` — retirar **sus** mobs. Es su via para deshacerse de ellos: si no,
   no tendria forma de bajar su propio cupo.
 
 Con Teams, `color` y `glow` los decide **solo el jefe del team** y aplican a los mobs de

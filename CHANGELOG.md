@@ -4,6 +4,11 @@
 
 - **Autocompletado de `despedir`**: al escribir `/cm despedir ` ya se ofrecen `todos` y los ids
   de **tus** mobs (los desplegados y los que guardas en huevos). Antes habia que saberse el id.
+- **`despedir`, ahora por mob**: con varios iguales, el tabulador ofrece cada uno con una marca
+  corta (`mercenario_basico#a1b2c3d4`) y `despedir <id>#<marca>` retira **solo ese**. El id suelto
+  deja de llevarse todos: si hay varios, lo dice y pide elegir. Antes se manejaba por definicion y
+  despedir uno se llevaba por delante el resto. Y `despedir` vuelve a salir en el autocompletado
+  (faltaba en la lista de administracion, asi que a un admin no le aparecia).
 - **`cuota` lista tus mobs**: ademas de los numeros, lista cada mob con su **id** y su ubicacion,
   marca las monturas y saca los que estan **guardados en huevos** (que no son entidades vivas y
   no aparecian).

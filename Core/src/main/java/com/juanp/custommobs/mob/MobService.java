@@ -407,6 +407,34 @@ public final class MobService implements Listener {
         return removed;
     }
 
+    /**
+     * Destruye UN mob concreto por su vinculo: desplegado o guardado en un huevo.
+     *
+     * <p>Es lo que permite despedir un 'mercenario_basico' sin llevarse los demas.
+     *
+     * @return {@code false} si el vinculo no existe o no es de ese dueno
+     */
+    public boolean dismissLink(UUID ownerId, UUID linkId) {
+        PlayerMobRegistry.MobLink link = this.playerMobs.byLink(linkId).orElse(null);
+        if (link == null || !ownerId.equals(link.owner())) {
+            return false;
+        }
+        CustomMob customMob = link.deployed() ? this.active.get(link.entityId()) : null;
+        if (customMob != null) {
+            // Quita la entidad y, de paso, el vinculo.
+            this.despawn(customMob);
+        } else {
+            this.playerMobs.removeLink(linkId);
+        }
+        this.playerMobs.save();
+        return true;
+    }
+
+    /** Marca corta y estable de un vinculo, para nombrarlo en el chat (id#marca). */
+    public static String shortId(UUID linkId) {
+        return linkId.toString().substring(0, 8);
+    }
+
     /** Cupo restante del jugador; {@code -1} si no hay limite configurado. */
     public int remainingPlayerMobs(UUID ownerId) {
         return this.remainingPlayerMobs(ownerId, false);

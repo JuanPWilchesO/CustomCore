@@ -123,8 +123,9 @@ public final class MobBookService {
                 + entity.getLocation().getBlockX() + " " + entity.getLocation().getBlockY()
                 + " " + entity.getLocation().getBlockZ()));
         lines.add("");
-        // El id de arriba sirve para algo: aqui esta como usarlo.
-        lines.add(Texts.color("&8Despedirlo: /cm despedir " + customMob.definition().id()));
+        // La marca distingue dos mobs iguales: sin ella, 'despedir <id>' no sabe cual.
+        lines.add(Texts.color("&8Despedirlo: /cm despedir " + customMob.definition().id()
+                + this.markOf(entity.getUniqueId())));
         return String.join("\n", lines);
     }
 
@@ -138,11 +139,19 @@ public final class MobBookService {
         lines.add("");
         lines.add(Texts.color("&8Guardado en su huevo."));
         lines.add("");
-        lines.add(Texts.color("&8Despedirlo: /cm despedir " + link.definitionId()));
+        lines.add(Texts.color("&8Despedirlo: /cm despedir " + link.definitionId()
+                + "#" + MobService.shortId(link.linkId())));
         if (link.state() != null) {
             lines.add(Texts.color("&4Vida: &0" + trim(link.state().health())));
         }
         return String.join("\n", lines);
+    }
+
+    /** Marca '#xxxxxxxx' del vinculo de esa entidad, o vacio si no aparece. */
+    private String markOf(java.util.UUID entityId) {
+        return this.service.playerMobs().byEntity(entityId)
+                .map(link -> "#" + MobService.shortId(link.linkId()))
+                .orElse("");
     }
 
     private static double value(LivingEntity entity, Attribute attribute) {

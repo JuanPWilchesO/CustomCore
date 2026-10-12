@@ -428,7 +428,10 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
             // de montura ayuda a distinguirlos cuando comparten definicion.
             boolean mount = customMob.definition().category()
                     == com.juanp.custommobs.mob.MobCategory.MOUNT;
-            sender.sendMessage(" - " + customMob.definition().id() + (mount ? " (montura)" : "")
+            String mark = this.plugin.mobs().playerMobs().byEntity(customMob.entity().getUniqueId())
+                    .map(link -> "#" + com.juanp.custommobs.mob.MobService.shortId(link.linkId()))
+                    .orElse("");
+            sender.sendMessage(" - " + customMob.definition().id() + mark + (mount ? " (montura)" : "")
                     + " en " + location.getWorld().getName() + " " + location.getBlockX() + " "
                     + location.getBlockY() + " " + location.getBlockZ());
         }
@@ -441,7 +444,8 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
                 continue;
             }
             inEggs++;
-            sender.sendMessage(" - " + link.definitionId() + " (guardado en su huevo)");
+            sender.sendMessage(" - " + link.definitionId() + "#"
+                    + com.juanp.custommobs.mob.MobService.shortId(link.linkId()) + " (guardado en su huevo)");
         }
         if (used > loaded) {
             sender.sendMessage(TAG + " " + (used - loaded)
@@ -597,15 +601,70 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage(TAG + " Uso: /custommobs despedir <id|todos>");
             return;
         }
-        String id = args[1].toLowerCase(Locale.ROOT);
-        boolean all = id.equals("todos") || id.equals("all");
-        if (!all && this.plugin.registry().get(id).isEmpty()) {
-            sender.sendMessage(TAG + " No existe ese mob; miralos con /custommobs list.");
+        String raw = args[1].toLowerCase(Locale.ROOT);
+        if (raw.equals("todos") || raw.equals("all")) {
+            int removed = this.plugin.mobs().dismiss(player.getUniqueId(), null);
+            sender.sendMessage(TAG + " Mobs despedidos: " + removed
+                    + ". Los huevos que los representaban quedan inservibles.");
             return;
         }
-        int removed = this.plugin.mobs().dismiss(player.getUniqueId(), all ? null : id);
-        sender.sendMessage(TAG + " Mobs despedidos: " + removed
-                + ". Los huevos que los representaban quedan inservibles.");
+        // Un mob concreto: id#marca. La marca es la cabeza del uuid del vinculo, y es lo que
+        // distingue dos 'mercenario_basico' entre si.
+        int hash = raw.indexOf('#');
+        if (hash > 0) {
+            String definitionId = raw.substring(0, hash);
+            String handle = raw.substring(hash + 1);
+            UUID target = null;
+            int matches = 0;
+            for (UUID linkId : this.plugin.mobs().playerMobs().linksOf(player.getUniqueId())) {
+                var link = this.plugin.mobs().playerMobs().byLink(linkId).orElse(null);
+                if (link == null || !link.definitionId().equalsIgnoreCase(definitionId)
+                        || !com.juanp.custommobs.mob.MobService.shortId(linkId).startsWith(handle)) {
+                    continue;
+                }
+                target = linkId;
+                matches++;
+            }
+            if (matches == 0) {
+                sender.sendMessage(TAG + " No tienes ese mob; miralos con /custommobs cuota.");
+                return;
+            }
+            if (matches > 1) {
+                sender.sendMessage(TAG + " Esa marca no distingue entre varios: escribe mas caracteres.");
+                return;
+            }
+            this.dismissOne(sender, player, target);
+            return;
+        }
+        // Id suelto: solo vale si hay UNO. Con varios seria la trampa de siempre —despedir uno
+        // se llevaba todos los de esa definicion.
+        UUID only = null;
+        int count = 0;
+        for (UUID linkId : this.plugin.mobs().playerMobs().linksOf(player.getUniqueId())) {
+            var link = this.plugin.mobs().playerMobs().byLink(linkId).orElse(null);
+            if (link != null && link.definitionId().equalsIgnoreCase(raw)) {
+                only = linkId;
+                count++;
+            }
+        }
+        if (count == 0) {
+            sender.sendMessage(TAG + " No tienes ese mob; miralos con /custommobs cuota.");
+            return;
+        }
+        if (count > 1) {
+            sender.sendMessage(TAG + " Tienes " + count + " '" + raw + "'. Elige cual: /custommobs despedir "
+                    + raw + "#<marca>  (usa el tabulador).");
+            return;
+        }
+        this.dismissOne(sender, player, only);
+    }
+
+    /** Despide un solo mob por su vinculo y lo cuenta. */
+    private void dismissOne(CommandSender sender, Player player, UUID linkId) {
+        boolean gone = this.plugin.mobs().dismissLink(player.getUniqueId(), linkId);
+        sender.sendMessage(TAG + (gone
+                ? " Mobs despedidos: 1. El huevo que lo representaba queda inservible."
+                : " No se pudo despedir ese mob."));
     }
 
     /** Entrega el libro de inspeccion. Repartirlo es tarea de administracion. */
@@ -917,7 +976,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(TAG + "           | spawner list | spawner remove <id> | spawner removeall [mob] | spawner reload");
         sender.sendMessage(TAG + "           | book [jugador]  (libro de inspeccion)");
         sender.sendMessage(TAG + "           | upgrade list | upgrade give <id> [jugador] | upgrade reload");
-        sender.sendMessage(TAG + "           | despedir <id|todos>  (tus mobs; cualquiera puede usarlo)");
+        sender.sendMessage(TAG + "           | despedir <todos|id|id#marca>  (tus mobs; cualquiera puede usarlo)");
     }
 
     @Override
@@ -931,7 +990,8 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
         if (args.length == 1) {
             List<String> options = admin
                     ? List.of("reload", "list", "give", "spawn", "remove", "active", "kill",
-                            "enchants", "cuota", "item", "color", "glow", "spawner", "book", "upgrade")
+                            "enchants", "cuota", "item", "color", "glow", "spawner", "book", "upgrade",
+                            "despedir")
                     : List.of("cuota", "color", "glow", "despedir");
             for (String option : options) {
                 if (option.startsWith(args[0].toLowerCase(Locale.ROOT))) {
@@ -949,29 +1009,34 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
             }
             return out;
         }
-        // 'despedir' es del jugador: se le ofrecen SUS mobs —los desplegados y los que
-        // guarda dentro de huevos—. Antes habia que saberse el id de memoria.
+        // 'despedir' es del jugador: se le ofrecen SUS mobs, con una marca corta por mob
+        // cuando hay varios de la misma definicion. Antes salia el id a secas, y despedir
+        // uno se llevaba por delante todos los de esa definicion.
         if (args.length == 2 && (args[0].equalsIgnoreCase("despedir") || args[0].equalsIgnoreCase("dismiss"))
                 && sender instanceof Player owner) {
             String prefix = args[1].toLowerCase(Locale.ROOT);
-            java.util.LinkedHashSet<String> ids = new java.util.LinkedHashSet<>();
-            for (CustomMob customMob : this.plugin.mobs().active()) {
-                if (owner.getUniqueId().equals(customMob.ownerId())) {
-                    ids.add(customMob.definition().id());
-                }
-            }
-            for (com.juanp.custommobs.mob.PlayerMobRegistry.MobLink link
-                    : this.plugin.mobs().playerMobs().all()) {
-                if (owner.getUniqueId().equals(link.owner())) {
-                    ids.add(link.definitionId());
-                }
-            }
             if ("todos".startsWith(prefix)) {
                 out.add("todos");
             }
-            for (String id : ids) {
-                if (id.startsWith(prefix)) {
-                    out.add(id);
+            java.util.Map<String, java.util.List<UUID>> byDefinition = new java.util.LinkedHashMap<>();
+            for (UUID linkId : this.plugin.mobs().playerMobs().linksOf(owner.getUniqueId())) {
+                this.plugin.mobs().playerMobs().byLink(linkId).ifPresent(link ->
+                        byDefinition.computeIfAbsent(link.definitionId(), key -> new ArrayList<>())
+                                .add(linkId));
+            }
+            for (var entry : byDefinition.entrySet()) {
+                String id = entry.getKey();
+                if (entry.getValue().size() == 1) {
+                    if (id.startsWith(prefix)) {
+                        out.add(id);
+                    }
+                    continue;
+                }
+                for (UUID linkId : entry.getValue()) {
+                    String handle = id + "#" + com.juanp.custommobs.mob.MobService.shortId(linkId);
+                    if (handle.startsWith(prefix)) {
+                        out.add(handle);
+                    }
                 }
             }
             return out;
