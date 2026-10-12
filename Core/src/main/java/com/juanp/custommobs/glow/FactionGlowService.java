@@ -201,6 +201,12 @@ public final class FactionGlowService extends BukkitRunnable {
         if (last != null && now - last < this.refreshMillis()) {
             return;
         }
+        // Se re-manda TAMBIEN la pertenencia al equipo, no solo el brillo: al cliente se le
+        // pierde sola (al cambiar de mundo, al reconstruir entidades) y entonces la placa y el
+        // brillo se quedaban blancos aunque el jugador estuviera quieto y al lado. Reañadir una
+        // entrada que ya esta no hace nada, asi que repetirlo es inofensivo.
+        this.send(viewer, new WrapperPlayServerTeams(team,
+                WrapperPlayServerTeams.TeamMode.ADD_ENTITIES, Optional.empty(), entry));
         NamedTextColor nameColor = HIDDEN_TEAM.equals(team) ? null : this.colorOf(team);
         this.send(viewer, this.metadata(target, glowing, nameColor));
         sent.put(targetId, now);
