@@ -96,9 +96,16 @@ public final class StyleService {
         return count;
     }
 
-    /** Quita al mob de los equipos de brillo propios (por ejemplo, al morir). */
+    /**
+     * Limpia lo que el plugin le puso al mob: el brillo y la placa.
+     *
+     * <p>Se llama en TODOS los caminos por los que el mob se va (muerte, guardado, retirada).
+     * Ocultar el nombre aqui es lo que evita la <b>placa fantasma</b>: si el cliente se queda
+     * con una copia de la entidad, al menos no tiene nombre que pintar.
+     */
     public void clear(LivingEntity entity) {
         this.clearGlow(entity);
+        entity.setCustomNameVisible(false);
     }
 
     private MobStyle resolve(UUID ownerId, UUID teamId) {

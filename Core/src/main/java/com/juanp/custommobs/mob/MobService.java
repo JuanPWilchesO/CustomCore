@@ -827,6 +827,10 @@ public final class MobService implements Listener {
                 .get(this.keys.link(), PersistentDataType.STRING));
         if (claimed != null && this.isDuplicateLink(claimed, entityId)) {
             this.plugin.getLogger().warning("Se retira un mob duplicado del vinculo " + claimed + ".");
+            // Antes se borraba sin limpiar: quedaba la entrada del equipo de brillo y su placa.
+            if (this.styles != null) {
+                this.styles.clear(entity);
+            }
             entity.remove();
             return;
         }
