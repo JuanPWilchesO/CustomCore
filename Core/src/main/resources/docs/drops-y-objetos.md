@@ -62,6 +62,14 @@ guardan en un cofre o lo reparte otro plugin — por eso no basta con la clave e
 que ponersela con el comando (o escribirla a mano antes de usarlo). El que no sea de la
 faccion, al intentarlo, recibe el aviso y no pasa nada mas.
 
+Si un jugador de otra faccion tiene el objeto en su inventario (por ejemplo, lo recibio en un
+mundo donde el bloqueo no aplica) y **hace clic en el**, el objeto **se cae al suelo** y el slot
+queda libre — no se le queda preso. En un cofre ajeno, en cambio, solo se cancela el clic: el
+objeto se queda donde estaba.
+
+El aviso de "no es la tuya" tiene un **enfriamiento de 3 segundos**: a clics seguidos no
+inunda el chat.
+
 Un **admin** (quien tenga el permiso de administracion) pasa siempre: reservar un objeto no
 puede dejarle sin poder revisarlo ni moverlo. Como un op tiene todos los permisos, cae ahi solo.
 

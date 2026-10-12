@@ -16,6 +16,10 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
 /**
  * Exclusividad de faccion de un objeto del catalogo.
  *
@@ -29,8 +33,12 @@ import org.bukkit.persistence.PersistentDataType;
  */
 public final class ItemFactionLock implements Listener {
 
+    /** Cuanto se calla el aviso, por jugador, para no inundar el chat a clics. */
+    private static final long NOTICE_COOLDOWN_MS = 3000L;
+
     private final MobService service;
     private final ItemCatalog catalog;
+    private final Map<UUID, Long> lastNotice = new ConcurrentHashMap<>();
 
     public ItemFactionLock(MobService service, ItemCatalog catalog) {
         this.service = service;
@@ -64,8 +72,22 @@ public final class ItemFactionLock implements Listener {
     }
 
     private void deny(Player player, String faction) {
+        long now = System.currentTimeMillis();
+        Long previous = this.lastNotice.get(player.getUniqueId());
+        if (previous != null && now - previous < NOTICE_COOLDOWN_MS) {
+            return;
+        }
+        this.lastNotice.put(player.getUniqueId(), now);
         player.sendMessage(Texts.color("&cEse objeto es de la faccion &f" + faction
                 + "&c: no es la tuya."));
+    }
+
+    /** Lo suelta en el suelo: el objeto no es suyo, asi que no le ocupa el inventario. */
+    private void drop(Player player, ItemStack item) {
+        if (item == null || item.getType().isAir()) {
+            return;
+        }
+        player.getWorld().dropItemNaturally(player.getLocation(), item);
     }
 
     /** No puede recogerlo del suelo. */
@@ -114,11 +136,31 @@ public final class ItemFactionLock implements Listener {
                 || !this.service.itemLockActive(player.getWorld())) {
             return;
         }
-        String faction = this.lockedFor(player, event.getCurrentItem(), event.getCursor());
+        // Lo que trae el cursor manda: si es de otra faccion, se cae al suelo.
+        ItemStack cursor = event.getCursor();
+        String faction = this.lockedFor(player, cursor);
         if (faction != null) {
             event.setCancelled(true);
+            player.setItemOnCursor(null);
+            this.drop(player, cursor);
             this.deny(player, faction);
+            return;
         }
+        ItemStack current = event.getCurrentItem();
+        faction = this.lockedFor(player, current);
+        if (faction == null) {
+            return;
+        }
+        event.setCancelled(true);
+        // Solo se suelta si esta en SU inventario. En un cofre ajeno se cancela y ya: el
+        // objeto se queda donde estaba, que no es suyo para andar tirandolo.
+        boolean ownInventory = event.getClickedInventory() != null
+                && event.getClickedInventory().getHolder() instanceof Player;
+        if (ownInventory) {
+            event.setCurrentItem(null);
+            this.drop(player, current);
+        }
+        this.deny(player, faction);
     }
 
     /** Tampoco puede arrastrarlo por encima de varias ranuras. */
