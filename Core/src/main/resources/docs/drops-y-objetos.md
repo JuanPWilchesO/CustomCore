@@ -49,6 +49,10 @@ El nombre se normaliza a minusculas y sin espacios, porque acaba siendo un nombr
 archivo. Despues lo llamas por ese nombre desde la tabla de drops o desde el
 equipamiento. **Un mismo objeto sirve para varios mobs.**
 
+> Un objeto del catalogo **no vale como ingrediente** de una receta que no sea del plugin: si lo
+> pones en la mesa y el resultado no es de CustomMobs, el crafteo se cancela. Asi un objeto con
+> NBT no acaba de relleno en un crafteo vanilla.
+
 ### Reservar un objeto a una faccion
 
 ```

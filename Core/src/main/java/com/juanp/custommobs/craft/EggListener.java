@@ -18,6 +18,7 @@ import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.persistence.PersistentDataType;
 
 import java.util.Optional;
 import java.util.Set;
@@ -60,14 +61,36 @@ public final class EggListener implements Listener {
      */
     @EventHandler(ignoreCancelled = true)
     public void onCraft(CraftItemEvent event) {
-        if (!(event.getWhoClicked() instanceof Player player)
-                || this.service.worldEnabled(player.getWorld())) {
+        if (!(event.getWhoClicked() instanceof Player player)) {
             return;
         }
-        if (this.craft.isCustomResult(event.getCurrentItem())) {
+        // Un objeto del catalogo no vale como ingrediente de una receta que NO sea del plugin:
+        // asi un encantamiento guardado no acaba de relleno en un crafteo vanilla. La marca
+        // viaja dentro del objeto, asi que basta con mirar la rejilla.
+        if (this.hasCatalogIngredient(event) && !this.craft.isCustomResult(event.getCurrentItem())) {
+            event.setCancelled(true);
+            player.sendMessage(Texts.color("&cEse objeto de CustomMobs no sirve para esta receta."));
+            return;
+        }
+        if (!this.service.worldEnabled(player.getWorld())
+                && this.craft.isCustomResult(event.getCurrentItem())) {
             event.setCancelled(true);
             player.sendMessage(Texts.color("&cEl plugin no funciona en este mundo."));
         }
+    }
+
+    /** {@code true} si en la rejilla hay algun objeto guardado del catalogo del plugin. */
+    private boolean hasCatalogIngredient(CraftItemEvent event) {
+        for (ItemStack item : event.getInventory().getMatrix()) {
+            if (item == null || item.getType().isAir() || !item.hasItemMeta()) {
+                continue;
+            }
+            if (item.getItemMeta().getPersistentDataContainer()
+                    .has(this.plugin.drops().catalog().nameKey(), PersistentDataType.STRING)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Colocar el huevo: despliega el mob, o lo vuelve a traer si estaba guardado. */

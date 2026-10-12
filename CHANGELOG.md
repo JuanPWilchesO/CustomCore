@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.8 — los objetos del catalogo no valen para recetas vanilla
+
+- Un objeto guardado en el catalogo (con NBT) **ya no sirve de ingrediente** en una receta que no
+  sea del plugin: si en la mesa hay uno y el resultado no es nuestro, el crafteo se cancela con un
+  aviso. Asi un encantamiento guardado no acaba de relleno en un crafteo vanilla ajeno. La marca
+  viaja dentro del objeto, asi que basta con mirar la rejilla.
+
 ## 0.3.7 — tus mobs a la vista, lobos en paz y objetos por faccion
 
 - **Autocompletado de `despedir`**: al escribir `/cm despedir ` ya se ofrecen `todos` y los ids
