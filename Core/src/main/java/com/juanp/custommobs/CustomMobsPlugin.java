@@ -243,7 +243,8 @@ public final class CustomMobsPlugin extends JavaPlugin {
         com.juanp.custommobs.effect.EffectListener effectListener =
                 new com.juanp.custommobs.effect.EffectListener(this, this.effectService);
         pluginManager.registerEvents(effectListener, this);
-        this.getServer().getScheduler().runTaskTimer(this, effectListener::tick, 20L, 20L);
+        // Cada tick: la congelacion y el paso helado necesitan ir al dia.
+        this.getServer().getScheduler().runTaskTimer(this, effectListener::tick, 1L, 1L);
 
         PluginCommand command = this.getCommand("customcore");
         if (command != null) {
