@@ -121,32 +121,11 @@ public final class FactionGlowService extends BukkitRunnable {
                                 : this.colorFor(viewer, this.service.factionOf(target)),
                         seen, !sneaking);
             }
-            // Mobs custom: por el ESTADO DE PVP con este espectador (enemigo rojo, aliado verde,
-            // neutral gris). Ese color es el que avisa de quien es quien. En un mob disfrazado no
-            // se ve —LibsDisguises dibuja el nombre por su cuenta—, asi que ahi queda el color de
-            // faccion que se le pone al nombre (factions.yml).
-            for (CustomMob customMob : this.service.active()) {
-                LivingEntity entity = customMob.entity();
-                if (!entity.isValid() || entity.isDead()) {
-                    continue;
-                }
-                // A un mob disfrazado no se le pinta: LibsDisguises dibuja el nombre (y su
-                // equipo) por su cuenta, asi que nuestros equipos no llegan y solo añadian
-                // paquetes raros con el nombre del perfil. Se deja su color de faccion, que va
-                // dentro del nombre del disfraz.
-                if (this.service.disguiseLink().isDisguised(entity)) {
-                    this.forget(viewer, entity, seen);
-                    continue;
-                }
-                if (!wants || !this.near(viewer, entity, radius)
-                        || !this.service.factionGlowActive(entity.getWorld())) {
-                    this.forget(viewer, entity, seen);
-                    continue;
-                }
-                this.paint(viewer, entity,
-                        this.colorFor(viewer, this.service.factionOf(customMob)),
-                        seen, entity.isGlowing());
-            }
+            // Los mobs NO se pintan por paquetes. Su color ya sale sin tocar el protocolo: los
+            // de servidor por el color de su faccion (factions.yml) y los de jugador por el
+            // estilo de su dueno o su team. El pintado por espectador para mobs era el que
+            // tiraba a los jugadores con "Error de protocolo de red" al matar o guardar un mob:
+            // fuera entero. El de los jugadores se queda como estaba, que lleva tiempo estable.
         }
     }
 
