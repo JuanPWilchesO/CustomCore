@@ -211,6 +211,31 @@ public final class ItemCatalog {
         return this.classKey;
     }
 
+    /**
+     * Reserva el objeto a una clase, o lo libera pasando {@code null}.
+     *
+     * @return {@code false} si el objeto no existe o no se pudo escribir
+     */
+    public boolean setClass(String rawName, String clazz) {
+        String name = clean(rawName);
+        if (name == null) {
+            return false;
+        }
+        File file = this.fileOf(name);
+        if (!file.exists()) {
+            return false;
+        }
+        YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
+        yaml.set("clase", clazz == null ? null : clazz.trim().toLowerCase(Locale.ROOT));
+        try {
+            yaml.save(file);
+            return true;
+        } catch (IOException ex) {
+            this.plugin.getLogger().warning("No se pudo escribir items/" + name + ".yml: " + ex.getMessage());
+            return false;
+        }
+    }
+
     /** La clase del objeto, si su yml la declara. */
     public Optional<String> classOf(String rawName) {
         String name = clean(rawName);

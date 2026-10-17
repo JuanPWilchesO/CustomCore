@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.3 — reservar un objeto a una clase por comando
+
+- **`/customcore item clase <nombre> <clase|nada>`**: igual que `item faccion`, pero para la
+  clase. Con `nada` se libera. Avisa de que las copias ya repartidas no cambian (se reparten
+  marcadas con `item give`).
+
 ## 0.5.2 — mobs invulnerables
 
 - **`invulnerable: true`** en el yml de un mob: no recibe dano de **ninguna** causa (golpes,

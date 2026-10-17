@@ -994,6 +994,31 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
                             + (craftable ? " &7[crafteable]" : ""));
                 }
             }
+            case "clase" -> {
+                if (args.length < 4) {
+                    sender.sendMessage(TAG + " Uso: /customcore item clase <nombre> <clase|nada>");
+                    return;
+                }
+                String clazz = args[3].equalsIgnoreCase("nada") || args[3].equals("-")
+                        ? null : args[3].toLowerCase(Locale.ROOT);
+                if (clazz != null && !this.plugin.classes().exists(clazz)) {
+                    sender.sendMessage(TAG + " Esa clase no existe. Conocidas: "
+                            + String.join(", ", this.plugin.classes().known()));
+                    return;
+                }
+                String itemName = args[2].toLowerCase(Locale.ROOT);
+                if (!this.plugin.drops().catalog().setClass(args[2], clazz)) {
+                    sender.sendMessage(TAG + " No existe ese item: " + itemName);
+                    return;
+                }
+                sender.sendMessage(TAG + (clazz == null
+                        ? " Item '" + itemName + "' liberado: lo usa cualquiera."
+                        : " Item '" + itemName + "' reservado a la clase '" + clazz + "'."));
+                if (clazz != null) {
+                    sender.sendMessage(TAG + " Las copias ya repartidas no cambian. Reparte copias"
+                            + " marcadas con /customcore item give " + itemName + " [jugador].");
+                }
+            }
             case "give" -> {
                 if (args.length < 3) {
                     sender.sendMessage(TAG + " Uso: /customcore item give <nombre> [jugador]");
@@ -1298,9 +1323,20 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
             return out;
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("item")) {
-            for (String option : List.of("save", "list", "remove", "faccion", "give")) {
+            for (String option : List.of("save", "list", "remove", "faccion", "clase", "give")) {
                 if (option.startsWith(args[1].toLowerCase(Locale.ROOT))) {
                     out.add(option);
+                }
+            }
+            return out;
+        }
+        if (args.length == 4 && args[0].equalsIgnoreCase("item") && args[1].equalsIgnoreCase("clase")) {
+            if ("nada".startsWith(args[3].toLowerCase(Locale.ROOT))) {
+                out.add("nada");
+            }
+            for (String clazz : this.plugin.classes().known()) {
+                if (clazz.startsWith(args[3].toLowerCase(Locale.ROOT))) {
+                    out.add(clazz);
                 }
             }
             return out;

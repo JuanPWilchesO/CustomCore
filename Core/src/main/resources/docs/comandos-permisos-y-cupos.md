@@ -28,6 +28,8 @@ Todos bajo `/customcore` (alias `cmobs`, `cm`).
 | `item save <nombre>` | guarda el objeto de tu mano en el catalogo, con su NBT |
 | `item list` | lista los objetos guardados |
 | `item remove <nombre>` | borra uno del catalogo |
+| `item faccion <nombre> <faccion\|nada>` | reserva el objeto a una faccion (o lo libera) |
+| `item clase <nombre> <clase\|nada>` | reserva el objeto a una clase (o lo libera) |
 | `color <color\|nada>` | color del nombre de tus player mobs |
 | `glow <color\|nada>` | brillo de tus player mobs |
 | `spawner list` | lista los spawners: id, mob, mundo, coordenadas y reaparicion |

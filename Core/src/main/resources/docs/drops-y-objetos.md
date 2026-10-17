@@ -80,6 +80,13 @@ inunda el chat.
 clase: guerrero
 ```
 
+O con el comando, igual que la faccion:
+
+```
+/customcore item clase <nombre> guerrero   lo reserva a esa clase
+/customcore item clase <nombre> nada       lo libera
+```
+
 El objeto queda reservado a esa **clase** (`/customcore class set <jugador> <clase>`). La clase no
 tiene relaciones de alianza: solo restringe objetos.
 
