@@ -105,6 +105,13 @@ public final class EffectListener implements Listener {
         player.sendMessage(Texts.color("&8[&cCustomCore&8] &7" + effect.name()));
         if ("sigilo".equals(effect.mechanic())) {
             this.vanish(player, true);
+            // Invisibilidad de vanilla ademas de ocultarse para los demas: asi el propio
+            // jugador ve desaparecer su cuerpo en F5 (como el vanish de Essentials). La
+            // armadura la sigue dibujando el cliente para uno mismo, igual que en Essentials;
+            // para los DEMAS no se ve nada, armadura incluida (hidePlayer).
+            int seconds = spec.duration() > 0 ? spec.duration() : effect.duration();
+            player.addPotionEffect(new org.bukkit.potion.PotionEffect(
+                    PotionEffectType.INVISIBILITY, seconds * 20, 0, false, false, false));
         }
         return true;
     }
