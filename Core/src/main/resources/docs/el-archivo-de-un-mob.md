@@ -66,7 +66,7 @@ equipar algo con NBT, como un encantamiento de otro plugin:
 ```yaml
 equipment:
   main-hand:
-    item: espada_del_sargento    # nombre guardado con /custommobs item save
+    item: espada_del_sargento    # nombre guardado con /customcore item save
     drop-chance: 0.0
 ```
 
@@ -86,7 +86,7 @@ Los nombres se resuelven en este orden:
 Sin namespace se busca primero en vanilla y luego en ExcellentEnchants. Los
 encantamientos custom no se comprueban al cargar: si escribes mal un id, el mob carga
 igual y el encantamiento simplemente no aparece. Los ids validos se listan con
-`/custommobs enchants excellentenchants`.
+`/customcore enchants excellentenchants`.
 
 ## Objetivos contra jugadores
 
@@ -353,10 +353,10 @@ recipe:
 ```
 
 - Los `extras` se suman al huevo base (`egg`).
-- `amount: 0` **desactiva el crafteo**: el mob solo se da con `/custommobs give`.
+- `amount: 0` **desactiva el crafteo**: el mob solo se da con `/customcore give`.
 - Sin bloque `recipe`: por defecto huevo + diamante.
 - Dos mobs con los mismos ingredientes colisionan: el segundo se omite con un aviso,
-  porque el cliente no podria distinguirlos. (`/custommobs reload` lo reporta.)
+  porque el cliente no podria distinguirlos. (`/customcore reload` lo reporta.)
 
 ## Skills y drops
 

@@ -1,6 +1,6 @@
 # Comandos, permisos y cupos
 
-Todos bajo `/custommobs` (alias `cmobs`, `cm`).
+Todos bajo `/customcore` (alias `cmobs`, `cm`).
 
 | Comando | Que hace |
 |---|---|
@@ -39,7 +39,7 @@ Todos bajo `/custommobs` (alias `cmobs`, `cm`).
 | `upgrade give <id> [jugador]` | reparte un item de mejora (alias `mejora`) |
 | `upgrade reload` | relee `upgrades/` y rehace las recetas |
 
-Desde consola, `spawn` pide mundo y coordenadas: `/custommobs spawn <id> <mundo> <x> <y> <z>`.
+Desde consola, `spawn` pide mundo y coordenadas: `/customcore spawn <id> <mundo> <x> <y> <z>`.
 
 **`recontar` vs `retirar`** — la diferencia es importante:
 
@@ -53,8 +53,8 @@ Desde consola, `spawn` pide mundo y coordenadas: `/custommobs spawn <id> <mundo>
 
 | Permiso | Para que | Por defecto |
 |---|---|---|
-| `custommobs.player` | invocar mobs con los huevos | `true` |
-| `custommobs.admin` | comandos de administracion | `op` |
+| `customcore.player` | invocar mobs con los huevos | `true` |
+| `customcore.admin` | comandos de administracion | `op` |
 
 Un jugador raso puede hacer **cuatro cosas** por su cuenta, y nada mas:
 
@@ -68,7 +68,7 @@ Con Teams, `color` y `glow` los decide **solo el jefe del team** y aplican a los
 todos sus miembros.
 
 Todo lo demas —incluido `cuota <jugador>`, `cuota recontar` y `cuota retirar`— exige
-`custommobs.admin`.
+`customcore.admin`.
 
 > **Ojo con `default: false`**: a diferencia de `op`, **ignora** el flag de operador. Si lo
 > cambias, ni tu (siendo op) podreis invocar hasta que se os conceda el permiso.
@@ -101,7 +101,7 @@ limits:
 
 El cupo esta **partido en tres cuentas que no se pisan**: los mobs que te siguen, los
 fijos a un bloque y las monturas. Puedes llevar una llena y seguir colocando de las otras.
-`/custommobs cuota` muestra las tres.
+`/customcore cuota` muestra las tres.
 
 - El grupo se lee de **LuckPerms en el momento de invocar**, no al conectarse: un cambio de
   rango aplica al instante.
@@ -109,7 +109,7 @@ fijos a un bloque y las monturas. Puedes llevar una llena y seguir colocando de 
 - Si su grupo no esta mapeado, o no se pudieron leer sus grupos, se usa
   `default-player-mobs`. `0` = sin limite.
 - Sin LuckPerms instalado, todos caen al grupo `default`.
-- Cambiar `limits` aplica con `/custommobs reload`, **sin reiniciar**.
+- Cambiar `limits` aplica con `/customcore reload`, **sin reiniciar**.
 
 ### Mobs fijos: su zona se mantiene cargada
 

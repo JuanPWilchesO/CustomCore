@@ -42,7 +42,7 @@ leash:
 respawn-seconds: 30
 ```
 
-- **Sin `egg` ni `recipe`**: no se craftea. Se invoca con `/custommobs spawn`.
+- **Sin `egg` ni `recipe`**: no se craftea. Se invoca con `/customcore spawn`.
 - **Sin `anchor`**: los mobs de servidor quedan siempre anclados a su punto.
 - `attitude: hostile` — ataca jugadores a la vista. Otras opciones: `neutral`, `defender`.
 - `respawn-seconds: 30` — al morir, reaparece en el mismo bloque a los 30 s.
@@ -50,15 +50,15 @@ respawn-seconds: 30
 ## 3. Invocalo
 
 ```
-/custommobs spawn orco
+/customcore spawn orco
 ```
 
-Desde el juego lo coloca donde estas; desde consola, `/custommobs spawn orco <mundo> <x> <y> <z>`.
+Desde el juego lo coloca donde estas; desde consola, `/customcore spawn orco <mundo> <x> <y> <z>`.
 
 ## 4. Comprueba el spawner
 
-- Matelo (`/custommobs kill orco` o a golpes).
-- Mira `/custommobs active`: desaparece.
+- Matelo (`/customcore kill orco` o a golpes).
+- Mira `/customcore active`: desaparece.
 - Espera 30 s: vuelve a estar, en el mismo sitio.
 - El estado vive en `data/spawners.yml`, asi que **sobrevive a un reinicio**.
 
@@ -72,7 +72,7 @@ son intocables. Ver `../docs/facciones-equipos-y-combate.md`.
 Un administrador puede meter a un jugador en una faccion:
 
 ```
-/custommobs faction set <jugador> <faccion>
+/customcore faction set <jugador> <faccion>
 ```
 
 A partir de ahi, los mobs de faccion lo tratan por `factions.yml`: **misma faccion o aliada =

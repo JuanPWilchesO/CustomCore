@@ -2,10 +2,10 @@
 
 ## API
 
-Se registra un servicio `CustomMobsApi` en el `ServicesManager`:
+Se registra un servicio `CustomCoreApi` en el `ServicesManager`:
 
 ```java
-CustomMobsApi api = getServer().getServicesManager().load(CustomMobsApi.class);
+CustomCoreApi api = getServer().getServicesManager().load(CustomCoreApi.class);
 
 api.definitionIds();                              // ids de mobs cargados
 api.isCustomMob(entity);                          // es un mob gestionado?
@@ -18,8 +18,8 @@ El servicio vive en el modulo **API**, que va empaquetado dentro del jar del **C
 ## Problemas frecuentes
 
 **Un mob no aparece al usar el huevo.**
-Revisa en este orden: (1) que tengas `custommobs.player`; (2) que no hayas llegado a tu
-cupo — `/custommobs cuota`; (3) que la receta sea la que crees.
+Revisa en este orden: (1) que tengas `customcore.player`; (2) que no hayas llegado a tu
+cupo — `/customcore cuota`; (3) que la receta sea la que crees.
 
 **"Este huevo ya no sirve."**
 Es lo esperado: el mob que representaba murio, asi que el vinculo se borro. Ese huevo es
@@ -45,12 +45,12 @@ Dos mobs con los mismos ingredientes: el cliente no puede distinguirlos. Cambia
 
 **Un encantamiento no se aplica.**
 Los encantamientos custom no se validan al cargar. Comprueba el id real con
-`/custommobs enchants excellentenchants`.
+`/customcore enchants excellentenchants`.
 
 **Quedo bloqueado sin tener mobs.**
 Tu cupo incluye mobs anclados en chunks descargados. Si un mob desaparecio sin pasar por
 muerte ni retirada (un plugin externo, un corte), la cuenta queda alta:
-`/custommobs cuota recontar <jugador>`.
+`/customcore cuota recontar <jugador>`.
 
 **Cambie los permisos por defecto y no aplican.**
 `plugin.yml` solo se lee al arrancar. Requiere reinicio del servidor.

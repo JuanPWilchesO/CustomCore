@@ -30,10 +30,10 @@ Hay objetos que **no se pueden escribir a mano** en un yml: un encantamiento de
 ExcellentEnchants, cualquier NBT puesto por otro plugin. Para esos esta el catalogo.
 
 ```
-/custommobs item save <nombre>     guarda el objeto de tu mano
-/custommobs item list              lista los nombres guardados
-/custommobs item remove <nombre>   borra uno
-/custommobs item faccion <nombre> <faccion|nada>   lo reserva a una faccion (o lo libera)
+/customcore item save <nombre>     guarda el objeto de tu mano
+/customcore item list              lista los nombres guardados
+/customcore item remove <nombre>   borra uno
+/customcore item faccion <nombre> <faccion|nada>   lo reserva a una faccion (o lo libera)
 ```
 
 Cada objeto vive en **`items/<nombre>.yml`**, con su nombre escrito dentro:
@@ -50,14 +50,14 @@ archivo. Despues lo llamas por ese nombre desde la tabla de drops o desde el
 equipamiento. **Un mismo objeto sirve para varios mobs.**
 
 > Un objeto del catalogo **no vale como ingrediente** de una receta que no sea del plugin: si lo
-> pones en la mesa y el resultado no es de CustomMobs, el crafteo se cancela. Asi un objeto con
+> pones en la mesa y el resultado no es de CustomCore, el crafteo se cancela. Asi un objeto con
 > NBT no acaba de relleno en un crafteo vanilla.
 
 ### Reservar un objeto a una faccion
 
 ```
-/custommobs item faccion espada_del_sargento rojos   solo los 'rojos' pueden usarla
-/custommobs item faccion espada_del_sargento nada    la libera: vale para cualquiera
+/customcore item faccion espada_del_sargento rojos   solo los 'rojos' pueden usarla
+/customcore item faccion espada_del_sargento nada    la libera: vale para cualquiera
 ```
 
 Un objeto reservado solo lo puede **recoger del suelo**, **sacar de un cofre**, **mover en su
@@ -95,7 +95,7 @@ puede dejarle sin poder revisarlo ni moverlo. Como un op tiene todos los permiso
 
 ## De la mano al mob, en dos pasos
 
-1. Sostien el objeto con su NBT y ejecuta `/custommobs item save mi_espada`.
+1. Sostien el objeto con su NBT y ejecuta `/customcore item save mi_espada`.
 2. Llamalo desde el mob:
 
 ```yaml
@@ -148,7 +148,7 @@ receta:
   esta **reservado a una faccion**, solo lo pueden craftear los jugadores de esa faccion.
 - Un ingrediente que sea **otro objeto del catalogo** se compara por su **NBT exacto**: no vale
   cualquier cuchillo del mismo material. Por eso conviene repartir copias con
-  `/custommobs item give`.
+  `/customcore item give`.
 - Si un nombre no es ni objeto del catalogo ni material, o la rejilla no cuadra, la receta se
   **omite y avisa en el log** — no rompe el arranque.
 - Dos recetas con la misma forma e ingredientes **chocan**: la segunda se omite con aviso.
@@ -156,5 +156,5 @@ receta:
   hierro fantasma es un lingote), asi que una receta tuya que solape **exactamente** una vanilla
   —misma forma y mismo material— puede resolverse con la vanilla. Y entonces
   [el crafteo se cancela](#). Anade un ingrediente o cambia la forma para que no choquen.
-- Los cambios no se aplican solos: hace falta **`/custommobs reload`** (o reiniciar).
+- Los cambios no se aplican solos: hace falta **`/customcore reload`** (o reiniciar).
 - `item list` marca los objetos que ya tienen receta: `[crafteable]`.

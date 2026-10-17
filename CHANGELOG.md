@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.1 — comprobar clase en las cadenas y fuera el nombre viejo
+
+- **Cadenas de interaccion**: un paso puede exigir **clase** ademas de faccion, y decidir por
+  donde sigue. En el paso: `clase: <id>` (o `*` = cualquiera) y `no-clase: <paso>`; con
+  `faction:`/`no-faction:` ya existentes, se pueden montar flujos distintos por clase y faccion.
+- **Nombre viejo fuera**: los alias de comando quedan en `/customcore` y `/cm`; los permisos
+  pasan a `customcore.player` / `customcore.admin`; y docs, ejemplos y MOTD dicen CustomCore.
+  El paquete Java interno sigue llamandose `com.juanp.custommobs` (no se ve; renombrarlo es un
+  refactor aparte).
+
 ## 0.5.0 — clases de jugador
 
 - **Clases**: se definen en `classes.yml` (`guerrero`, `mago`, `picaro`...) y se asignan con

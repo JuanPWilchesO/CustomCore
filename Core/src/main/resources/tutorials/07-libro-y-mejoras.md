@@ -7,7 +7,7 @@ Dos piezas pensadas para que el jugador cuide de sus mobs: **verlos** y **mejora
 Repartelo (hace falta ser administrador):
 
 ```
-/custommobs book
+/customcore book
 ```
 
 Te lo deja en el inventario. **Clic derecho** y se abre: una pagina por cada mob tuyo, con
@@ -20,7 +20,7 @@ economia como quiera.
 
 ## 2. Un item de mejora
 
-Crea `plugins/CustomMobs/upgrades/piedra_vida.yml`:
+Crea `plugins/CustomCore/upgrades/piedra_vida.yml`:
 
 ```yaml
 id: piedra_vida
@@ -40,8 +40,8 @@ recipe:
 Recarga y repartetelo:
 
 ```
-/custommobs upgrade reload
-/custommobs upgrade give piedra_vida
+/customcore upgrade reload
+/customcore upgrade give piedra_vida
 ```
 
 Ahora tienes la piedra en la mano. **Clic derecho sobre uno de tus mobs** y le sube 20 de

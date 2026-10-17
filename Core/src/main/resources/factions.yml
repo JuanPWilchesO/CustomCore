@@ -1,4 +1,4 @@
-# CustomMobs - relaciones entre facciones de los mobs de categoria 'server'.
+# CustomCore - relaciones entre facciones de los mobs de categoria 'server'.
 #
 # Las relaciones son simetricas: si 'orcos' declara a 'humanos' como enemigo,
 # la enemistad vale tambien al reves. Lo que no se declare aqui es NEUTRAL:
@@ -11,7 +11,7 @@
 #   color: color del NOMBRE (un nombre de color de Minecraft)
 #   glow:  color del BRILLO; ademas lo enciende
 # Los dos son opcionales. Los mobs de JUGADOR no los usan: esos llevan el color que
-# elija su dueno o su team con /custommobs color y /custommobs glow.
+# elija su dueno o su team con /customcore color y /customcore glow.
 
 orcos:
   allies: [goblins]

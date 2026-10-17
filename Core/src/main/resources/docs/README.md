@@ -1,4 +1,4 @@
-# CustomMobs — documentacion
+# CustomCore — documentacion
 
 Mobs definidos por YAML, invocados con huevos crafteados, con facciones, disfraces,
 equipamiento, encantamientos custom, skills y un cupo de mobs por jugador que sale del
@@ -25,14 +25,14 @@ cualquiera de ellos el plugin sigue funcionando: cada uno degrada por su cuenta.
 
 1. Copia el jar a `plugins/`.
 2. Arranca el servidor una vez. Se crean:
-   - `plugins/CustomMobs/config.yml` — configuracion general.
-   - `plugins/CustomMobs/factions.yml` — relaciones entre facciones.
-   - `plugins/CustomMobs/mobs/` — un archivo por mob. Se copian **seis ejemplos
+   - `plugins/CustomCore/config.yml` — configuracion general.
+   - `plugins/CustomCore/factions.yml` — relaciones entre facciones.
+   - `plugins/CustomCore/mobs/` — un archivo por mob. Se copian **seis ejemplos
      numerados** que funcionan como tutorial: abrelos en orden.
-   - `plugins/CustomMobs/docs/` — esta documentacion.
-   - `plugins/CustomMobs/tutorials/` — los tutoriales paso a paso.
+   - `plugins/CustomCore/docs/` — esta documentacion.
+   - `plugins/CustomCore/tutorials/` — los tutoriales paso a paso.
 3. Edita lo que quieras.
-4. `/custommobs reload` — recarga mobs, config y facciones **sin reiniciar**.
+4. `/customcore reload` — recarga mobs, config y facciones **sin reiniciar**.
 
 > `plugin.yml` es la excepcion: los permisos que declara solo se leen al arrancar. Si
 > cambias sus valores por defecto hace falta reiniciar el servidor.

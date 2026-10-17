@@ -4,7 +4,7 @@
 # Lo que se aprende aqui: los CUATRO efectos (damage, heal, message, potion)
 # y los CINCO objetivos (self, owner, target, enemies, allies).
 #
-# Probar:   /custommobs give tutorial_arquero
+# Probar:   /customcore give tutorial_arquero
 #
 # Cada skill se evalua cada 'skills.interval-ticks' del config (20 = 1 segundo).
 # 'chance' es la probabilidad por evaluacion: si falla la tirada se reintenta en

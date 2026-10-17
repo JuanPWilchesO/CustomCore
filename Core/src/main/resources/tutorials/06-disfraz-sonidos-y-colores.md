@@ -42,8 +42,8 @@ sounds:
 Cada jugador distingue los suyos:
 
 ```
-/custommobs color <color|nada>     color del nombre
-/custommobs glow <color|nada>      brillo, y de que color
+/customcore color <color|nada>     color del nombre
+/customcore glow <color|nada>      brillo, y de que color
 ```
 
 - El color **tine el nombre entero** y sobreescribe el del yml.
@@ -75,5 +75,5 @@ sounds:
   ambient: { sound: entity.wither.ambient, volume: 0.8, pitch: 0.6, interval-seconds: 12 }
 ```
 
-Recarga, invocalo y ajusta su color con `/custommobs color` para reconocerlo entre los
+Recarga, invocalo y ajusta su color con `/customcore color` para reconocerlo entre los
 demas.

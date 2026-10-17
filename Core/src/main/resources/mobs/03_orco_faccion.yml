@@ -5,7 +5,7 @@
 # frente a jugadores y 'respawn-seconds', que convierte el punto en SPAWNER.
 #
 # Este mob NO se craftea. Se invoca con:
-#          /custommobs spawn tutorial_orco
+#          /customcore spawn tutorial_orco
 # =============================================================================
 
 id: tutorial_orco

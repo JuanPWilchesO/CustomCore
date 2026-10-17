@@ -84,7 +84,7 @@ limits:
     staff: 3
 ```
 
-`/custommobs cuota` muestra las tres lineas: seguidores, fijos y monturas.
+`/customcore cuota` muestra las tres lineas: seguidores, fijos y monturas.
 
 ## 6. No se teletransporta
 
@@ -94,10 +94,10 @@ lleva, con un aviso por chat y su plazo.
 
 ## 7. Probarlo
 
-1. `/custommobs give mi_montura`, coloca el huevo y subete.
+1. `/customcore give mi_montura`, coloca el huevo y subete.
 2. Comprueba color, marcas y armadura.
 3. Camina sobre el agua: debe helarse.
-4. `/custommobs cuota` → tu montura debe estar en la linea de **Monturas**.
+4. `/customcore cuota` → tu montura debe estar en la linea de **Monturas**.
 5. Golpeala con su huevo para recogerla y volver a colocarla.
 
 Sigue con `../docs/monturas.md` para la referencia completa.

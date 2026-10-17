@@ -1,4 +1,4 @@
-# CustomMobs
+# CustomCore
 
 Mobs definidos por YAML, invocados con huevos crafteados, con facciones, disfraces,
 equipamiento, encantamientos custom, skills y un cupo de mobs por jugador que sale del
@@ -25,12 +25,12 @@ cualquiera de ellos el plugin sigue funcionando: cada uno degrada por su cuenta.
 
 1. Copia el jar a `plugins/`.
 2. Arranca el servidor una vez. Se crean:
-   - `plugins/CustomMobs/config.yml` — configuracion general.
-   - `plugins/CustomMobs/factions.yml` — relaciones entre facciones.
-   - `plugins/CustomMobs/mobs/` — un archivo por mob. Se copian **cinco ejemplos
+   - `plugins/CustomCore/config.yml` — configuracion general.
+   - `plugins/CustomCore/factions.yml` — relaciones entre facciones.
+   - `plugins/CustomCore/mobs/` — un archivo por mob. Se copian **cinco ejemplos
      numerados** que funcionan como tutorial: abrelos en orden.
 3. Edita lo que quieras.
-4. `/custommobs reload` — recarga mobs, config y facciones **sin reiniciar**.
+4. `/customcore reload` — recarga mobs, config y facciones **sin reiniciar**.
 
 > `plugin.yml` es la excepcion: los permisos que declara solo se leen al arrancar. Si
 > cambias sus valores por defecto hace falta reiniciar el servidor.
@@ -39,7 +39,7 @@ cualquiera de ellos el plugin sigue funcionando: cada uno degrada por su cuenta.
 
 ## Primeros pasos: tu primer mob
 
-Crea `plugins/CustomMobs/mobs/guardia.yml`:
+Crea `plugins/CustomCore/mobs/guardia.yml`:
 
 ```yaml
 id: guardia
@@ -61,9 +61,9 @@ skills:
     message: '{mob} &fVigilando la zona.'
 ```
 
-`/custommobs reload` y luego, dentro del juego:
+`/customcore reload` y luego, dentro del juego:
 
-- `/custommobs give guardia` — te da el huevo.
+- `/customcore give guardia` — te da el huevo.
 - O craftealo: **huevo de zombi + diamante** (la receta por defecto).
 - Usa el huevo → aparece el Guardia, y **tu eres su dueno**.
 
@@ -134,7 +134,7 @@ Se aceptan tambien los nombres de Bukkit (`head`, `chest`, `CHEST`…).
 ```yaml
 equipment:
   main-hand:
-    item: espada_del_sargento    # nombre guardado con /custommobs item save
+    item: espada_del_sargento    # nombre guardado con /customcore item save
     drop-chance: 0.0
 ```
 
@@ -154,7 +154,7 @@ Los nombres se resuelven en este orden:
 Sin namespace se busca primero en vanilla y luego en ExcellentEnchants. Los
 encantamientos custom no se comprueban al cargar: si escribes mal un id, el mob carga
 igual y el encantamiento simplemente no aparece. Los ids validos se listan con
-`/custommobs enchants excellentenchants`.
+`/customcore enchants excellentenchants`.
 
 ### Objetivos
 
@@ -242,10 +242,10 @@ recipe:
 ```
 
 - Los `extras` se suman al huevo base (`egg`).
-- `amount: 0` **desactiva el crafteo**: el mob solo se da con `/custommobs give`.
+- `amount: 0` **desactiva el crafteo**: el mob solo se da con `/customcore give`.
 - Sin bloque `recipe`: por defecto huevo + diamante.
 - Dos mobs con los mismos ingredientes colisionan: el segundo se omite con un aviso,
-  porque el cliente no podria distinguirlos. (`/custommobs reload` lo reporta.)
+  porque el cliente no podria distinguirlos. (`/customcore reload` lo reporta.)
 
 ### Skills
 
@@ -364,9 +364,9 @@ Hay objetos que **no se pueden escribir a mano** en un yml: un encantamiento de
 ExcellentEnchants, cualquier NBT puesto por otro plugin. Para esos esta el catalogo.
 
 ```
-/custommobs item save <nombre>     guarda el objeto de tu mano
-/custommobs item list              lista los nombres guardados
-/custommobs item remove <nombre>   borra uno
+/customcore item save <nombre>     guarda el objeto de tu mano
+/customcore item list              lista los nombres guardados
+/customcore item remove <nombre>   borra uno
 ```
 
 Cada objeto vive en **`items/<nombre>.yml`**, con su nombre escrito dentro:
@@ -388,8 +388,8 @@ equipamiento. **Un mismo objeto sirve para varios mobs.**
 Cada jugador puede distinguir sus mobs de los de los demas:
 
 ```
-/custommobs color <color|nada>     color del nombre
-/custommobs glow <color|nada>      brillo, y de que color
+/customcore color <color|nada>     color del nombre
+/customcore glow <color|nada>      brillo, y de que color
 ```
 
 - El color **tine el nombre entero** y sobreescribe el que escribio el admin en el yml.
@@ -434,7 +434,7 @@ La actitud frente a **jugadores** se define por mob:
 
 ## Comandos
 
-Todos bajo `/custommobs` (alias `cmobs`, `cm`).
+Todos bajo `/customcore` (alias `cmobs`, `cm`).
 
 | Comando | Que hace |
 |---|---|
@@ -506,7 +506,7 @@ limits:
 
 El cupo esta **partido en dos cuentas que no se pisan**: los mobs que te siguen
 (`anchor: owner`) y los fijos a un bloque (`anchor: point`). Puedes llevar una llena y
-seguir colocando de la otra. `/custommobs cuota` muestra las dos.
+seguir colocando de la otra. `/customcore cuota` muestra las dos.
 
 - El grupo se lee de **LuckPerms en el momento de invocar**, no al conectarse: un cambio
   de rango aplica al instante.
@@ -514,7 +514,7 @@ seguir colocando de la otra. `/custommobs cuota` muestra las dos.
 - Si su grupo no esta mapeado, o no se pudieron leer sus grupos, se usa
   `default-player-mobs`. `0` = sin limite.
 - Sin LuckPerms instalado, todos caen al grupo `default`.
-- Cambiar `limits` aplica con `/custommobs reload`, **sin reiniciar**.
+- Cambiar `limits` aplica con `/customcore reload`, **sin reiniciar**.
 
 El cupo se lleva en `player-mobs.yml` y **cuenta los mobs anclados a un bloque aunque
 su chunk este descargado** — un conteo que solo mirase las entidades cargadas se
@@ -525,7 +525,7 @@ saltaria el tope desplegando mobs por bloques repartidos.
 ## Libro de inspeccion e items de mejora
 
 **El libro** muestra al jugador sus mobs con sus estadisticas de combate. Lo reparte solo
-un administrador (`/custommobs book`), pero **cualquiera puede usarlo**: asi el servidor lo
+un administrador (`/customcore book`), pero **cualquiera puede usarlo**: asi el servidor lo
 puede vender o regalar desde su economia. Al usarlo se abre un libro con una pagina por mob
 (vida actual y maxima, ataque, velocidad, armadura y ubicacion) y tambien aparecen los mobs
 que el jugador tiene guardados en su huevo.
@@ -586,7 +586,7 @@ branding:
   motd-enabled: true                     # false = sin mensaje de bienvenida
   motd:                                  # se manda al entrar; admite '&' para color
     - '&0&m----------------------------------'
-    - ' &cCustomMobs &0| &cAP2P Project'
+    - ' &cCustomCore &0| &cAP2P Project'
     - ' &cBienvenido, &4{jugador}&c.'
     - '&0&m----------------------------------'
 
@@ -601,7 +601,7 @@ recall:
 ```
 
 El MOTD admite los marcadores `{jugador}`, `{online}` y `{max}`. Cambiarlo **no pide
-reinicio**: se aplica con `/custommobs reload`.
+reinicio**: se aplica con `/customcore reload`.
 
 La **firma** (`Plugin by: AP2P Project`) no se configura: va hardcodeada en el codigo,
 con los colores de la bandera palestina.
@@ -636,10 +636,10 @@ hace nada, con aviso.
 
 ## API para otros plugins
 
-Se registra un servicio `CustomMobsApi` en el `ServicesManager`:
+Se registra un servicio `CustomCoreApi` en el `ServicesManager`:
 
 ```java
-CustomMobsApi api = getServer().getServicesManager().load(CustomMobsApi.class);
+CustomCoreApi api = getServer().getServicesManager().load(CustomCoreApi.class);
 
 api.definitionIds();                              // ids de mobs cargados
 api.isCustomMob(entity);                          // es un mob gestionado?
@@ -672,7 +672,7 @@ aparte. Los spawners son la excepcion: su punto debe sobrevivir a la muerte del 
 
 **Un mob no aparece al usar el huevo.**
 Revisa en este orden: (1) que tengas `custommobs.player`; (2) que no hayas llegado a tu
-cupo — `/custommobs cuota`; (3) que el mob tenga `egg` y que su crafteo no este apagado
+cupo — `/customcore cuota`; (3) que el mob tenga `egg` y que su crafteo no este apagado
 (`recipe.amount: 0`).
 
 **"Jugador no encontrado" al usar `give`.**
@@ -687,12 +687,12 @@ Dos mobs con los mismos ingredientes: el cliente no puede distinguirlos. Cambia
 
 **Un encantamiento no se aplica.**
 Los encantamientos custom no se validan al cargar. Comprueba el id real con
-`/custommobs enchants excellentenchants`.
+`/customcore enchants excellentenchants`.
 
 **Quedo bloqueado sin tener mobs.**
 Tu cupo incluye mobs anclados en chunks descargados. Si un mob desaparecio sin pasar por
 muerte ni retirada (un plugin externo, un corte), la cuenta queda alta:
-`/custommobs cuota recontar <jugador>`.
+`/customcore cuota recontar <jugador>`.
 
 **Cambie los permisos por defecto y no aplican.**
 `plugin.yml` solo se lee al arrancar. Requiere reinicio del servidor.
@@ -706,7 +706,7 @@ javac anterior no puede leerlo. La salida, en cambio, es **bytecode 21**, o sea 
 funciona en servidores con **Java 21+**.
 
 ```
-mvn -B clean package        # deja Core/target/CustomMobs-<version>.jar
+mvn -B clean package        # deja Core/target/CustomCore-<version>.jar
 ```
 
 Para publicar una version nueva:
@@ -717,8 +717,8 @@ Para publicar una version nueva:
 4. Adjunta el jar:
 
 ```
-gh release create vX.Y.Z Core/target/CustomMobs-X.Y.Z.jar \
-  --title 'CustomMobs X.Y.Z' --notes-file CHANGELOG.md
+gh release create vX.Y.Z Core/target/CustomCore-X.Y.Z.jar \
+  --title 'CustomCore X.Y.Z' --notes-file CHANGELOG.md
 ```
 
 ### Por que no hay build automatico (todavia)

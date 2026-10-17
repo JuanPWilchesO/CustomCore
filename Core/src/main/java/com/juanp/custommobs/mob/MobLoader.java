@@ -189,6 +189,8 @@ public final class MobLoader {
                     normalize(asString(map.get("no-pay"))),
                     normalize(asString(map.get("faction"))),
                     normalize(asString(map.get("no-faction"))),
+                    normalize(asString(map.containsKey("clase") ? map.get("clase") : map.get("class"))),
+                    normalize(asString(map.containsKey("no-clase") ? map.get("no-clase") : map.get("no-class"))),
                     asString(map.get("console-command")),
                     asString(map.get("player-command"))));
         }

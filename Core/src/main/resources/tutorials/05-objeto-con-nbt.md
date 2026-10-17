@@ -9,11 +9,11 @@ Sostien en la mano el objeto ya preparado (con su encantamiento, su nombre, su N
 ejecuta:
 
 ```
-/custommobs item save espada_del_sargento
+/customcore item save espada_del_sargento
 ```
 
 El nombre se normaliza a minusculas y sin espacios. Se crea
-`plugins/CustomMobs/items/espada_del_sargento.yml`:
+`plugins/CustomCore/items/espada_del_sargento.yml`:
 
 ```yaml
 nombre: espada_del_sargento
@@ -45,8 +45,8 @@ drops:
 ## 4. Gestiona el catalogo
 
 ```
-/custommobs item list
-/custommobs item remove espada_del_sargento
+/customcore item list
+/customcore item remove espada_del_sargento
 ```
 
 Un **mismo objeto sirve para varios mobs**. Si un drop nombra un objeto que no existe, se

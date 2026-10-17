@@ -8,7 +8,7 @@
 #   - NO pelea: la lleva su jinete. Tampoco dispara skills de interaccion,
 #     porque en una montura el clic derecho sirve para montarse.
 #
-# Probar:   /custommobs give tutorial_montura
+# Probar:   /customcore give tutorial_montura
 # =============================================================================
 
 id: tutorial_montura

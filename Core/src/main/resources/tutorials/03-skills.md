@@ -134,8 +134,8 @@ del invocador. Ver `../docs/skills.md`.
 ## 5. Prueba
 
 ```
-/custommobs reload
-/custommobs give arquero
+/customcore reload
+/customcore give arquero
 ```
 
 Invocalo y dejate ver: debe gritarte, curarte si te haces dano y envenenar a quien lo

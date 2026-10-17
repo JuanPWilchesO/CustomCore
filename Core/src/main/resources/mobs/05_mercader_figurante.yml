@@ -4,7 +4,7 @@
 # Lo que se aprende aqui: 'ai: false' para dejarlo QUIETO en su puesto, mas
 # disfraz y sonidos.
 #
-# Se invoca con:   /custommobs spawn tutorial_mercader
+# Se invoca con:   /customcore spawn tutorial_mercader
 # =============================================================================
 
 id: tutorial_mercader

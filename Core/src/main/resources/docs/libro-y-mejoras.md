@@ -9,7 +9,7 @@ propios mobs**.
 
 Un item tipo libro que muestra al jugador **sus mobs con sus estadisticas de combate**.
 
-- **Solo lo reparte un administrador**: `/custommobs book [jugador]` (alias `libro`).
+- **Solo lo reparte un administrador**: `/customcore book [jugador]` (alias `libro`).
 - **Cualquier jugador puede usarlo**. El permiso es para *repartirlo*, no para usarlo: asi
   el servidor lo puede vender, regalar o incluir en su sistema de economia.
 - Al usarlo (clic derecho, con el libro en la mano) se abre **un libro de verdad** con
@@ -91,7 +91,7 @@ consume** y se le avisa de lo que subio. Si el mob no es suyo, no pasa nada y **
 ### Craftearlo o no
 
 - `recipe.amount: 0` → **no se craftea**: solo se reparte con
-  `/custommobs upgrade give <id> [jugador]`.
+  `/customcore upgrade give <id> [jugador]`.
 - `recipe.amount: 1` o mas → se craftea sin forma, con el material base y los `extras`.
 
 Dos items con **los mismos ingredientes** son indistinguibles para el cliente, y el segundo
@@ -107,9 +107,9 @@ sigue leyendo del yml.
 ### Comandos
 
 ```
-/custommobs upgrade list                     que items de mejora hay
-/custommobs upgrade give <id> [jugador]      reparte uno
-/custommobs upgrade reload                   relee upgrades/ y rehace las recetas
+/customcore upgrade list                     que items de mejora hay
+/customcore upgrade give <id> [jugador]      reparte uno
+/customcore upgrade reload                   relee upgrades/ y rehace las recetas
 ```
 
 `mejora` funciona como alias de `upgrade`.

@@ -46,13 +46,13 @@ enchants:
 Para saber los ids reales:
 
 ```
-/custommobs enchants excellentenchants
+/customcore enchants excellentenchants
 ```
 
 ## 3. Recarga y prueba
 
 ```
-/custommobs reload
+/customcore reload
 ```
 
 Invoca el guardia y miralo: debe traer casco y espada. Matelo y comprueba que **no suelta**
@@ -64,7 +64,7 @@ Si un objeto lleva NBT que no se puede escribir a mano, guardalo en el catalogo 
 referencialo por nombre:
 
 ```
-/custommobs item save filo_del_guardia
+/customcore item save filo_del_guardia
 ```
 
 ```yaml

@@ -19,6 +19,8 @@ import java.util.List;
  * @param noPay           a donde va si no puede pagar; {@code null} = cierra
  * @param faction         faccion exigida al jugador ({@code *} = cualquiera, {@code null} = no se mira)
  * @param noFaction       a donde va si no cumple la faccion; {@code null} = cierra
+ * @param clazz           clase exigida al jugador ({@code *} = cualquiera, {@code null} = no se mira)
+ * @param noClass         a donde va si no cumple la clase; {@code null} = cierra
  * @param consoleCommand  comando de consola que ejecuta (solo aqui, en una interaccion)
  * @param playerCommand   comando que ejecuta el propio jugador
  */
@@ -32,6 +34,8 @@ public record ChainStep(
         String noPay,
         String faction,
         String noFaction,
+        String clazz,
+        String noClass,
         String consoleCommand,
         String playerCommand
 ) {
@@ -49,5 +53,10 @@ public record ChainStep(
     /** {@code true} si exige pertenecer a una faccion. */
     public boolean checksFaction() {
         return this.faction != null && !this.faction.isBlank();
+    }
+
+    /** {@code true} si exige pertenecer a una clase. */
+    public boolean checksClass() {
+        return this.clazz != null && !this.clazz.isBlank();
     }
 }

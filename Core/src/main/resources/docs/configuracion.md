@@ -7,7 +7,7 @@ branding:
   motd-enabled: true
   motd:
     - '&0&m----------------------------------'
-    - ' &cCustomMobs &0| &cAP2P Project'
+    - ' &cCustomCore &0| &cAP2P Project'
     - ' &cBienvenido, &4{jugador}&c.'
     - '&0&m----------------------------------'
 
@@ -23,8 +23,8 @@ skills:
   interval-ticks: 20
 
 permissions:
-  player: custommobs.player
-  admin: custommobs.admin
+  player: customcore.player
+  admin: customcore.admin
 
 limits:
   default-player-mobs: 3
@@ -131,7 +131,7 @@ son **81 chunks**. Bajalo o ponlo en `0` si notas presion de memoria.
 ## El MOTD
 
 Admite los marcadores `{jugador}`, `{online}` y `{max}`. Cambiarlo **no pide reinicio**:
-se aplica con `/custommobs reload`.
+se aplica con `/customcore reload`.
 
 La **firma** (`Plugin by AP2P Project`) no se configura: va hardcodeada en el codigo, con
 los colores de la bandera palestina.
@@ -204,7 +204,7 @@ faction-glow:
 |---|---|
 | `off` | nadie ve el brillo |
 | `global` | lo ven todos, siempre |
-| `player` | cada jugador lo decide con `/custommobs glowfaccion` |
+| `player` | cada jugador lo decide con `/customcore glowfaccion` |
 
 El color de un brillo sale del equipo de scoreboard, y los equipos son **globales**: pintarlo
 de una vez no serviria, porque la relacion es distinta para cada espectador. Por eso se le

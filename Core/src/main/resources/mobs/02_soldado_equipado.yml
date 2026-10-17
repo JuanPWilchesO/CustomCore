@@ -4,9 +4,9 @@
 # Lo que se aprende aqui: equipamiento por slot, encantamientos vanilla y
 # CUSTOM, y 'drop-chance' para que no suelte el equipo al morir.
 #
-# Probar:   /custommobs give tutorial_soldado
+# Probar:   /customcore give tutorial_soldado
 # Los ids de encantamientos custom se listan con:
-#          /custommobs enchants excellentenchants
+#          /customcore enchants excellentenchants
 # =============================================================================
 
 id: tutorial_soldado

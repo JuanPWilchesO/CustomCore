@@ -1,4 +1,4 @@
-# CustomMobs - configuracion general
+# CustomCore - configuracion general
 debug: false
 
 # Diagnostico: guarda los ultimos paquetes enviados a cada jugador y los vuelca al log cuando
@@ -67,9 +67,9 @@ skills:
 permissions:
   # Permiso para usar los huevos custom. Se comprueba con el sistema de permisos de
   # Bukkit, asi que sirve cualquier plugin (LuckPerms incluido).
-  player: custommobs.player
+  player: customcore.player
   # Permiso para los comandos de administracion.
-  admin: custommobs.admin
+  admin: customcore.admin
 
 limits:
   # Cupo de mobs anclados al DUENO (anchor: owner) para quien no tenga grupo mapeado.
@@ -120,7 +120,7 @@ spawning:
 
 book:
   # Libro de inspeccion: muestra al jugador SUS mobs con sus estadisticas de combate.
-  # Solo lo reparte un administrador (/custommobs book), pero cualquier jugador puede
+  # Solo lo reparte un administrador (/customcore book), pero cualquier jugador puede
   # usarlo, para que el servidor lo venda o lo regale desde su economia.
   material: WRITTEN_BOOK
   display-name: '&6Inventario de fuerzas'
@@ -164,7 +164,7 @@ faction-glow:
   #
   #   off    -> nadie ve el brillo
   #   global -> lo ven todos, siempre
-  #   player -> cada jugador lo decide con /custommobs glowfaccion
+  #   player -> cada jugador lo decide con /customcore glowfaccion
   mode: off
   # Radio en bloques dentro del cual se pinta. 0 = sin limite.
   radius: 48.0

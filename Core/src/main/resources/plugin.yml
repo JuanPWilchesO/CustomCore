@@ -4,7 +4,7 @@ main: com.juanp.custommobs.CustomMobsPlugin
 api-version: '1.21'
 author: Juan Pablo
 description: Mobs, objetos, recetas, facciones y pociones custom definidos por YAML.
-website: https://github.com/JuanPWilchesO/CustomMobs
+website: https://github.com/JuanPWilchesO/CustomCore
 
 softdepend:
   - Teams
@@ -16,14 +16,14 @@ commands:
   customcore:
     description: Administracion de CustomCore.
     usage: /customcore <reload|list|give|spawn|cuota>
-    aliases: [cm, cmobs, custommobs]
+    aliases: [cm]
     # Sin 'permission' aqui a proposito: el permiso se comprueba en el codigo, por
     # subcomando, para que un jugador raso pueda usar 'cuota' y ver su propio cupo.
 
 permissions:
-  custommobs.player:
+  customcore.player:
     description: Permite invocar mobs con los huevos custom.
     default: true
-  custommobs.admin:
-    description: Acceso a los comandos de administracion de CustomMobs.
+  customcore.admin:
+    description: Acceso a los comandos de administracion de CustomCore.
     default: op

@@ -9,9 +9,9 @@
 # El valor es CUANTO SUBE, no el valor final.
 #
 # El crafteo es sin forma. 'amount: 0' lo desactiva y entonces solo se reparte
-# con /custommobs upgrade give. Los ingredientes extra se suman al material.
+# con /customcore upgrade give. Los ingredientes extra se suman al material.
 #
-# Repartir:  /custommobs upgrade give piedra_vida [jugador]
+# Repartir:  /customcore upgrade give piedra_vida [jugador]
 # =============================================================================
 
 id: piedra_vida

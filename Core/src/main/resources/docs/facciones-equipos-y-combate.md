@@ -87,7 +87,7 @@ intocable" que usa la IA para elegir a quien atacar.
 Un administrador puede meter a un jugador en una faccion:
 
 ```
-/custommobs faction set <jugador> <faccion>
+/customcore faction set <jugador> <faccion>
 ```
 
 A partir de ahi, los mobs de `category: server` lo tratan por `factions.yml`, no por su
@@ -134,7 +134,7 @@ se defiende:
 ## Ver los bandos de un vistazo (brillo por faccion)
 
 Con `faction-glow.mode` en `global` (o en `player`, y cada quien lo enciende con
-`/custommobs glowfaccion`) cada jugador ve a los demas con el brillo de su relacion:
+`/customcore glowfaccion`) cada jugador ve a los demas con el brillo de su relacion:
 
 | Relacion contigo | Brillo |
 |---|---|

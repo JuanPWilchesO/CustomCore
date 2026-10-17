@@ -4,7 +4,7 @@
 # El mob mas simple que sirve para algo. Lo que se aprende aqui:
 #   categoria 'player', huevo, receta, atributos y ancla al dueno.
 #
-# Probar:   /custommobs reload     y luego     /custommobs give tutorial_guardia
+# Probar:   /customcore reload     y luego     /customcore give tutorial_guardia
 # =============================================================================
 
 id: tutorial_guardia
@@ -25,7 +25,7 @@ egg: ZOMBIE_SPAWN_EGG
 recipe:
   extras:
     - IRON_INGOT
-  # Cuantos huevos produce. 0 desactiva el crafteo (solo /custommobs give).
+  # Cuantos huevos produce. 0 desactiva el crafteo (solo /customcore give).
   amount: 1
 
 glow: false

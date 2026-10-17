@@ -118,6 +118,10 @@ public final class ChainService {
             this.goTo(mob, player, skill, conversationId, step.noFaction(), depth + 1);
             return;
         }
+        if (step.checksClass() && !this.inClass(player, step.clazz())) {
+            this.goTo(mob, player, skill, conversationId, step.noClass(), depth + 1);
+            return;
+        }
         // 4) la pregunta: se mandan los botones y se espera el clic.
         if (step.asks()) {
             for (int index = 0; index < step.options().size(); index++) {
@@ -150,6 +154,12 @@ public final class ChainService {
      * <p>{@code *} pide simplemente que tenga alguna. Si se nombra una, valen tambien sus
      * <b>aliadas</b>: quien sirve a los orcos sirve tambien a los goblins, que son su bando.
      */
+    /** {@code true} si el jugador es de esa clase ({@code *} = cualquiera). */
+    private boolean inClass(Player player, String wanted) {
+        String clazz = this.plugin.playerClasses().of(player.getUniqueId()).orElse(null);
+        return clazz != null && ("*".equals(wanted) || clazz.equals(wanted));
+    }
+
     private boolean inFaction(Player player, String wanted) {
         String faction = this.plugin.playerFactions().of(player.getUniqueId()).orElse(null);
         if (faction == null) {

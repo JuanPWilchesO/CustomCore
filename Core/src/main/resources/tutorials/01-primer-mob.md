@@ -4,7 +4,7 @@ Vamos a crear un guardia que sigue a su dueno y lo protege. Diez minutos.
 
 ## 1. Crea el archivo
 
-`plugins/CustomMobs/mobs/guardia.yml`:
+`plugins/CustomCore/mobs/guardia.yml`:
 
 ```yaml
 id: guardia
@@ -26,16 +26,16 @@ leash:
 ## 2. Cargalo
 
 ```
-/custommobs reload
+/customcore reload
 ```
 
-Debe aparecer `guardia` en `/custommobs list`.
+Debe aparecer `guardia` en `/customcore list`.
 
 ## 3. Consigue el huevo
 
 Dos caminos:
 
-- `/custommobs give guardia` — te lo da directamente.
+- `/customcore give guardia` — te lo da directamente.
 - Craftealo: **huevo de zombi + diamante** (la receta por defecto, porque no pusimos
   `recipe.extras`).
 
@@ -52,7 +52,7 @@ A partir de ahi:
 
 ## 5. Comprueba
 
-- `/custommobs active` — debe listarlo con `[dueno: TuNombre]`.
+- `/customcore active` — debe listarlo con `[dueno: TuNombre]`.
 - Alejate: a mas de 10 bloques intenta volver; a mas de 24 se teletransporta.
 
 ## Que has aprendido

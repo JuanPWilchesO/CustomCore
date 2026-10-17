@@ -145,7 +145,7 @@ limits:
 ```
 
 Asi puedes llevar el cupo de seguidores y el de mobs fijos llenos y, ademas, tu montura.
-`/custommobs cuota` muestra las **tres** lineas. `0` = sin limite.
+`/customcore cuota` muestra las **tres** lineas. `0` = sin limite.
 
 ---
 
