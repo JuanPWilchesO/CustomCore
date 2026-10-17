@@ -61,7 +61,7 @@ public final class DropService {
     private void warnMissing(String name) {
         if (this.warned.add(name)) {
             this.plugin.getLogger().warning("El drop '" + name
-                    + "' no esta en el catalogo. Guardalo con /custommobs item save " + name);
+                    + "' no esta en el catalogo. Guardalo con /customcore item save " + name);
         }
     }
 }

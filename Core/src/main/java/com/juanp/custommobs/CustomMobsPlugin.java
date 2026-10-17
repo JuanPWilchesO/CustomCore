@@ -314,7 +314,7 @@ public final class CustomMobsPlugin extends JavaPlugin {
         this.mobService.restoreAll();
         this.mobService.resumeSpawners();
 
-        this.getLogger().info("CustomMobs habilitado. Definiciones: " + this.registry.size()
+        this.getLogger().info("CustomCore habilitado. Definiciones: " + this.registry.size()
                 + " | facciones: " + this.factions.size()
                 + " | disfraces: " + this.disguiseLink.name()
                 + " | teams: " + this.teamLink.name()

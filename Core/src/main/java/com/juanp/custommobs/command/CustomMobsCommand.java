@@ -29,7 +29,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-/** /custommobs reload | list | give | enchants */
+/** /customcore reload | list | give | enchants */
 public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
 
     /**
@@ -144,7 +144,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
      */
     private void faction(CommandSender sender, String[] args) {
         if (args.length < 2) {
-            sender.sendMessage(TAG + " Uso: /custommobs faction <set|get|clear|list>");
+            sender.sendMessage(TAG + " Uso: /customcore faction <set|get|clear|list>");
             return;
         }
         String action = args[1].toLowerCase(Locale.ROOT);
@@ -163,7 +163,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
             return;
         }
         if (args.length < 3) {
-            sender.sendMessage(TAG + " Uso: /custommobs faction " + action + " <jugador>"
+            sender.sendMessage(TAG + " Uso: /customcore faction " + action + " <jugador>"
                     + (action.equals("set") ? " <faccion>" : ""));
             return;
         }
@@ -185,7 +185,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
             }
             case "set" -> {
                 if (args.length < 4) {
-                    sender.sendMessage(TAG + " Uso: /custommobs faction set <jugador> <faccion>");
+                    sender.sendMessage(TAG + " Uso: /customcore faction set <jugador> <faccion>");
                     return;
                 }
                 String faction = args[3].toLowerCase(Locale.ROOT);
@@ -205,7 +205,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
                             + " ni en ningun mob; comprueba la ortografia.");
                 }
             }
-            default -> sender.sendMessage(TAG + " Uso: /custommobs faction <set|get|clear|list>");
+            default -> sender.sendMessage(TAG + " Uso: /customcore faction <set|get|clear|list>");
         }
     }
 
@@ -275,7 +275,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
 
         ItemStack egg = this.plugin.craft().createEgg(definition);
         if (egg == null) {
-            sender.sendMessage(TAG + " '" + definition.id() + "' no define huevo; usa /custommobs spawn.");
+            sender.sendMessage(TAG + " '" + definition.id() + "' no define huevo; usa /customcore spawn.");
             return;
         }
         target.getInventory().addItem(egg);
@@ -284,7 +284,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
 
     private void spawn(CommandSender sender, String[] args) {
         if (args.length < 2) {
-            sender.sendMessage(TAG + " Uso: /custommobs spawn <id> [mundo x y z]");
+            sender.sendMessage(TAG + " Uso: /customcore spawn <id> [mundo x y z]");
             return;
         }
         MobDefinition definition = this.plugin.registry().get(args[1]).orElse(null);
@@ -310,7 +310,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
         } else if (sender instanceof Player player) {
             location = player.getLocation();
         } else {
-            sender.sendMessage(TAG + " Desde consola hace falta: /custommobs spawn <id> <mundo> <x> <y> <z>");
+            sender.sendMessage(TAG + " Desde consola hace falta: /customcore spawn <id> <mundo> <x> <y> <z>");
             return;
         }
 
@@ -366,7 +366,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
                 if (max > 0 && used >= max) {
                     sender.sendMessage(TAG + " Sigue en el tope: sus mobs existen, asi que no puede invocar mas.");
                     sender.sendMessage(TAG + " Para liberar cupo de verdad hay que retirarlos:"
-                            + " /custommobs cuota retirar " + target.getName());
+                            + " /customcore cuota retirar " + target.getName());
                 } else if (used > 0) {
                     sender.sendMessage(TAG + " Los anclados en chunks descargados volveran a contar cuando carguen.");
                 }
@@ -397,9 +397,9 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
             ownerId = player.getUniqueId();
             label = player.getName();
         } else {
-            sender.sendMessage(TAG + " Uso: /custommobs cuota [jugador]");
-            sender.sendMessage(TAG + "      /custommobs cuota recontar <jugador>  (solo rehace la cuenta, no toca mobs)");
-            sender.sendMessage(TAG + "      /custommobs cuota retirar <jugador>  (mata sus mobs y deja el cupo en cero)");
+            sender.sendMessage(TAG + " Uso: /customcore cuota [jugador]");
+            sender.sendMessage(TAG + "      /customcore cuota recontar <jugador>  (solo rehace la cuenta, no toca mobs)");
+            sender.sendMessage(TAG + "      /customcore cuota retirar <jugador>  (mata sus mobs y deja el cupo en cero)");
             return;
         }
 
@@ -456,7 +456,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
         if (loaded + inEggs == 0 && used == 0) {
             sender.sendMessage(" - (no tiene mobs)");
         } else {
-            sender.sendMessage(TAG + " Para deshacerte de uno: /custommobs despedir <id>, o 'todos'.");
+            sender.sendMessage(TAG + " Para deshacerte de uno: /customcore despedir <id>, o 'todos'.");
         }
     }
 
@@ -469,7 +469,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
     /**
      * Gobierna los spawners: listarlos, borrarlos y releerlos.
      *
-     * <p>Hasta ahora la unica via era {@code /custommobs remove}, que exige estar en el
+     * <p>Hasta ahora la unica via era {@code /customcore remove}, que exige estar en el
      * juego y solo alcanza lo que este cargado alrededor. Con esto se limpian desde la
      * consola y sin caminar hasta el sitio.
      */
@@ -491,10 +491,10 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
     }
 
     private void spawnerUsage(CommandSender sender) {
-        sender.sendMessage(TAG + " Uso: /custommobs spawner list");
-        sender.sendMessage(TAG + "      /custommobs spawner remove <id>");
-        sender.sendMessage(TAG + "      /custommobs spawner removeall [mob]");
-        sender.sendMessage(TAG + "      /custommobs spawner reload");
+        sender.sendMessage(TAG + " Uso: /customcore spawner list");
+        sender.sendMessage(TAG + "      /customcore spawner remove <id>");
+        sender.sendMessage(TAG + "      /customcore spawner removeall [mob]");
+        sender.sendMessage(TAG + "      /customcore spawner reload");
     }
 
     private void spawnerList(CommandSender sender) {
@@ -511,14 +511,14 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
 
     private void spawnerRemove(CommandSender sender, String[] args) {
         if (args.length < 3) {
-            sender.sendMessage(TAG + " Uso: /custommobs spawner remove <id>");
+            sender.sendMessage(TAG + " Uso: /customcore spawner remove <id>");
             return;
         }
         UUID id = parseUuid(args[2]);
         SpawnerEntry entry = id == null ? null : this.plugin.spawners().get(id).orElse(null);
         if (entry == null) {
             sender.sendMessage(TAG + " No hay ningun spawner con ese id; miralos con"
-                    + " '/custommobs spawner list'.");
+                    + " '/customcore spawner list'.");
             return;
         }
         int killed = this.retireSpawnerMobs(entry);
@@ -600,7 +600,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
             return;
         }
         if (args.length < 2) {
-            sender.sendMessage(TAG + " Uso: /custommobs despedir <id|todos>");
+            sender.sendMessage(TAG + " Uso: /customcore despedir <id|todos>");
             return;
         }
         String raw = args[1].toLowerCase(Locale.ROOT);
@@ -628,7 +628,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
                 matches++;
             }
             if (matches == 0) {
-                sender.sendMessage(TAG + " No tienes ese mob; miralos con /custommobs cuota.");
+                sender.sendMessage(TAG + " No tienes ese mob; miralos con /customcore cuota.");
                 return;
             }
             if (matches > 1) {
@@ -650,11 +650,11 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
             }
         }
         if (count == 0) {
-            sender.sendMessage(TAG + " No tienes ese mob; miralos con /custommobs cuota.");
+            sender.sendMessage(TAG + " No tienes ese mob; miralos con /customcore cuota.");
             return;
         }
         if (count > 1) {
-            sender.sendMessage(TAG + " Tienes " + count + " '" + raw + "'. Elige cual: /custommobs despedir "
+            sender.sendMessage(TAG + " Tienes " + count + " '" + raw + "'. Elige cual: /customcore despedir "
                     + raw + "#<marca>  (usa el tabulador).");
             return;
         }
@@ -685,7 +685,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
     /** Items de mejora: verlos, repartirlos y releerlos. */
     private void upgrade(CommandSender sender, String[] args) {
         if (args.length < 2) {
-            sender.sendMessage(TAG + " Uso: /custommobs upgrade list | give <id> [jugador] | reload");
+            sender.sendMessage(TAG + " Uso: /customcore upgrade list | give <id> [jugador] | reload");
             return;
         }
         switch (args[1].toLowerCase(Locale.ROOT)) {
@@ -699,13 +699,13 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
             }
             case "give" -> {
                 if (args.length < 3) {
-                    sender.sendMessage(TAG + " Uso: /custommobs upgrade give <id> [jugador]");
+                    sender.sendMessage(TAG + " Uso: /customcore upgrade give <id> [jugador]");
                     return;
                 }
                 var spec = this.plugin.upgrades().get(args[2]).orElse(null);
                 if (spec == null) {
                     sender.sendMessage(TAG + " No hay ningun item de mejora con ese id;"
-                            + " miralos con '/custommobs upgrade list'.");
+                            + " miralos con '/customcore upgrade list'.");
                     return;
                 }
                 Player target = this.targetPlayer(sender, args, 3);
@@ -721,7 +721,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(TAG + " Items de mejora recargados: "
                         + this.plugin.upgrades().size() + ".");
             }
-            default -> sender.sendMessage(TAG + " Uso: /custommobs upgrade list | give <id> [jugador] | reload");
+            default -> sender.sendMessage(TAG + " Uso: /customcore upgrade list | give <id> [jugador] | reload");
         }
     }
 
@@ -780,7 +780,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
      */
     private void kill(CommandSender sender, String[] args) {
         if (args.length < 2) {
-            sender.sendMessage(TAG + " Uso: /custommobs kill <id>");
+            sender.sendMessage(TAG + " Uso: /customcore kill <id>");
             return;
         }
         String id = args[1].toLowerCase(Locale.ROOT);
@@ -836,7 +836,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
         }
         boolean isName = "name".equals(field);
         if (args.length < 2) {
-            sender.sendMessage(TAG + " Uso: /custommobs " + (isName ? "color" : "glow")
+            sender.sendMessage(TAG + " Uso: /customcore " + (isName ? "color" : "glow")
                     + " <color|" + MobStyle.OFF + ">");
             sender.sendMessage(TAG + " Colores: RED, BLUE, GREEN, GOLD, AQUA, LIGHT_PURPLE...");
             return;
@@ -883,7 +883,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
      * y despues cualquier mob lo llama desde su tabla de drops con {@code item: <nombre>}.
      */
     private void item(CommandSender sender, String[] args) {
-        String usage = TAG + " Uso: /custommobs item save <nombre> | list | remove <nombre>"
+        String usage = TAG + " Uso: /customcore item save <nombre> | list | remove <nombre>"
                 + " | faccion <nombre> <faccion|nada>";
         if (args.length < 2) {
             sender.sendMessage(usage);
@@ -896,7 +896,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
                     return;
                 }
                 if (args.length < 3) {
-                    sender.sendMessage(TAG + " Uso: /custommobs item save <nombre>");
+                    sender.sendMessage(TAG + " Uso: /customcore item save <nombre>");
                     return;
                 }
                 ItemStack hand = player.getInventory().getItemInMainHand();
@@ -912,7 +912,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage(TAG + " Item guardado como '" + name + "' en items/" + name + ".yml.");
                 sender.sendMessage(TAG + " Para que caiga, en el yml del mob: drops: - item: '" + name + "'");
                 sender.sendMessage(TAG + " Para craftearlo, anade 'receta:' a items/" + name
-                        + ".yml y /custommobs reload.");
+                        + ".yml y /customcore reload.");
             }
             case "list" -> {
                 var names = this.plugin.drops().catalog().names();
@@ -927,7 +927,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
             }
             case "give" -> {
                 if (args.length < 3) {
-                    sender.sendMessage(TAG + " Uso: /custommobs item give <nombre> [jugador]");
+                    sender.sendMessage(TAG + " Uso: /customcore item give <nombre> [jugador]");
                     return;
                 }
                 Player target = this.targetPlayer(sender, args, 3);
@@ -947,14 +947,14 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
             }
             case "remove" -> {
                 if (args.length < 3 || !this.plugin.drops().catalog().remove(args[2])) {
-                    sender.sendMessage(TAG + " Uso: /custommobs item remove <nombre> (debe existir)");
+                    sender.sendMessage(TAG + " Uso: /customcore item remove <nombre> (debe existir)");
                     return;
                 }
                 sender.sendMessage(TAG + " Item '" + args[2].toLowerCase(Locale.ROOT) + "' borrado del catalogo.");
             }
             case "faccion" -> {
                 if (args.length < 4) {
-                    sender.sendMessage(TAG + " Uso: /custommobs item faccion <nombre> <faccion|nada>");
+                    sender.sendMessage(TAG + " Uso: /customcore item faccion <nombre> <faccion|nada>");
                     return;
                 }
                 String faction = args[3].equalsIgnoreCase("nada") || args[3].equals("-")
@@ -976,7 +976,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
                     // La marca solo la llevan las copias que salen del catalogo: las que ya
                     // estan repartidas por el mundo no cambian.
                     sender.sendMessage(TAG + " Las copias ya repartidas no cambian. Reparte copias"
-                            + " marcadas con /custommobs item give " + itemName + " [jugador].");
+                            + " marcadas con /customcore item give " + itemName + " [jugador].");
                 }
             }
             default -> sender.sendMessage(usage);
@@ -994,7 +994,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
             }
             sender.sendMessage(" - " + key);
             if (++shown >= 60) {
-                sender.sendMessage("... (afina con /custommobs enchants <texto>)");
+                sender.sendMessage("... (afina con /customcore enchants <texto>)");
                 break;
             }
         }
@@ -1002,7 +1002,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
     }
 
     private void help(CommandSender sender) {
-        sender.sendMessage(TAG + " /custommobs reload | list | give <id> [jugador] | spawn <id> [mundo x y z]");
+        sender.sendMessage(TAG + " /customcore reload | list | give <id> [jugador] | spawn <id> [mundo x y z]");
         sender.sendMessage(TAG + "           | remove [radio] | active | kill <id> | enchants [filtro]");
         sender.sendMessage(TAG + "           | cuota [jugador] | cuota recontar <jugador> | cuota retirar <jugador>");
         sender.sendMessage(TAG + "           | item save <nombre> | item list | item remove <nombre>  (catalogo de items)");

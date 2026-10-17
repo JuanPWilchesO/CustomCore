@@ -13,7 +13,7 @@ import java.util.Map;
  * <ul>
  *   <li>{@code material} + el resto de campos: el objeto se arma desde el yml.</li>
  *   <li>{@code itemName}: el <b>nombre</b> de un objeto del catalogo ({@code items/<nombre>.yml}),
- *       guardado antes con {@code /custommobs item save}. Es la via para equipar un objeto con
+ *       guardado antes con {@code /customcore item save}. Es la via para equipar un objeto con
  *       NBT —un encantamiento de otro plugin, por ejemplo—, que no se puede escribir a mano.
  *       En ese caso el objeto del catalogo manda tal cual; solo se le respeta {@code dropChance},
  *       que es cosa del mob y no del objeto.</li>

@@ -12,7 +12,7 @@ import java.util.Random;
  * <ul>
  *   <li>{@code material} + {@code min}/{@code max}: un objeto vanilla, escrito a mano.</li>
  *   <li>{@code item}: el <b>nombre</b> de un objeto del catalogo, guardado antes con
- *       {@code /custommobs item save <nombre>}. Es la via para objetos con NBT —un
+ *       {@code /customcore item save <nombre>}. Es la via para objetos con NBT —un
  *       encantamiento de ExcellentEnchants, por ejemplo—, que no se pueden escribir a mano.</li>
  * </ul>
  *

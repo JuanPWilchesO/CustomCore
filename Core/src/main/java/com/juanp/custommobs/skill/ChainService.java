@@ -182,7 +182,7 @@ public final class ChainService {
                             int index) {
         return LegacyComponentSerializer.legacyAmpersand()
                 .deserialize(this.text(mob, player, label))
-                .clickEvent(ClickEvent.runCommand("/custommobs _chain " + conversationId + " " + index))
+                .clickEvent(ClickEvent.runCommand("/customcore _chain " + conversationId + " " + index))
                 .hoverEvent(HoverEvent.showText(Component.text("Pulsa para elegir")));
     }
 }

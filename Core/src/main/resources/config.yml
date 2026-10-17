@@ -26,7 +26,7 @@ branding:
   motd-enabled: true
   motd:
     - '&0&m----------------------------------'
-    - ' &cCustomMobs &0| &cAP2P Project'
+    - ' &cCustomCore &0| &cAP2P Project'
     - ' &cBienvenido, &4{jugador}&c.'
     - '&0&m----------------------------------'
 

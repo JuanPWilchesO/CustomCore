@@ -24,7 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Exclusividad de faccion de un objeto del catalogo.
  *
- * <p>Un objeto guardado con {@code /custommobs item faccion <nombre> <faccion>} queda
+ * <p>Un objeto guardado con {@code /customcore item faccion <nombre> <faccion>} queda
  * reservado: solo un jugador de esa faccion puede <b>recogerlo</b>, <b>equiparlo</b> o
  * <b>usarlo</b>. La marca viaja dentro del propio objeto (su NBT), asi que sobrevive a que
  * lo suelten, lo guarden en un cofre o lo reparta otro plugin.
