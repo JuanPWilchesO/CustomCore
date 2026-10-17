@@ -82,13 +82,17 @@ public final class EffectService {
             }
             Material material = Material.matchMaterial(section.getString("material", "POTION"));
             String id = key.toLowerCase(Locale.ROOT);
+            var recipeSection = section.getConfigurationSection("receta");
+            var recipe = recipeSection == null ? null
+                    : com.juanp.custommobs.drop.ItemCatalog.parseRecipe(recipeSection).orElse(null);
             this.potions.put(id, new PotionSpec(id,
                     section.getString("nombre", id),
                     material == null ? Material.POTION : material,
                     section.getString("color"),
                     effectId.toLowerCase(Locale.ROOT),
                     section.getInt("duracion", 0),
-                    section.getString("faccion")));
+                    section.getString("faccion"),
+                    recipe));
         }
         this.plugin.getLogger().info("Efectos cargados: " + this.effects.size()
                 + " | pociones: " + this.potions.size() + ".");

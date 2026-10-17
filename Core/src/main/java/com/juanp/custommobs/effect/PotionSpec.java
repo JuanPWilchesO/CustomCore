@@ -14,5 +14,6 @@ import org.bukkit.Material;
  * @param faction  faccion que puede usarla, o {@code null}
  */
 public record PotionSpec(String id, String name, Material material, String color,
-                         String effectId, int duration, String faction) {
+                         String effectId, int duration, String faction,
+                         com.juanp.custommobs.item.ItemRecipe recipe) {
 }

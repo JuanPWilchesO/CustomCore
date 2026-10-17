@@ -248,10 +248,12 @@ public final class ItemCatalog {
         if (!file.exists()) {
             return Optional.empty();
         }
-        return recipeOf(YamlConfiguration.loadConfiguration(file));
+        return parseRecipe(YamlConfiguration.loadConfiguration(file));
     }
 
-    private static Optional<com.juanp.custommobs.item.ItemRecipe> recipeOf(YamlConfiguration yaml) {
+    /** Lee un bloque de receta (con {@code forma} o {@code ingredientes}). */
+    public static Optional<com.juanp.custommobs.item.ItemRecipe> parseRecipe(
+            org.bukkit.configuration.ConfigurationSection yaml) {
         var section = yaml.getConfigurationSection("receta");
         if (section == null) {
             return Optional.empty();

@@ -16,6 +16,10 @@ sangre_fria:
   color: AQUA
   efecto: congelamiento
   duracion: 300
+  # receta:                     # descomenta para que se pueda craftear
+  #   forma: [" A ", "ABA", " A "]
+  #   ingredientes: { A: DIAMOND, B: GLASS_BOTTLE }
+  #   cantidad: 1
 
 pluma_de_icaro:
   nombre: '&fPluma de Icaro'

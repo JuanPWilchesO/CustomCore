@@ -83,6 +83,26 @@ public final class CraftService {
                 this.plugin.getLogger().warning("Receta de '" + name + "' omitida: " + trouble);
             }
         }
+
+        // Las pociones tambien pueden ser crafteables (bloque 'receta:' en potions.yml).
+        if (this.plugin.effects() == null) {
+            return;
+        }
+        for (var potion : this.plugin.effects().potions().values()) {
+            var recipe = potion.recipe();
+            if (recipe == null) {
+                continue;
+            }
+            ItemStack result = this.plugin.effects().item(potion);
+            result.setAmount(recipe.amount());
+            NamespacedKey key = new NamespacedKey(this.plugin, "potion_" + potion.id());
+            String trouble = recipe.shaped()
+                    ? this.registerShaped(key, result, recipe)
+                    : this.registerItemShapeless(key, result, recipe.loose());
+            if (trouble != null) {
+                this.plugin.getLogger().warning("Receta de la pocion '" + potion.id() + "' omitida: " + trouble);
+            }
+        }
     }
 
     /** Registra una receta con forma (el orden importa). Devuelve el motivo del fallo, o {@code null}. */
