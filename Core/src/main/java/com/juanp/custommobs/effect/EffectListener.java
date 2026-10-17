@@ -267,13 +267,25 @@ public final class EffectListener implements Listener {
         }
     }
 
-    /** Un jugador en sigilo no debe reaparecer cuando entra alguien nuevo. */
+    /**
+     * El sigilo aguanta las reconexiones, en los dos sentidos: si entra alguien nuevo no debe
+     * ver a los que estan en sigilo, y si el que reconecta es el que estaba en sigilo, debe
+     * seguir oculto para todos (si no, al volver a entrar la entidad se re-manda y reaparece).
+     */
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
+        Player joined = event.getPlayer();
+        if (this.vanished.contains(joined.getUniqueId())) {
+            for (Player other : Bukkit.getOnlinePlayers()) {
+                if (!other.equals(joined)) {
+                    other.hidePlayer(this.plugin, joined);
+                }
+            }
+        }
         for (UUID id : this.vanished) {
             Player hidden = Bukkit.getPlayer(id);
-            if (hidden != null && !hidden.equals(event.getPlayer())) {
-                event.getPlayer().hidePlayer(this.plugin, hidden);
+            if (hidden != null && !hidden.equals(joined)) {
+                joined.hidePlayer(this.plugin, hidden);
             }
         }
     }
