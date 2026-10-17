@@ -5,6 +5,13 @@ debug: false
 # se desconecta. Sirve para cazar un "Error de protocolo de red" del cliente. Dejalo apagado.
 debug-packets: false
 
+# Aviso en la action bar cuando miras un mob custom: dice si es Enemigo, Aliado o Neutral
+# respecto a tu faccion. Es texto por jugador: no toca entidades ni brillos.
+faction-info:
+  action-bar: true
+  # Alcance de la mirada, en bloques.
+  range: 8
+
 # ---------------------------------------------------------------------------
 # Firma y mensaje de bienvenida.
 # ---------------------------------------------------------------------------

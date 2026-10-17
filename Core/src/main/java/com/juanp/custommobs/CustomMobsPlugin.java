@@ -244,6 +244,12 @@ public final class CustomMobsPlugin extends JavaPlugin {
         this.glow = new FactionGlowService(this, this.mobService);
         this.glow.runTaskTimer(this, 20L, 20L);
 
+        // Aviso en la action bar al mirar un mob custom: Enemigo / Aliado / Neutral.
+        if (this.getConfig().getBoolean("faction-info.action-bar", true)) {
+            new com.juanp.custommobs.combat.FactionHud(this.mobService)
+                    .runTaskTimer(this, 20L, 10L);
+        }
+
         // Diagnostico opcional: traza de los paquetes enviados a cada jugador, volcada al
         // desconectarse. Es la unica forma de cazar un "Error de protocolo de red" del cliente,
         // porque ahi el servidor no ve nada.
