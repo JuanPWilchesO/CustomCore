@@ -39,7 +39,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
      */
     // El color del cierre manda: lo que venga despues del prefijo hereda ese color. En negro
     // (&0) los mensajes no se leian en el chat, asi que va en gris (&8).
-    private static final String TAG = com.juanp.custommobs.mob.Texts.color("&8[&cCustomMobs&8]");
+    private static final String TAG = com.juanp.custommobs.mob.Texts.color("&8[&cCustomCore&8]");
 
     private final CustomMobsPlugin plugin;
 
@@ -1003,8 +1003,8 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
         }
         sender.sendMessage(TAG + " Efectos custom (" + all.size() + "):");
         for (var spec : all.values()) {
-            sender.sendMessage(" - " + spec.id() + " - " + spec.name()
-                    + (spec.mechanic().isEmpty() ? "" : " [" + spec.mechanic() + "]"));
+            sender.sendMessage(com.juanp.custommobs.mob.Texts.color(" &7" + spec.id() + " &8- &f"
+                    + spec.name() + (spec.mechanic().isEmpty() ? "" : " &8[" + spec.mechanic() + "]")));
         }
     }
 
@@ -1014,8 +1014,8 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
         if (args.length < 2 || "list".equalsIgnoreCase(args[1])) {
             sender.sendMessage(TAG + " Pociones (" + all.size() + "):");
             for (var spec : all.values()) {
-                sender.sendMessage(" - " + spec.id() + " - " + spec.name()
-                        + " (efecto: " + spec.effectId() + ")");
+                sender.sendMessage(com.juanp.custommobs.mob.Texts.color(" &7" + spec.id()
+                        + " &8- &f" + spec.name() + " &8(efecto: " + spec.effectId() + ")"));
             }
             return;
         }
