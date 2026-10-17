@@ -7,6 +7,7 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.Registry;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -124,7 +125,7 @@ public final class EffectService {
     // ------------------------------------------------------------------ activos
 
     /** Aplica un efecto a un jugador. {@code seconds <= 0} usa la duracion del efecto. */
-    public void apply(Player player, EffectSpec spec, int seconds) {
+    public void apply(LivingEntity player, EffectSpec spec, int seconds) {
         int duration = seconds > 0 ? seconds : spec.duration();
         this.active.computeIfAbsent(player.getUniqueId(), key -> new ConcurrentHashMap<>())
                 .put(spec.id(), System.currentTimeMillis() + duration * 1000L);
@@ -141,7 +142,7 @@ public final class EffectService {
     }
 
     /** {@code true} si el jugador tiene activo algun efecto con esa mecanica. */
-    public boolean hasMechanic(Player player, String mechanic) {
+    public boolean hasMechanic(LivingEntity player, String mechanic) {
         Map<String, Long> mine = this.active.get(player.getUniqueId());
         if (mine == null) {
             return false;
@@ -160,7 +161,7 @@ public final class EffectService {
     }
 
     /** La potencia de la mecanica activa, o 0 si no la tiene. */
-    public double powerOf(Player player, String mechanic) {
+    public double powerOf(LivingEntity player, String mechanic) {
         Map<String, Long> mine = this.active.get(player.getUniqueId());
         if (mine == null) {
             return 0.0D;
@@ -179,8 +180,13 @@ public final class EffectService {
     }
 
     /** Quita los efectos caducados y devuelve los ids que se han ido. */
-    public List<String> expire(Player player) {
-        Map<String, Long> mine = this.active.get(player.getUniqueId());
+    public List<String> expire(LivingEntity player) {
+        return this.expire(player.getUniqueId());
+    }
+
+    /** Quita los efectos caducados de un uuid (vale para jugadores y para mobs). */
+    public List<String> expire(java.util.UUID id) {
+        Map<String, Long> mine = this.active.get(id);
         if (mine == null) {
             return List.of();
         }
@@ -191,17 +197,17 @@ public final class EffectService {
                 gone.add(entry.getKey());
             }
         }
-        for (String id : gone) {
-            mine.remove(id);
+        for (String goneId : gone) {
+            mine.remove(goneId);
         }
         if (mine.isEmpty()) {
-            this.active.remove(player.getUniqueId());
+            this.active.remove(id);
         }
         return gone;
     }
 
     /** Efectos activos del jugador (ids), sin tocar los caducados. */
-    public List<String> activeOf(Player player) {
+    public List<String> activeOf(LivingEntity player) {
         Map<String, Long> mine = this.active.get(player.getUniqueId());
         if (mine == null) {
             return List.of();
@@ -217,6 +223,11 @@ public final class EffectService {
     }
 
     // ------------------------------------------------------------------ item
+
+    /** Los uuid con algun efecto activo (para limpiar los de mobs). */
+    public java.util.Set<UUID> activeIds() {
+        return java.util.Set.copyOf(this.active.keySet());
+    }
 
     public NamespacedKey potionKey() {
         return this.potionKey;

@@ -20,6 +20,7 @@ import org.bukkit.event.player.PlayerItemConsumeEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffectType;
 
 import java.util.Map;
@@ -29,7 +30,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Las mecanicas de los efectos: dano (congelacion, caida, robo de vida), beber una pocion,
- * sigilo y paso helado.
+ * usar un objeto del catalogo, sigilo y paso helado.
  *
  * <p>La tarea corre <b>cada tick</b>: la congelacion hay que limpiarla todo el rato (si no,
  * entre un reseteo y el siguiente el hielo agarra) y el paso helado tiene que ir por delante
@@ -45,6 +46,8 @@ public final class EffectListener implements Listener {
     private final Map<String, Long> frost = new ConcurrentHashMap<>();
     /** Jugadores en sigilo (tipo vanish): ocultos para los demas. */
     private final Set<UUID> vanished = ConcurrentHashMap.newKeySet();
+    /** Enfriamiento de los objetos con {@code usar:}: jugador:objeto -> cuando se puede usar. */
+    private final Map<String, Long> cooldowns = new ConcurrentHashMap<>();
     private int ticks;
 
     public EffectListener(CustomMobsPlugin plugin, EffectService service) {
@@ -52,17 +55,22 @@ public final class EffectListener implements Listener {
         this.service = service;
     }
 
-    // ------------------------------------------------------------------ pociones
+    // ------------------------------------------------------------------ pociones y objetos
 
-    /** Beber una pocion: se aplica el efecto (el item lo consume el juego). */
+    /** Comer o beber: pocion del plugin, o comida del catalogo con {@code usar:}. */
     @EventHandler(ignoreCancelled = true)
     public void onDrink(PlayerItemConsumeEvent event) {
-        this.service.potionOf(event.getItem())
-                .flatMap(this.service::potion)
-                .ifPresent(spec -> this.apply(event.getPlayer(), spec));
+        ItemStack item = event.getItem();
+        PotionSpec potion = this.service.potionOf(item).flatMap(this.service::potion).orElse(null);
+        if (potion != null) {
+            this.apply(event.getPlayer(), potion);
+            return;
+        }
+        // Comida: el juego ya la consume, asi que aqui solo se aplica el efecto.
+        this.useCatalog(event.getPlayer(), item, false);
     }
 
-    /** Items que no se beben: clic derecho y se gastan. */
+    /** Clic derecho: pocion que no se bebe, o cualquier objeto del catalogo con {@code usar:}. */
     @EventHandler(ignoreCancelled = true)
     public void onUse(PlayerInteractEvent event) {
         if (event.getHand() != EquipmentSlot.HAND) {
@@ -73,18 +81,29 @@ public final class EffectListener implements Listener {
             return;
         }
         ItemStack item = event.getItem();
-        if (item == null || item.getType() == Material.POTION
-                || item.getType() == Material.SPLASH_POTION
-                || item.getType() == Material.LINGERING_POTION) {
+        if (item == null) {
             return;
         }
-        this.service.potionOf(item).flatMap(this.service::potion).ifPresent(spec -> {
-            event.setCancelled(true);
-            if (!this.apply(event.getPlayer(), spec)) {
+        boolean drinkable = item.getType() == Material.POTION
+                || item.getType() == Material.SPLASH_POTION
+                || item.getType() == Material.LINGERING_POTION;
+        if (!drinkable) {
+            PotionSpec potion = this.service.potionOf(item).flatMap(this.service::potion).orElse(null);
+            if (potion != null) {
+                event.setCancelled(true);
+                if (this.apply(event.getPlayer(), potion)) {
+                    item.setAmount(item.getAmount() - 1);
+                }
                 return;
             }
-            item.setAmount(item.getAmount() - 1);
-        });
+        }
+        if (item.getType().isEdible()) {
+            return; // se maneja al comer
+        }
+        // Objeto del catalogo con 'usar:'.
+        if (!drinkable && this.useCatalog(event.getPlayer(), item, true)) {
+            event.setCancelled(true);
+        }
     }
 
     /** @return {@code false} si la faccion de la pocion no deja usarla */
@@ -101,17 +120,58 @@ public final class EffectListener implements Listener {
                 return false;
             }
         }
-        this.service.apply(player, effect, spec.duration());
+        return this.applyEffect(player, effect, spec.duration());
+    }
+
+    /**
+     * El objeto del catalogo, si su yml trae {@code usar:}.
+     *
+     * @param spend si hay que gastar una unidad al usarlo
+     * @return {@code true} si el objeto era del catalogo y tenia uso
+     */
+    private boolean useCatalog(Player player, ItemStack item, boolean spend) {
+        if (item.getType().isAir() || !item.hasItemMeta()) {
+            return false;
+        }
+        var catalog = this.plugin.drops().catalog();
+        String name = item.getItemMeta().getPersistentDataContainer()
+                .get(catalog.nameKey(), PersistentDataType.STRING);
+        if (name == null) {
+            return false;
+        }
+        var use = catalog.useOf(name).orElse(null);
+        if (use == null) {
+            return false;
+        }
+        EffectSpec effect = this.service.effect(use.effectId()).orElse(null);
+        if (effect == null) {
+            return false;
+        }
+        String key = player.getUniqueId() + ":" + name;
+        long now = System.currentTimeMillis();
+        Long until = this.cooldowns.get(key);
+        if (until != null && until > now) {
+            return true;
+        }
+        if (use.cooldownSeconds() > 0) {
+            this.cooldowns.put(key, now + use.cooldownSeconds() * 1000L);
+        }
+        this.applyEffect(player, effect, use.duration());
+        if (spend && use.consume()) {
+            item.setAmount(item.getAmount() - 1);
+        }
+        return true;
+    }
+
+    /** Aplica un efecto ya resuelto: mensaje y, si toca, las acciones de fuera. */
+    private boolean applyEffect(Player player, EffectSpec effect, int seconds) {
+        this.service.apply(player, effect, seconds);
         player.sendMessage(Texts.color("&8[&cCustomCore&8] &7" + effect.name()));
         if ("sigilo".equals(effect.mechanic())) {
             this.vanish(player, true);
-            // Invisibilidad de vanilla ademas de ocultarse para los demas: asi el propio
-            // jugador ve desaparecer su cuerpo en F5 (como el vanish de Essentials). La
-            // armadura la sigue dibujando el cliente para uno mismo, igual que en Essentials;
-            // para los DEMAS no se ve nada, armadura incluida (hidePlayer).
-            int seconds = spec.duration() > 0 ? spec.duration() : effect.duration();
+            int duration = seconds > 0 ? seconds : effect.duration();
             player.addPotionEffect(new org.bukkit.potion.PotionEffect(
-                    PotionEffectType.INVISIBILITY, seconds * 20, 0, false, false, false));
+                    PotionEffectType.INVISIBILITY, duration * 20, 0, false, false, false));
         }
         return true;
     }
@@ -139,20 +199,20 @@ public final class EffectListener implements Listener {
         }
     }
 
-    /** Robo de vida: te curas un % del dano que haces. */
+    /** Robo de vida: te curas un % del dano que haces. Vale para jugadores y para mobs. */
     @EventHandler(ignoreCancelled = true)
     public void onHit(EntityDamageByEntityEvent event) {
-        if (!(event.getDamager() instanceof Player player)
+        if (!(event.getDamager() instanceof LivingEntity attacker)
                 || !(event.getEntity() instanceof LivingEntity)) {
             return;
         }
-        double power = this.service.powerOf(player, "robo_vida");
+        double power = this.service.powerOf(attacker, "robo_vida");
         if (power <= 0.0D) {
             return;
         }
-        AttributeInstance maxHealth = player.getAttribute(Attribute.MAX_HEALTH);
+        AttributeInstance maxHealth = attacker.getAttribute(Attribute.MAX_HEALTH);
         double max = maxHealth == null ? 20.0D : maxHealth.getValue();
-        player.setHealth(Math.min(max, player.getHealth() + event.getFinalDamage() * power));
+        attacker.setHealth(Math.min(max, attacker.getHealth() + event.getFinalDamage() * power));
     }
 
     // ------------------------------------------------------------------ tarea
@@ -162,7 +222,6 @@ public final class EffectListener implements Listener {
         this.ticks++;
         for (Player player : Bukkit.getOnlinePlayers()) {
             if (this.service.hasMechanic(player, "congelamiento")) {
-                // Limpiar el hielo TODO el rato: si no, entre tick y tick el ice_aspect agarra.
                 player.setFreezeTicks(0);
                 if (player.hasPotionEffect(PotionEffectType.SLOWNESS)) {
                     player.removePotionEffect(PotionEffectType.SLOWNESS);
@@ -175,6 +234,12 @@ public final class EffectListener implements Listener {
         if (this.ticks % 20 != 0) {
             return;
         }
+        // Limpia los efectos de mobs que ya no estan.
+        for (UUID id : this.service.activeIds()) {
+            if (Bukkit.getPlayer(id) == null) {
+                this.service.expire(id);
+            }
+        }
         for (Player player : Bukkit.getOnlinePlayers()) {
             for (String id : this.service.expire(player)) {
                 this.service.effect(id).ifPresent(spec -> {
@@ -186,12 +251,10 @@ public final class EffectListener implements Listener {
             }
         }
         this.thaw();
+        this.cooldowns.entrySet().removeIf(entry -> entry.getValue() < System.currentTimeMillis());
     }
 
-    /**
-     * Hiela el bloque de debajo y los de delante: con solo el de abajo el jugador se hundia
-     * antes de que llegara el siguiente.
-     */
+    /** Hiela el bloque de debajo y los de delante. */
     private void freezeUnder(Player player) {
         Location origin = player.getLocation().subtract(0.0D, 1.0D, 0.0D);
         this.freezeBlock(origin.getBlock());
@@ -252,12 +315,7 @@ public final class EffectListener implements Listener {
         }
     }
 
-    /**
-     * Sigilo tipo vanish: el jugador desaparece para los demas, con armadura y equipo.
-     *
-     * <p>Se usa la API de jugador oculto de Bukkit, no paquetes propios: es la misma via que
-     * usa Essentials para su vanish, y no toca el protocolo a mano.
-     */
+    /** Sigilo tipo vanish: oculto para los demas (armadura y equipo incluidos) e invisible. */
     private void vanish(Player player, boolean on) {
         if (on) {
             this.vanished.add(player.getUniqueId());
@@ -274,11 +332,7 @@ public final class EffectListener implements Listener {
         }
     }
 
-    /**
-     * El sigilo aguanta las reconexiones, en los dos sentidos: si entra alguien nuevo no debe
-     * ver a los que estan en sigilo, y si el que reconecta es el que estaba en sigilo, debe
-     * seguir oculto para todos (si no, al volver a entrar la entidad se re-manda y reaparece).
-     */
+    /** El sigilo aguanta las reconexiones en los dos sentidos. */
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
         Player joined = event.getPlayer();

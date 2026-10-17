@@ -205,6 +205,36 @@ public final class ItemCatalog {
     }
 
     /**
+     * Lo que hace el objeto al usarse, si su yml trae un bloque {@code usar:}.
+     *
+     * @see com.juanp.custommobs.item.UseSpec
+     */
+    public Optional<com.juanp.custommobs.item.UseSpec> useOf(String rawName) {
+        String name = clean(rawName);
+        if (name == null) {
+            return Optional.empty();
+        }
+        File file = this.fileOf(name);
+        if (!file.exists()) {
+            return Optional.empty();
+        }
+        YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
+        var section = yaml.getConfigurationSection("usar");
+        if (section == null) {
+            return Optional.empty();
+        }
+        String effect = section.getString("efecto");
+        if (effect == null || effect.isBlank()) {
+            return Optional.empty();
+        }
+        return Optional.of(new com.juanp.custommobs.item.UseSpec(
+                effect.trim().toLowerCase(java.util.Locale.ROOT),
+                Math.max(0, section.getInt("duracion", 0)),
+                section.getBoolean("consume", true),
+                Math.max(0, section.getInt("cooldown", 0))));
+    }
+
+    /**
      * Receta del objeto, si su yml trae una.
      *
      * @see com.juanp.custommobs.item.ItemRecipe

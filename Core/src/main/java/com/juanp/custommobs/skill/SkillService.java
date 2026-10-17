@@ -193,6 +193,16 @@ public final class SkillService extends BukkitRunnable {
     }
 
     private void potion(LivingEntity target, SkillSpec skill) {
+        // Un efecto del plugin (effects.yml) manda sobre los de Minecraft, y vale tambien para
+        // buffear al propio mob con target: self.
+        var effects = this.service.plugin().effects();
+        if (effects != null) {
+            var custom = effects.effect(skill.potion()).orElse(null);
+            if (custom != null) {
+                effects.apply(target, custom, skill.potionDurationSeconds());
+                return;
+            }
+        }
         PotionEffectType type = this.effectOf(skill.potion());
         if (type == null) {
             return;
