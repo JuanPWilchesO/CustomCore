@@ -1183,35 +1183,11 @@ public final class MobService implements Listener {
         // Se retira YA (diferirlo un tick lo empeoraba), y un segundo despues se le re-manda el
         // "borrar entidad" a quien pudiera verlo: al cliente terco se le cae asi la placa
         // fantasma. A esa altura la animacion de muerte ya paso, asi que no se nota.
-        // A un disfrazado no se le barre: LibsDisguises maneja su retirada (y sus entidades de
-        // apoyo). OJO: esto salta SOLO el barrido, no la retirada — si no, el mob se queda vivo.
-        boolean disguised = this.disguiseLink != null && entity instanceof LivingEntity living
-                && this.disguiseLink.isDisguised(living);
-        int entityId = entity.getEntityId();
-        String world = entity.getWorld().getName();
-        org.bukkit.Location where = entity.getLocation().clone();
+        // Se retira y punto. El "barrido" que mandaba un borrar-entidad a mano un segundo
+        // despues resulto ser el que tiraba a los jugadores con "Error de protocolo de red" al
+        // guardar un mob: un paquete de mas que no compensa por un cosmetico. La placa ya se
+        // oculta arriba (setCustomNameVisible(false)) y, con el mob fuera, el cliente la suelta.
         entity.remove();
-        if (disguised) {
-            return;
-        }
-        this.plugin.getServer().getScheduler().runTaskLater(this.plugin, () -> {
-            org.bukkit.World bukkit = this.plugin.getServer().getWorld(world);
-            if (bukkit == null) {
-                return;
-            }
-            try {
-                var manager = com.github.retrooper.packetevents.PacketEvents.getAPI().getPlayerManager();
-                var packet = new com.github.retrooper.packetevents.wrapper.play.server
-                        .WrapperPlayServerDestroyEntities(entityId);
-                for (org.bukkit.entity.Player player : bukkit.getPlayers()) {
-                    if (player.getLocation().distanceSquared(where) <= 64.0D * 64.0D) {
-                        manager.sendPacket(player, packet);
-                    }
-                }
-            } catch (Throwable ignored) {
-                // Sin PacketEvents (o sin una version compatible) no hay barrido: no pasa nada.
-            }
-        }, 20L);
     }
 
     /** Si el mob pertenecia a un spawner, programa su reaparicion. */

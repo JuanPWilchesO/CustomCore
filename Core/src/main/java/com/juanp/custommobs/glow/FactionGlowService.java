@@ -238,8 +238,11 @@ public final class FactionGlowService extends BukkitRunnable {
         this.send(viewer, new WrapperPlayServerTeams(team,
                 WrapperPlayServerTeams.TeamMode.REMOVE_ENTITIES, Optional.empty(),
                 entryOf(target)));
-        // Sin color de faccion: el brillo real de la entidad y su nombre tal cual.
-        this.send(viewer, this.metadata(target, target.isGlowing(), null));
+        // Solo se le mandan datos si la entidad sigue viva: mandar metadatos de una entidad ya
+        // retirada es otro paquete que el cliente no necesita (y nos costo un Network Protocol).
+        if (target.isValid()) {
+            this.send(viewer, this.metadata(target, target.isGlowing(), null));
+        }
     }
 
     /**
