@@ -1,5 +1,36 @@
 # Changelog
 
+## 0.6.0 — skills reutilizables, objetivos por mirada y efectos nuevos
+
+- **Skills reutilizables**: un archivo por skill en `skills/` (id = nombre del archivo),
+  con `ref:` desde los mobs. Los archivos invalidos o duplicados se avisan y se omiten.
+- **Skills desde items**: `usar.skills` (lista) o `usar.skill` (una). El item decide
+  `consume` y `cooldown`; el cooldown efectivo es el **mayor** entre el del item y el de
+  las skills. `usar.efecto` sigue funcionando.
+- **Objetivos nuevos**: `target-type: LOOK|RADIUS` + `target: ENEMIES|ALLIES|SELF`.
+  `LOOK + ENEMIES` solo afecta al enemigo apuntado; `LOOK + ALLIES` solo al aliado.
+  Se acaba el fuego amigo por accidente. Las skills viejas siguen cargando:
+  `target: look` pasa a `LOOK + ENEMIES`; `enemies/allies/self` siguen siendo de radio.
+- **Raycast de mirada** propio, con alcance configurable (tope 128) y corte por paredes.
+- **Efectos de skill** `IGNITE` y `FREEZE`: fuego y congelacion durante `amount`
+  segundos; `FREEZE` añade Lentitud II.
+- **HEAL porcentual**: `porcentaje: true` hace que `amount` sea una fraccion de la vida
+  maxima.
+- **Purga de efectos**: `quitar_positivos` y `quitar_negativos`, con `tipo` en
+  `effects.yml`; cubren efectos del plugin y de Minecraft (BENEFICIAL/HARMFUL).
+- **Clic sobre entidades**: se atiende `PlayerInteractEntityEvent`, no solo
+  `PlayerInteractEvent`; los items con `usar:` funcionan al hacer clic sobre un mob.
+- **`items.ignore-cancelled-use`**: opcion para procesar el uso aunque otro plugin cancele
+  el clic derecho al aire. Sigue respetando clase/faccion.
+- **Restricciones centralizadas**: clase/faccion se comprueban antes de castear en clic,
+  entidad y comida; `customcore.bypass` va separado de `customcore.admin`.
+- **`/customcore testcast <skill>`**: lanza una skill desde la mirada, para probar
+  distancias sin depender del clic (solo admin).
+- **Fuego amigo en agro**: un golpe entre companeros de team sin faccion ya no deja marca
+  de agresion.
+- **Objetos**: bloqueo tambien al atacar, disparar arco/ballesta, lanzar tridente y pasar a
+  la mano secundaria.
+
 ## 0.5.3 — reservar un objeto a una clase por comando
 
 - **`/customcore item clase <nombre> <clase|nada>`**: igual que `item faccion`, pero para la

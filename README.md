@@ -8,6 +8,18 @@ Pensado para **Paper**. Se apoya en tres plugins opcionales: **Teams** (bandos d
 jugadores), **LibsDisguises** (apariencias) y **LuckPerms** (grupos y cupos). Sin
 cualquiera de ellos el plugin sigue funcionando: cada uno degrada por su cuenta.
 
+## Novedades 0.6.0
+
+- **Skills reutilizables** en `skills/`: un archivo por skill, referenciables con `ref:`.
+- **Skills desde objetos**: `usar.skills` / `usar.skill`, con cooldown maximo entre item y skill.
+- **Objetivos por mirada**: `target-type: LOOK|RADIUS` + `target: ENEMIES|ALLIES|SELF`.
+  Evita el fuego amigo por diseno; las skills viejas siguen cargando.
+- **Fuego y hielo**: `effect: ignite` y `effect: freeze`, con duracion configurable.
+- **Curacion porcentual**: `porcentaje: true` en `heal`.
+- **Purgas**: `quitar_positivos` / `quitar_negativos`, del plugin y de Minecraft.
+- **Permiso `customcore.bypass`** separado de `customcore.admin`.
+- **`/customcore testcast <skill>`** para probar distancias sin depender del clic (admin).
+
 ---
 
 ## Requisitos
@@ -29,8 +41,9 @@ cualquiera de ellos el plugin sigue funcionando: cada uno degrada por su cuenta.
    - `plugins/CustomCore/factions.yml` — relaciones entre facciones.
    - `plugins/CustomCore/mobs/` — un archivo por mob. Se copian **cinco ejemplos
      numerados** que funcionan como tutorial: abrelos en orden.
+   - `plugins/CustomCore/skills/` — skills reutilizables, una por archivo.
 3. Edita lo que quieras.
-4. `/customcore reload` — recarga mobs, config y facciones **sin reiniciar**.
+4. `/customcore reload` — recarga mobs, `skills/`, items, config y facciones **sin reiniciar**.
 
 > `plugin.yml` es la excepcion: los permisos que declara solo se leen al arrancar. Si
 > cambias sus valores por defecto hace falta reiniciar el servidor.

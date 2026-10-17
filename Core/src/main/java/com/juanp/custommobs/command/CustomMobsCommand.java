@@ -100,6 +100,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
             case "enchants" -> this.enchants(sender, args);
             case "item" -> this.item(sender, args);
             case "effects" -> this.effects(sender, args);
+            case "testcast", "cast" -> this.testCast(sender, args);
             case "potion" -> this.potion(sender, args);
             case "spawner" -> this.spawner(sender, args);
             case "book", "libro" -> this.book(sender, args);
@@ -316,6 +317,25 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
             }
         }
         return false;
+    }
+
+    /** Lanza una skill desde el jugador, sin pasar por el clic del item. Sirve para probar distancias. */
+    private void testCast(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(TAG + " Solo un jugador puede lanzar una skill de prueba.");
+            return;
+        }
+        if (args.length < 2) {
+            player.sendMessage(TAG + " Uso: /customcore testcast <skill>");
+            return;
+        }
+        if (this.plugin.skillService() == null) {
+            player.sendMessage(TAG + " El servicio de skills no esta listo.");
+            return;
+        }
+        int cast = this.plugin.skillService().cast(player,
+                List.of(args[1].toLowerCase(Locale.ROOT)));
+        player.sendMessage(TAG + " Skills lanzadas: " + cast);
     }
 
     private void give(CommandSender sender, String[] args) {

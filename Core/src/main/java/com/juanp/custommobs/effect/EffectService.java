@@ -15,9 +15,11 @@ import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.potion.PotionEffectTypeCategory;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -65,8 +67,12 @@ public final class EffectService {
                     section.getString("descripcion", ""),
                     Math.max(1, section.getInt("duracion", 300)),
                     section.getDouble("potencia", 0.0D),
-                    section.getString("mecanica", "").toLowerCase(Locale.ROOT),
-                    section.getStringList("vanilla")));
+                    // Se aceptan guiones y guiones bajos: 'quitar-positivos' y
+                    // 'quitar_positivos' son la misma mecanica.
+                    section.getString("mecanica", "").toLowerCase(Locale.ROOT).trim()
+                            .replace('-', '_'),
+                    section.getStringList("vanilla"),
+                    typeOf(section.getString("tipo"))));
         }
 
         YamlConfiguration potionYaml = this.load("potions.yml");
@@ -91,8 +97,9 @@ public final class EffectService {
                     section.getString("color"),
                     effectId.toLowerCase(Locale.ROOT),
                     section.getInt("duracion", 0),
-                    section.getString("faccion"),
-                    section.getString("clase"),
+                    // Un valor vacio no es una restriccion: se normaliza a null.
+                    blankToNull(section.getString("faccion")),
+                    blankToNull(section.getString("clase")),
                     recipe));
         }
         this.plugin.getLogger().info("Efectos cargados: " + this.effects.size()
@@ -131,6 +138,15 @@ public final class EffectService {
 
     /** Aplica un efecto a un jugador. {@code seconds <= 0} usa la duracion del efecto. */
     public void apply(LivingEntity player, EffectSpec spec, int seconds) {
+        // Las purgas son instantaneas: no se quedan en la lista de efectos activos.
+        if ("quitar_positivos".equals(spec.mechanic())) {
+            this.clearByType(player, true);
+            return;
+        }
+        if ("quitar_negativos".equals(spec.mechanic())) {
+            this.clearByType(player, false);
+            return;
+        }
         int duration = seconds > 0 ? seconds : spec.duration();
         this.active.computeIfAbsent(player.getUniqueId(), key -> new ConcurrentHashMap<>())
                 .put(spec.id(), System.currentTimeMillis() + duration * 1000L);
@@ -144,6 +160,61 @@ public final class EffectService {
             int level = parts.length > 1 ? Math.max(1, parseInt(parts[1], 1)) : 1;
             player.addPotionEffect(new PotionEffect(type, duration * 20, level - 1, true, true, true));
         }
+    }
+
+    /**
+     * Quita los efectos de una categoria: primero los del plugin (su estado interno) y
+     * despues los de Minecraft, que es donde entran tambien los que aplican otros plugins.
+     *
+     * <p>La categoria vanilla sale de {@link PotionEffectType#getCategory()}: BENEFICIAL
+     * para los positivos y HARMFUL para los negativos. Los NEUTRAL no se tocan.
+     *
+     * @param positive {@code true} para positivos, {@code false} para negativos
+     * @return cuantos efectos se quitaron
+     */
+    public int clearByType(LivingEntity player, boolean positive) {
+        int removed = 0;
+        Map<String, Long> mine = this.active.get(player.getUniqueId());
+        if (mine != null) {
+            Iterator<Map.Entry<String, Long>> iterator = mine.entrySet().iterator();
+            while (iterator.hasNext()) {
+                EffectSpec spec = this.effects.get(iterator.next().getKey());
+                if (spec == null) {
+                    continue;
+                }
+                boolean match = positive
+                        ? "positivo".equals(spec.type())
+                        : "negativo".equals(spec.type());
+                if (match) {
+                    iterator.remove();
+                    removed++;
+                }
+            }
+            if (mine.isEmpty()) {
+                this.active.remove(player.getUniqueId());
+            }
+        }
+
+        PotionEffectTypeCategory wanted = positive
+                ? PotionEffectTypeCategory.BENEFICIAL
+                : PotionEffectTypeCategory.HARMFUL;
+        for (PotionEffect effect : new ArrayList<>(player.getActivePotionEffects())) {
+            if (effect.getType().getCategory() == wanted) {
+                player.removePotionEffect(effect.getType());
+                removed++;
+            }
+        }
+        return removed;
+    }
+
+    /** Normaliza el tipo del yml; lo que no se reconoce se trata como positivo. */
+    private static String typeOf(String raw) {
+        String value = raw == null ? "" : raw.trim().toLowerCase(Locale.ROOT);
+        return switch (value) {
+            case "negativo", "negative", "harmful" -> "negativo";
+            case "neutro", "neutral" -> "neutro";
+            default -> "positivo";
+        };
     }
 
     /** {@code true} si el jugador tiene activo algun efecto con esa mecanica. */
@@ -272,6 +343,11 @@ public final class EffectService {
         String id = item.getItemMeta().getPersistentDataContainer()
                 .get(this.potionKey, PersistentDataType.STRING);
         return id == null ? Optional.empty() : Optional.of(id);
+    }
+
+    /** Un texto vacio vale lo mismo que no estar: no impone restriccion. */
+    private static String blankToNull(String raw) {
+        return raw == null || raw.isBlank() ? null : raw.trim().toLowerCase(Locale.ROOT);
     }
 
     private static int parseInt(String raw, int fallback) {

@@ -25,6 +25,7 @@ import java.util.Map;
  * @param skillIntervalTicks  cada cuantos ticks se evaluan las skills
  * @param playerPermission    permiso para usar los huevos custom
  * @param adminPermission     permiso para los comandos de administracion
+ * @param bypassPermission    permiso para saltarse las restricciones de objetos y pociones
  * @param defaultPlayerMobs   cupo de mobs anclados al dueno; {@code 0} = sin limite
  * @param defaultPointMobs    cupo de mobs anclados a un bloque; {@code 0} = sin limite
  * @param defaultMountMobs    cupo de monturas; {@code 0} = sin limite
@@ -46,6 +47,8 @@ import java.util.Map;
  * @param spawnIntervalSeconds cada cuantos segundos se intenta
  * @param spawnAttempts       intentos de aparicion por jugador y ciclo
  * @param spawnGlobalCap      tope de mobs naturales vivos a la vez
+ * @param itemFactionAllies   si un objeto de faccion vale tambien para sus aliados
+ * @param itemIgnoreCancelledUse procesar el 'usar:' aunque otro plugin cancele el clic
  */
 public record PluginConfig(
         boolean debug,
@@ -58,6 +61,7 @@ public record PluginConfig(
         long skillIntervalTicks,
         String playerPermission,
         String adminPermission,
+        String bypassPermission,
         int defaultPlayerMobs,
         int defaultPointMobs,
         int defaultMountMobs,
@@ -81,7 +85,9 @@ public record PluginConfig(
         int spawnGlobalCap,
         boolean itemLockAnyWorld,
         boolean playerPvpAnyWorld,
-        boolean factionGlowAnyWorld
+        boolean factionGlowAnyWorld,
+        boolean itemFactionAllies,
+        boolean itemIgnoreCancelledUse
 ) {
 
     public static PluginConfig load(FileConfiguration cfg) {
@@ -102,8 +108,9 @@ public record PluginConfig(
                 Math.max(1.0D, cfg.getDouble("targeting.aggro-watch-radius", 24.0D)),
                 cfg.getBoolean("targeting.aggro-on-friendly-mobs", true),
                 Math.max(1L, cfg.getLong("skills.interval-ticks", 20L)),
-                cfg.getString("permissions.player", "custommobs.player"),
-                cfg.getString("permissions.admin", "custommobs.admin"),
+                cfg.getString("permissions.player", "customcore.player"),
+                cfg.getString("permissions.admin", "customcore.admin"),
+                cfg.getString("permissions.bypass", "customcore.bypass"),
                 // El mismo valor que trae la plantilla: un servidor con un config.yml
                 // anterior no debe quedarse sin tope por no tener la clave.
                 Math.max(0, cfg.getInt("limits.default-player-mobs", 3)),
@@ -129,7 +136,11 @@ public record PluginConfig(
                 Math.max(1, cfg.getInt("spawning.global-cap", 80)),
                 cfg.getBoolean("worlds.anywhere.item-faction-lock", false),
                 cfg.getBoolean("worlds.anywhere.player-friendly-fire", false),
-                cfg.getBoolean("worlds.anywhere.faction-glow", false)
+                cfg.getBoolean("worlds.anywhere.faction-glow", false),
+                // Por defecto, la faccion exacta: un aliado NO hereda el objeto.
+                cfg.getBoolean("items.faction-allies", false),
+                // Por defecto se procesa el uso aunque otro plugin cancele el clic.
+                cfg.getBoolean("items.ignore-cancelled-use", true)
         );
     }
 

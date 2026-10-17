@@ -3,9 +3,12 @@ package com.juanp.custommobs.skill;
 import com.juanp.custommobs.mob.CustomMob;
 import com.juanp.custommobs.mob.MobDefinition;
 import com.juanp.custommobs.mob.MobService;
+import org.bukkit.FluidCollisionMode;
 import org.bukkit.Location;
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
+import org.bukkit.util.RayTraceResult;
+import org.bukkit.util.Vector;
 import org.bukkit.block.Block;
 import org.bukkit.Registry;
 import org.bukkit.attribute.Attribute;
@@ -67,7 +70,10 @@ public final class SkillService extends BukkitRunnable {
             // combate; las pasivas, siempre que el mob este cargado.
             boolean inCombat = this.inCombat(entity);
             for (SkillSpec skill : skills) {
-                if (skill.trigger() == SkillTrigger.INTERACT) {
+                // Las de item solo las dispara el uso explicito de un objeto. Un mob que
+                // las referencie con 'ref:' no debe ejecutarlas por su cuenta.
+                if (skill.trigger() == SkillTrigger.INTERACT
+                        || skill.trigger() == SkillTrigger.ITEM) {
                     continue;
                 }
                 if (skill.trigger() == SkillTrigger.ACTIVE && !inCombat) {
@@ -102,7 +108,8 @@ public final class SkillService extends BukkitRunnable {
             perMob.put(skill.id(), now + skill.cooldownSeconds() * 1000L);
             String spoken = this.spoken(customMob, skill);
             for (Player listener : listeners) {
-                listener.sendMessage(spoken);
+                // El texto se colorea aqui: los '&' del yml no los traduce Bukkit solo.
+                listener.sendMessage(com.juanp.custommobs.mob.Texts.color(spoken));
             }
             return;
         }
@@ -128,6 +135,9 @@ public final class SkillService extends BukkitRunnable {
     }
 
     private List<LivingEntity> resolve(CustomMob customMob, SkillSpec skill) {
+        if (skill.targetType() != null) {
+            return this.resolveTyped(customMob, skill);
+        }
         LivingEntity entity = customMob.entity();
         List<LivingEntity> found = new ArrayList<>();
         switch (skill.target()) {
@@ -137,7 +147,8 @@ public final class SkillService extends BukkitRunnable {
             case OWNER -> this.ownerOf(customMob)
                     .filter(owner -> this.inRange(entity, owner, skill.range()))
                     .ifPresent(found::add);
-            case TARGET -> {
+            case TARGET, LOOK -> {
+                // Desde un mob, 'look' es lo mismo que su objetivo actual.
                 if (entity instanceof Mob mob && mob.getTarget() != null
                         && this.inRange(entity, mob.getTarget(), skill.range())) {
                     found.add(mob.getTarget());
@@ -161,10 +172,52 @@ public final class SkillService extends BukkitRunnable {
         return found;
     }
 
+    /** Resolucion nueva: LOOK (un objetivo filtrado por bando) o RADIUS (area). */
+    private List<LivingEntity> resolveTyped(CustomMob customMob, SkillSpec skill) {
+        LivingEntity entity = customMob.entity();
+        List<LivingEntity> found = new ArrayList<>();
+        switch (skill.targetType()) {
+            case LOOK -> {
+                if (skill.target() == SkillTarget.SELF) {
+                    found.add(entity);
+                } else if (entity instanceof Mob mob && mob.getTarget() != null) {
+                    LivingEntity target = mob.getTarget();
+                    if (skill.target() == SkillTarget.ENEMIES
+                            && this.service.policy().isValidTarget(customMob, target)) {
+                        found.add(target);
+                    } else if (skill.target() == SkillTarget.ALLIES
+                            && this.isAlly(customMob, target)) {
+                        found.add(target);
+                    }
+                }
+            }
+            case RADIUS -> {
+                if (skill.target() == SkillTarget.SELF) {
+                    found.add(entity);
+                } else if (skill.target() == SkillTarget.ENEMIES) {
+                    for (LivingEntity candidate : this.nearby(entity, skill.range())) {
+                        if (this.service.policy().isValidTarget(customMob, candidate)) {
+                            found.add(candidate);
+                        }
+                    }
+                } else if (skill.target() == SkillTarget.ALLIES) {
+                    for (LivingEntity candidate : this.nearby(entity, skill.range())) {
+                        if (this.isAlly(customMob, candidate)) {
+                            found.add(candidate);
+                        }
+                    }
+                }
+            }
+        }
+        return found;
+    }
+
     private void apply(CustomMob customMob, SkillSpec skill, LivingEntity target) {
         switch (skill.effect()) {
             case DAMAGE -> target.damage(skill.amount(), customMob.entity());
-            case HEAL -> this.heal(target, skill.amount());
+            case HEAL -> this.heal(target, skill.amount(), skill.percent());
+            case IGNITE -> this.ignite(target, skill.amount());
+            case FREEZE -> this.freeze(target, skill.amount());
             case POTION -> this.potion(target, skill);
             case CONSOLE_COMMAND -> this.consoleCommand(customMob, skill,
                     target instanceof Player player ? player : this.onlineOwner(customMob));
@@ -182,14 +235,64 @@ public final class SkillService extends BukkitRunnable {
         }
         // Aviso opcional: en dano o curacion se le dice al jugador afectado.
         if (skill.hasMessage() && target instanceof Player player) {
-            player.sendMessage(skill.message());
+            player.sendMessage(com.juanp.custommobs.mob.Texts.color(
+                    this.spoken(customMob, skill, player)));
         }
     }
 
-    private void heal(LivingEntity target, double amount) {
+    private void heal(LivingEntity target, double amount, boolean percent) {
         AttributeInstance health = target.getAttribute(Attribute.MAX_HEALTH);
         double max = health != null ? health.getValue() : 20.0D;
-        target.setHealth(Math.max(0.0D, Math.min(max, target.getHealth() + amount)));
+        // En modo porcentaje, 'amount' es una fraccion de la vida maxima (0.50 = 50%).
+        double value = percent ? max * amount : amount;
+        target.setHealth(Math.max(0.0D, Math.min(max, target.getHealth() + value)));
+    }
+
+    /** Prende fuego al objetivo. {@code amount} son segundos. */
+    private void ignite(LivingEntity target, double seconds) {
+        int ticks = (int) Math.max(20L, Math.round(Math.max(1.0D, seconds) * 20.0D));
+        target.setFireTicks(Math.max(target.getFireTicks(), ticks));
+    }
+
+    /**
+     * Congela al objetivo. {@code amount} son segundos.
+     *
+     * <p>Los freeze ticks dan el estado visual y el dano de congelacion; la lentitud
+     * asegura que tambien se note en el movimiento, porque el hielo visual por si solo
+     * no siempre ralentiza.
+     */
+    private void freeze(LivingEntity target, double seconds) {
+        int ticks = (int) Math.max(20L, Math.round(Math.max(1.0D, seconds) * 20.0D));
+        target.setFreezeTicks(Math.max(target.getFreezeTicks(), ticks));
+        target.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS,
+                ticks, 1, false, true, true));
+    }
+
+    /**
+     * La entidad viva que el jugador tiene en la cruz de vista.
+     *
+     * <p>Se hace el raycast a mano en vez de usar {@code getTargetEntity}: ese metodo queda
+     * limitado por el rango de interaccion del jugador (3 bloques), no por el alcance que
+     * pida la skill. Aqui manda el {@code range} de la skill, y un poco de tolerancia
+     * lateral para no exigir punteria perfecta.
+     */
+    private LivingEntity lookingAt(Player caster, double range) {
+        Location eye = caster.getEyeLocation();
+        Vector direction = eye.getDirection();
+        double max = Math.max(1.0D, range);
+
+        // Una pared corta el alcance: no se atraviesan bloques.
+        RayTraceResult block = caster.getWorld().rayTraceBlocks(eye, direction, max,
+                FluidCollisionMode.NEVER, true);
+        if (block != null) {
+            max = Math.min(max, block.getHitPosition().distance(eye.toVector()));
+        }
+
+        RayTraceResult hit = caster.getWorld().rayTraceEntities(eye, direction, max, 0.35D,
+                entity -> entity instanceof LivingEntity
+                        && !entity.getUniqueId().equals(caster.getUniqueId())
+                        && !entity.isDead() && entity.isValid());
+        return hit != null && hit.getHitEntity() instanceof LivingEntity living ? living : null;
     }
 
     private void potion(LivingEntity target, SkillSpec skill) {
@@ -268,7 +371,7 @@ public final class SkillService extends BukkitRunnable {
                 this.service.plugin().getLogger().info("[skill] Interaccion de "
                         + customMob.definition().id() + " a " + clicker.getName() + ": " + text);
             }
-            clicker.sendMessage(text);
+            clicker.sendMessage(com.juanp.custommobs.mob.Texts.color(text));
             return;
         }
         // Con un clic, el actor es quien hizo clic: los comandos y la invocacion van por ahi,
@@ -286,7 +389,8 @@ public final class SkillService extends BukkitRunnable {
             }
         }
         if (skill.hasMessage()) {
-            clicker.sendMessage(skill.message());
+            clicker.sendMessage(com.juanp.custommobs.mob.Texts.color(
+                    this.spoken(customMob, skill, clicker)));
         }
     }
 
@@ -465,6 +569,238 @@ public final class SkillService extends BukkitRunnable {
                     && this.service.teamLink().isAlly(source.ownerId(), player.getUniqueId());
         }
         return false;
+    }
+
+    // ------------------------------------------------------------------ skills de item
+
+    /**
+     * Lanza skills desde un jugador, en el orden en que las declara el item.
+     *
+     * <p>El cooldown lo aplica el item: usa el mayor entre su propio 'cooldown' y el
+     * 'cooldown-seconds' de las skills que lanza. Tampoco se tira 'chance': un clic
+     * consciente no debe fallar al azar.
+     */
+    public int cast(Player caster, List<String> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return 0;
+        }
+        int cast = 0;
+        for (String id : ids) {
+            SkillSpec skill = this.service.plugin().skillCatalog().get(id).orElse(null);
+            if (skill == null) {
+                this.service.plugin().getLogger().warning(
+                        "El item apunta a una skill que no existe en skills/: " + id);
+                continue;
+            }
+            this.castOne(caster, skill);
+            cast++;
+        }
+        return cast;
+    }
+
+    private void castOne(Player caster, SkillSpec skill) {
+        // La unica puerta para comandos y cadenas desde un item es 'mode: item'.
+        boolean commandLike = skill.effect() == SkillEffect.CONSOLE_COMMAND
+                || skill.effect() == SkillEffect.PLAYER_COMMAND
+                || skill.effect() == SkillEffect.CHAIN;
+        if (commandLike && skill.trigger() != SkillTrigger.ITEM) {
+            this.service.plugin().getLogger().warning("La skill '" + skill.id()
+                    + "' usa " + skill.effect() + " pero no es 'mode: item'; no se ejecuta"
+                    + " desde un objeto.");
+            return;
+        }
+        if (skill.effect() == SkillEffect.CHAIN || skill.effect() == SkillEffect.SUMMON) {
+            this.service.plugin().getLogger().warning("La skill '" + skill.id() + "' usa "
+                    + skill.effect() + "; ese efecto no se admite desde un item.");
+            return;
+        }
+        if (skill.effect() == SkillEffect.CONSOLE_COMMAND) {
+            this.consoleCommandFromPlayer(caster, skill);
+            return;
+        }
+        if (skill.effect() == SkillEffect.PLAYER_COMMAND) {
+            caster.performCommand(this.commandTextForPlayer(caster, skill));
+            return;
+        }
+        if (skill.effect() == SkillEffect.MESSAGE) {
+            String text = this.spokenForPlayer(caster, skill);
+            if (text.isBlank()) {
+                return;
+            }
+            double range = skill.range() > 0 ? skill.range() : DEFAULT_SPEAK_RANGE;
+            for (Player listener : this.listeners(caster, range)) {
+                listener.sendMessage(com.juanp.custommobs.mob.Texts.color(text));
+            }
+            return;
+        }
+
+        for (LivingEntity target : this.playerTargets(caster, skill)) {
+            switch (skill.effect()) {
+                case HEAL -> this.heal(target, skill.amount(), skill.percent());
+                case DAMAGE -> target.damage(skill.amount(), caster);
+                case IGNITE -> this.ignite(target, skill.amount());
+                case FREEZE -> this.freeze(target, skill.amount());
+                case POTION -> this.potion(target, skill);
+                default -> {
+                }
+            }
+            if (skill.hasMessage() && target instanceof Player player) {
+                player.sendMessage(com.juanp.custommobs.mob.Texts.color(
+                        this.spokenForPlayer(caster, skill)));
+            }
+        }
+    }
+
+    private List<LivingEntity> playerTargets(Player caster, SkillSpec skill) {
+        if (skill.targetType() != null) {
+            return this.playerTargetsTyped(caster, skill);
+        }
+        List<LivingEntity> found = new ArrayList<>();
+        switch (skill.target()) {
+            case SELF -> found.add(caster);
+            case TARGET, LOOK -> {
+                LivingEntity looked = this.lookingAt(caster, skill.range());
+                if (looked != null) {
+                    found.add(looked);
+                }
+            }
+            case ALLIES -> {
+                for (LivingEntity candidate : this.nearby(caster, skill.range())) {
+                    if (this.isAllyOfPlayer(caster, candidate)) {
+                        found.add(candidate);
+                    }
+                }
+            }
+            case ENEMIES -> {
+                for (LivingEntity candidate : this.nearby(caster, skill.range())) {
+                    if (this.isEnemyOfPlayer(caster, candidate)) {
+                        found.add(candidate);
+                    }
+                }
+            }
+            // OWNER es un concepto de mob; desde un item apunta al lanzador.
+            default -> found.add(caster);
+        }
+        return found;
+    }
+
+    /** Resolucion nueva desde un jugador: LOOK filtrado por bando o RADIUS. */
+    private List<LivingEntity> playerTargetsTyped(Player caster, SkillSpec skill) {
+        List<LivingEntity> found = new ArrayList<>();
+        switch (skill.targetType()) {
+            case LOOK -> {
+                if (skill.target() == SkillTarget.SELF) {
+                    found.add(caster);
+                } else {
+                    LivingEntity looked = this.lookingAt(caster, skill.range());
+                    if (looked != null) {
+                        if (skill.target() == SkillTarget.ENEMIES
+                                && this.isEnemyOfPlayer(caster, looked)) {
+                            found.add(looked);
+                        } else if (skill.target() == SkillTarget.ALLIES
+                                && this.isAllyOfPlayer(caster, looked)) {
+                            found.add(looked);
+                        }
+                    }
+                }
+            }
+            case RADIUS -> {
+                if (skill.target() == SkillTarget.SELF) {
+                    found.add(caster);
+                } else if (skill.target() == SkillTarget.ENEMIES) {
+                    for (LivingEntity candidate : this.nearby(caster, skill.range())) {
+                        if (this.isEnemyOfPlayer(caster, candidate)) {
+                            found.add(candidate);
+                        }
+                    }
+                } else if (skill.target() == SkillTarget.ALLIES) {
+                    for (LivingEntity candidate : this.nearby(caster, skill.range())) {
+                        if (this.isAllyOfPlayer(caster, candidate)) {
+                            found.add(candidate);
+                        }
+                    }
+                }
+            }
+        }
+        return found;
+    }
+
+    /** Aliado de un jugador: su team, su faccion, una aliada, o un mob de los suyos. */
+    private boolean isAllyOfPlayer(Player caster, LivingEntity candidate) {
+        if (candidate.getUniqueId().equals(caster.getUniqueId())) {
+            return false;
+        }
+        if (candidate instanceof Player other) {
+            if (this.service.teamLink().isAlly(caster.getUniqueId(), other.getUniqueId())) {
+                return true;
+            }
+            return this.service.sameSide(this.service.factionOf(caster),
+                    this.service.factionOf(other));
+        }
+        CustomMob other = this.service.find(candidate.getUniqueId()).orElse(null);
+        if (other == null) {
+            return false;
+        }
+        if (other.isOwner(caster.getUniqueId())) {
+            return true;
+        }
+        if (other.ownerId() != null
+                && this.service.teamLink().isAlly(caster.getUniqueId(), other.ownerId())) {
+            return true;
+        }
+        return this.service.sameSide(this.service.factionOf(caster),
+                this.service.factionOf(other));
+    }
+
+    /** Enemigo de un jugador: facciones enemigas. Sin faccion no hay enemistad. */
+    private boolean isEnemyOfPlayer(Player caster, LivingEntity candidate) {
+        if (candidate.getUniqueId().equals(caster.getUniqueId())) {
+            return false;
+        }
+        if (candidate instanceof Player other) {
+            if (this.service.teamLink().isAlly(caster.getUniqueId(), other.getUniqueId())) {
+                return false;
+            }
+            String mine = this.service.factionOf(caster);
+            String theirs = this.service.factionOf(other);
+            return mine != null && theirs != null && this.service.factions().isEnemy(mine, theirs);
+        }
+        CustomMob other = this.service.find(candidate.getUniqueId()).orElse(null);
+        if (other != null) {
+            if (other.isOwner(caster.getUniqueId())) {
+                return false;
+            }
+            if (other.ownerId() != null
+                    && this.service.teamLink().isAlly(caster.getUniqueId(), other.ownerId())) {
+                return false;
+            }
+            String mine = this.service.factionOf(caster);
+            String theirs = this.service.factionOf(other);
+            return mine != null && theirs != null && this.service.factions().isEnemy(mine, theirs);
+        }
+        // Vanilla: los monstruos hostiles son enemigos; el resto no.
+        return candidate instanceof org.bukkit.entity.Monster;
+    }
+
+    private String spokenForPlayer(Player caster, SkillSpec skill) {
+        String message = skill.hasMessage() ? skill.message() : "";
+        return message.replace("{mob}", caster.getName())
+                .replace("{jugador}", caster.getName());
+    }
+
+    private String commandTextForPlayer(Player caster, SkillSpec skill) {
+        String command = skill.command() == null ? "" : skill.command();
+        return command.replace("{mob}", caster.getName())
+                .replace("{jugador}", caster.getName());
+    }
+
+    private void consoleCommandFromPlayer(Player caster, SkillSpec skill) {
+        String command = this.commandTextForPlayer(caster, skill);
+        if (command.isBlank()) {
+            return;
+        }
+        this.service.plugin().getServer().dispatchCommand(
+                this.service.plugin().getServer().getConsoleSender(), command);
     }
 
     /** Texto que dice el mob: {@code {mob}} se sustituye por su nombre visible. */

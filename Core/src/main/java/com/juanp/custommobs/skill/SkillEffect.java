@@ -9,6 +9,10 @@ public enum SkillEffect {
     DAMAGE,
     /** Restaura vida a cada objetivo. */
     HEAL,
+    /** Prende fuego a cada objetivo durante {@code amount} segundos. */
+    IGNITE,
+    /** Congela a cada objetivo durante {@code amount} segundos. */
+    FREEZE,
     /** El mob habla: el texto va a los jugadores dentro del radio. */
     MESSAGE,
     /** Aplica un efecto de pocion a cada objetivo. */
@@ -26,10 +30,16 @@ public enum SkillEffect {
         if (raw == null || raw.isBlank()) {
             return null;
         }
-        try {
-            return valueOf(raw.toUpperCase(Locale.ROOT).trim());
-        } catch (IllegalArgumentException ex) {
-            return null;
-        }
+        return switch (raw.toLowerCase(Locale.ROOT).trim()) {
+            case "ignite", "burn", "fuego", "prender", "quemar" -> IGNITE;
+            case "freeze", "congelar", "hielo", "helar" -> FREEZE;
+            default -> {
+                try {
+                    yield valueOf(raw.toUpperCase(Locale.ROOT).trim());
+                } catch (IllegalArgumentException ex) {
+                    yield null;
+                }
+            }
+        };
     }
 }

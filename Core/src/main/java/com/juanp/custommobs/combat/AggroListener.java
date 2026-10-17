@@ -10,6 +10,8 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 
+import java.util.UUID;
+
 /**
  * Convierte una agresion contra el bando protegido en hostilidad del mob.
  *
@@ -75,18 +77,25 @@ public final class AggroListener implements Listener {
         if (victimMob == null) {
             return false;
         }
-        String mine = this.service.factionOf(victimMob);
-        if (mine == null) {
-            return false;
-        }
-        String theirs;
+        UUID attackerId = null;
+        String theirs = null;
         if (attacker instanceof Player player) {
+            attackerId = player.getUniqueId();
             theirs = this.service.factionOf(player);
         } else {
             CustomMob attackerMob = this.service.find(attacker.getUniqueId()).orElse(null);
-            theirs = attackerMob == null ? null : this.service.factionOf(attackerMob);
+            if (attackerMob != null) {
+                attackerId = attackerMob.ownerId();
+                theirs = this.service.factionOf(attackerMob);
+            }
         }
-        return this.service.sameSide(mine, theirs);
+        // El mismo team manda: sin esto, dos companeros sin faccion dejaban una marca de
+        // agresion inutil que ensuciaba el estado.
+        if (victimMob.ownerId() != null && attackerId != null
+                && this.service.teamLink().isAlly(victimMob.ownerId(), attackerId)) {
+            return true;
+        }
+        return this.service.sameSide(this.service.factionOf(victimMob), theirs);
     }
 
     /**

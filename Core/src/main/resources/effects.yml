@@ -17,18 +17,23 @@
 #                  robo_vida     -> cura un % del dano que haces
 #                  sigilo        -> oculta tu nombre a los demas
 #                  paso_helado   -> congela el agua bajo tus pies
+#                  quitar_positivos -> quita todos los efectos positivos (plugin y Minecraft)
+#                  quitar_negativos -> quita todos los efectos negativos (plugin y Minecraft)
+#   tipo         positivo | negativo | neutro (por defecto positivo). Lo usan las purgas.
 
 congelamiento:
   nombre: 'Inmunidad al congelamiento'
   descripcion: 'No sufres dano por congelacion y el hielo no te agarra.'
   duracion: 300
   mecanica: congelamiento
+  tipo: positivo
 
 caida:
   nombre: 'Inmunidad a la caida'
   descripcion: 'No sufres dano al caer.'
   duracion: 300
   mecanica: caida
+  tipo: positivo
 
 robo_vida:
   nombre: 'Robo de vida'
@@ -36,15 +41,33 @@ robo_vida:
   duracion: 120
   potencia: 0.25
   mecanica: robo_vida
+  tipo: positivo
 
 sigilo:
   nombre: 'Sigilo'
   descripcion: 'Los demas no te ven el nombre.'
   duracion: 60
   mecanica: sigilo
+  tipo: positivo
 
 paso_helado:
   nombre: 'Paso helado'
   descripcion: 'Congelas el agua bajo tus pies mientras caminas.'
   duracion: 120
   mecanica: paso_helado
+  tipo: positivo
+
+# Purga instantanea: no deja un estado activo, solo limpia al aplicarse.
+quitar_positivos:
+  nombre: 'Purga de efectos positivos'
+  descripcion: 'Quita todos los efectos positivos activos, del plugin y de Minecraft.'
+  duracion: 1
+  mecanica: quitar_positivos
+  tipo: neutro
+
+quitar_negativos:
+  nombre: 'Purga de efectos negativos'
+  descripcion: 'Quita todos los efectos negativos activos, del plugin y de Minecraft.'
+  duracion: 1
+  mecanica: quitar_negativos
+  tipo: neutro

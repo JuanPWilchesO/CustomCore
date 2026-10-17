@@ -46,7 +46,8 @@ public final class MobRegistry {
         for (File file : files) {
             String fallbackId = file.getName().substring(0, file.getName().length() - 4);
             YamlConfiguration cfg = YamlConfiguration.loadConfiguration(file);
-            Optional<MobDefinition> parsed = MobLoader.parse(fallbackId, cfg);
+            Optional<MobDefinition> parsed = MobLoader.parse(fallbackId, cfg,
+                    this.plugin.skillCatalog());
             if (parsed.isEmpty()) {
                 this.plugin.getLogger().warning("Definicion invalida, se omite: " + file.getName());
                 continue;

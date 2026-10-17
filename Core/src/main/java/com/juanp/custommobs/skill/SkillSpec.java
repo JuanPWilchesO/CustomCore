@@ -10,6 +10,7 @@ package com.juanp.custommobs.skill;
  * @param id                    identificador unico dentro del mob (cooldowns y logs)
  * @param effect                que hace
  * @param target                a quien apunta (en {@code MESSAGE} se ignora: habla al radio)
+ * @param targetType            como se elige: LOOK (cruz de vista) o RADIUS (radio)
  * @param trigger               cuando se dispara: pasiva, activa (solo en combate) o al
  *                              hacer clic derecho sobre el mob
  * @param range                 radio de busqueda y alcance maximo, en bloques
@@ -23,11 +24,13 @@ package com.juanp.custommobs.skill;
  * @param summon                definicion que invoca (SUMMON), como aparezca en su id
  * @param command               comando a ejecutar (CONSOLE_COMMAND, PLAYER_COMMAND)
  * @param chain                 pasos de la conversacion (CHAIN)
+ * @param percent               si {@code amount} es una fraccion de la vida maxima (HEAL)
  */
 public record SkillSpec(
         String id,
         SkillEffect effect,
         SkillTarget target,
+        SkillTargetType targetType,
         SkillTrigger trigger,
         double range,
         int cooldownSeconds,
@@ -39,7 +42,8 @@ public record SkillSpec(
         int potionAmplifier,
         String summon,
         String command,
-        ChainSpec chain
+        ChainSpec chain,
+        boolean percent
 ) {
 
     public boolean hasMessage() {

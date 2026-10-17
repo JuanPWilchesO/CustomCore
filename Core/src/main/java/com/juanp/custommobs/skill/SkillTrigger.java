@@ -12,13 +12,16 @@ import java.util.Locale;
  *       alguien a quien atacar.</li>
  *   <li>{@link #INTERACT}: cuando un jugador hace clic derecho sobre el mob. Sirve para
  *       dialogos de interaccion.</li>
+ *   <li>{@link #ITEM}: cuando un jugador usa un objeto del catalogo. Nunca la ejecuta el
+ *       planificador de mobs: solo el uso explicito del item.</li>
  * </ul>
  */
 public enum SkillTrigger {
 
     PASSIVE,
     ACTIVE,
-    INTERACT;
+    INTERACT,
+    ITEM;
 
     /** Valor por defecto cuando el yml no dice nada. */
     public static final SkillTrigger DEFAULT = PASSIVE;
@@ -32,6 +35,7 @@ public enum SkillTrigger {
             case "pasiva", "pasivo", "passive", "siempre", "always" -> PASSIVE;
             case "activa", "activo", "active", "combate", "combat" -> ACTIVE;
             case "interaccion", "interaction", "clic", "click", "interactuar" -> INTERACT;
+            case "item", "objeto", "usar", "use", "uso" -> ITEM;
             default -> null;
         };
     }

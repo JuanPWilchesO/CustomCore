@@ -51,3 +51,27 @@ drops:
 
 Un **mismo objeto sirve para varios mobs**. Si un drop nombra un objeto que no existe, se
 avisa **una vez** en el log y ese drop se omite: no rompe nada.
+
+## 5. Uso del objeto con skills
+
+Un objeto tambien puede lanzar **skills** en vez de un efecto suelto:
+
+```yaml
+clase: mago
+usar:
+  skills:
+    - balsamo_propio
+    - balsamo_aliados
+  consume: false
+  cooldown: 30
+```
+
+- `usar.skills` es una lista, en orden; `usar.skill` sirve para una sola.
+- `usar.efecto` sigue valiendo para un efecto de `effects.yml`.
+- El cooldown efectivo es el **mayor** entre el del item y el de las skills.
+- La `clase` y la `faccion` se comprueban antes de lanzar la skill.
+- `console_command`, `player_command` y `chain` exigen `mode: item`; un mob no las
+  ejecuta aunque las referencie.
+
+Las skills compartidas viven en `plugins/CustomCore/skills/<id>.yml` y se referencian
+por su id. Para probar sin depender del clic: `/customcore testcast <skill>`.

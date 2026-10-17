@@ -37,15 +37,43 @@ skills:
     potion-amplifier: 0
 ```
 
+## Modelo de objetivos: `target-type` + `target`
+
+Una skill decide **como** elige el objetivo y **a quien** se lo aplica. Son dos claves
+separadas:
+
+```yaml
+target-type: LOOK      # LOOK | RADIUS
+target: ENEMIES        # ENEMIES | ALLIES | SELF
+```
+
+| Combinacion | Quien recibe la skill |
+|---|---|
+| `LOOK + ENEMIES` | solo la entidad de la cruz de vista, si es enemiga |
+| `LOOK + ALLIES` | solo la entidad de la cruz de vista, si es aliada |
+| `LOOK + SELF` | el lanzador |
+| `RADIUS + ENEMIES` | todos los enemigos dentro de `range` |
+| `RADIUS + ALLIES` | todos los aliados dentro de `range` |
+| `RADIUS + SELF` | el lanzador |
+
+Asi una skill de mirada **no puede hacer fuego amigo**: si apuntas a un aliado con
+`target: ENEMIES`, no hace nada.
+
+**Compatibilidad**: las skills viejas siguen cargando. `target: enemies/allies/self`
+se interpreta como `RADIUS + ...`; `target: look` se interpreta como
+`LOOK + ENEMIES` (ya no golpea aliados). `target: owner` y `target: target` siguen
+siendo objetivos especiales de mob.
+
 ## Campos
 
 | Campo | Valores | Por defecto |
 |---|---|---|
 | `id` | texto unico dentro del mob | — |
-| `effect` | `damage` \| `heal` \| `message` \| `potion` \| `summon` | — |
-| `target` | `self` \| `owner` \| `target` \| `enemies` \| `allies` | `self` en cadenas, invocaciones y comandos; obligatorio en el resto |
+| `effect` | `damage` \| `heal` \| `ignite` \| `freeze` \| `message` \| `potion` \| `summon` | — |
+| `target-type` | `LOOK` \| `RADIUS` | se infiere del `target` viejo |
+| `target` | `ENEMIES` \| `ALLIES` \| `SELF`; legado: `owner` \| `target` \| `look` | `self` en cadenas, invocaciones y comandos; obligatorio en el resto |
 | `mode` | `pasiva` \| `activa` \| `interaccion` | `pasiva` |
-| `range` | bloques (tope 32) | `8.0` |
+| `range` | bloques (tope 128) | `8.0` |
 | `cooldown-seconds` | entero | `5` |
 | `chance` | `0.0` a `1.0` | `1.0` |
 | `amount` | dano o curacion | `0.0` |
@@ -224,28 +252,40 @@ skills:
 - El tope de 10 por uso esta para que un yml descuidado no suelte una horda: el ritmo lo marca
   `cooldown-seconds`.
 
-## Los cinco efectos
+## Efectos
 
 | `effect` | Hace |
 |---|---|
 | `damage` | resta `amount` de vida al objetivo |
-| `heal` | suma `amount` de vida al objetivo |
+| `heal` | suma `amount` de vida; con `porcentaje: true`, `amount` es fraccion de la vida maxima |
+| `ignite` | prende fuego al objetivo durante `amount` segundos |
+| `freeze` | congela al objetivo durante `amount` segundos y aplica Lentitud II |
 | `message` | manda un texto a los jugadores en rango |
 | `potion` | aplica `potion` durante `potion-duration-seconds`, a nivel `potion-amplifier` |
 | `summon` | invoca copias de otra definicion alrededor del mob |
-| `console_command` | ejecuta un comando desde la consola (**solo interaccion**) |
-| `player_command` | el jugador ejecuta un comando (**solo interaccion**) |
-| `chain` | una conversacion por pasos, a base de clics (**solo interaccion**) |
+| `console_command` | ejecuta un comando desde la consola (**solo interaccion o item**) |
+| `player_command` | el jugador ejecuta un comando (**solo interaccion o item**) |
+| `chain` | una conversacion por pasos, a base de clics (**solo interaccion o item**) |
 
-## Los cinco objetivos
+## Objetivos
+
+Con el modelo nuevo, `target-type` elige **como** y `target` elige **a quien**:
 
 | `target` | Quien es |
+|---|---|
+| `SELF` | el lanzador |
+| `ENEMIES` | enemigos: faccion enemiga, team enemigo, o monstruo vanilla hostil |
+| `ALLIES` | dueno, companeros de team, faccion aliada y mobs propios/aliados |
+
+Los valores viejos siguen valiendo como objetivos especiales:
+
+| `target` viejo | Quien es |
 |---|---|
 | `self` | el propio mob |
 | `owner` | su dueno |
 | `target` | a quien esta atacando ahora |
-| `enemies` | los enemigos declarados **y** quien lo agredio (venganza) |
-| `allies` | companeros de team y aliados |
+| `enemies` | los enemigos declarados **y** quien lo agredio (venganza), en radio |
+| `allies` | companeros de team y aliados, en radio |
 
 **Los objetivos usan la misma politica de combate que la IA**: si el mob considera
 enemigo a alguien, sus skills tambien. No hay dos definiciones de "enemigo".
@@ -260,6 +300,31 @@ Los mobs de `category: server` **no tienen dueno**, y eso cambia los objetivos:
   **misma faccion no cuenta como aliada** aqui, aunque en combate si es intocable.
 - `target` funciona igual, pero necesita que el mob este peleando.
 
+## Skills reutilizables (`skills/`)
+
+Ademas de las skills dentro de un mob, puedes tener un archivo por skill en
+`plugins/CustomCore/skills/`. El **id es el nombre del archivo** (sin `.yml`). Las skills
+compartidas se referencian desde un mob con `ref:`:
+
+```yaml
+skills:
+  - ref: grito_orco
+```
+
+Un archivo de `skills/`:
+
+```yaml
+mode: item
+effect: IGNITE
+target-type: LOOK
+target: ENEMIES
+range: 30
+amount: 5
+```
+
+Las skills con `mode: item` solo las dispara el uso de un objeto; el planificador de mobs
+las ignora aunque un mob las referencie.
+
 ## Detalles que importan
 
 - En `effect: message` el `target` **se ignora**: el mob habla a los jugadores dentro
@@ -268,7 +333,7 @@ Los mobs de `category: server` **no tienen dueno**, y eso cambia los objetivos:
   jugador, le llega el aviso. Es la forma de que una skill sea **observable**.
 - Si falla la tirada de `chance`, se reintenta en el siguiente ciclo **sin gastar** el
   cooldown.
-- `range` tiene un tope duro de **32 bloques**; lo que pidas por encima se recorta.
+- `range` tiene un tope duro de **128 bloques**; lo que pidas por encima se recorta.
 - `range` es **alcance maximo tambien para `owner` y `target`**: una skill de dueno no
   alcanza a su dueno si esta fuera del radio, ni una de objetivo a un enemigo lejano. El
   valor por defecto son **8 bloques**.

@@ -12,6 +12,8 @@ de mob o el uso de un objeto del catálogo.
 | `robo_vida` | Te curas un 25% del daño que haces (en cada golpe, no al matar). |
 | `sigilo` | Desapareces para los demás, armadura incluida, y te vuelves invisible (F5). |
 | `paso_helado` | Congelas el agua bajo tus pies y por delante. Se descongela a los 5 s. |
+| `quitar_positivos` | Quita todos los efectos positivos, del plugin y de Minecraft. |
+| `quitar_negativos` | Quita todos los efectos negativos, del plugin y de Minecraft. |
 
 En el juego: `/customcore effects list` y `/customcore effects info <id>`.
 
@@ -23,11 +25,18 @@ congelamiento:
   descripcion: 'No sufres dano por congelacion y el hielo no te agarra.'
   duracion: 300          # segundos por defecto
   mecanica: congelamiento
+  tipo: positivo      # positivo | negativo | neutro (por defecto positivo)
   # vanilla: [SLOW_FALL, 'SPEED:2']   # efectos de Minecraft que aplica ademas
 ```
 
-`mecanica` es lo que hace CustomCore: `congelamiento`, `caida`, `robo_vida`, `sigilo` o
-`paso_helado`. `potencia` la usan las mecánicas que la necesitan (robo de vida).
+`mecanica` es lo que hace CustomCore: `congelamiento`, `caida`, `robo_vida`, `sigilo`,
+`paso_helado`, `quitar_positivos` o `quitar_negativos`. `potencia` la usan las mecánicas
+que la necesitan (robo de vida).
+
+`tipo` clasifica el efecto del plugin como `positivo`, `negativo` o `neutro`. Lo usan las
+purgas: `quitar_positivos` borra los del plugin marcados como positivos y todos los
+`BENEFICIAL` de Minecraft; `quitar_negativos` hace lo mismo con los negativos y los
+`HARMFUL`. Los `NEUTRAL` no se tocan.
 
 ## 1. Como poción (`potions.yml`)
 
@@ -77,6 +86,29 @@ usar:
 - Si el objeto es **comida** → se aplica al comer (el juego lo consume).
 - Si no → **clic derecho** → se aplica y, con `consume: true`, se gasta una unidad.
 - La **facción** del objeto se respeta igual que en el resto del catálogo.
+
+## Fuego y hielo (skills)
+
+No son efectos de `effects.yml`: son efectos de skill que se aplican al objetivo.
+
+```yaml
+- id: prender
+  effect: ignite
+  target-type: LOOK
+  target: ENEMIES
+  range: 30
+  amount: 5          # segundos
+
+- id: congelar
+  effect: freeze
+  target-type: LOOK
+  target: ENEMIES
+  range: 30
+  amount: 5          # segundos; ademas aplica Lentitud II
+```
+
+`ignite` pone fuego; `freeze` pone freeze ticks y Lentitud II. El daño depende de la
+inmunidad del mob, el agua/lluvia y las protecciones del servidor.
 
 ## Aviso
 

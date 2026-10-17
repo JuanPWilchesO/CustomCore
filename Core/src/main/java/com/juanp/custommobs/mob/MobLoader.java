@@ -7,9 +7,11 @@ import com.juanp.custommobs.drop.DropSpec;
 import com.juanp.custommobs.skill.ChainOption;
 import com.juanp.custommobs.skill.ChainSpec;
 import com.juanp.custommobs.skill.ChainStep;
+import com.juanp.custommobs.skill.SkillCatalog;
 import com.juanp.custommobs.skill.SkillEffect;
 import com.juanp.custommobs.skill.SkillSpec;
 import com.juanp.custommobs.skill.SkillTarget;
+import com.juanp.custommobs.skill.SkillTargetType;
 import com.juanp.custommobs.skill.SkillTrigger;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -32,12 +34,13 @@ import java.util.Set;
 public final class MobLoader {
 
     /** Tope de seguridad: ninguna skill puede apuntar mas lejos que esto. */
-    private static final double MAX_SKILL_RANGE = 32.0D;
+    private static final double MAX_SKILL_RANGE = 128.0D;
 
     private MobLoader() {
     }
 
-    public static Optional<MobDefinition> parse(String fileId, ConfigurationSection cfg) {
+    public static Optional<MobDefinition> parse(String fileId, ConfigurationSection cfg,
+                                                 SkillCatalog catalog) {
         String id = cfg.getString("id", fileId);
         if (id == null || id.isBlank()) {
             return Optional.empty();
@@ -109,7 +112,7 @@ public final class MobLoader {
 
         DisguiseSpec disguise = parseDisguise(cfg.getConfigurationSection("disguise"));
         MobSounds sounds = parseSounds(cfg.getConfigurationSection("sounds"));
-        List<SkillSpec> skills = parseSkills(cfg);
+        List<SkillSpec> skills = parseSkills(cfg, catalog);
         List<DropSpec> drops = parseDrops(cfg);
         // Los mobs de rol no deberian arder al amanecer; el resto conserva el vanilla.
         boolean burnsInDaylight = cfg.getBoolean("burn-in-daylight", category == MobCategory.PLAYER);
@@ -337,7 +340,7 @@ public final class MobLoader {
      * Lee la lista {@code skills}. Una entrada invalida se omite con aviso implicito:
      * nunca hace fallar la carga del mob entero. Los ids repetidos se descartan.
      */
-    private static List<SkillSpec> parseSkills(ConfigurationSection cfg) {
+    private static List<SkillSpec> parseSkills(ConfigurationSection cfg, SkillCatalog catalog) {
         List<Map<?, ?>> raw = cfg.getMapList("skills");
         if (raw.isEmpty()) {
             return List.of();
@@ -345,7 +348,11 @@ public final class MobLoader {
         List<SkillSpec> skills = new ArrayList<>();
         Set<String> seen = new HashSet<>();
         for (Map<?, ?> entry : raw) {
-            SkillSpec skill = parseSkill(entry);
+            // 'ref:' apunta a un archivo de skills/. Las skills inline siguen valiendo.
+            String ref = normalize(asString(entry.get("ref")));
+            SkillSpec skill = ref == null
+                    ? parseSkill(entry)
+                    : (catalog == null ? null : catalog.get(ref).orElse(null));
             if (skill == null) {
                 // Una skill que no se puede leer se descartaba en silencio, y eso es una trampa:
                 // la definicion carga, pero la skill no existe y nada lo dice. Que se sepa.
@@ -400,10 +407,15 @@ public final class MobLoader {
         return new DropSpec(material, null, min, max, chance, label);
     }
 
-    private static SkillSpec parseSkill(Map<?, ?> entry) {
+    /** Parseo compartido por los mobs y por el catalogo de {@code skills/}. */
+    public static SkillSpec parseSkill(Map<?, ?> entry) {
         String id = normalize(asString(entry.get("id")));
         SkillEffect effect = SkillEffect.parse(asString(entry.get("effect")));
         SkillTarget target = SkillTarget.parse(asString(entry.get("target")));
+        SkillTargetType targetType = SkillTargetType.parse(asString(entry.get("target-type")));
+        if (targetType == null) {
+            targetType = SkillTargetType.parse(asString(entry.get("target_type")));
+        }
         if (id == null || effect == null) {
             return null;
         }
@@ -420,6 +432,23 @@ public final class MobLoader {
             }
             target = SkillTarget.SELF;
         }
+        if (targetType != null) {
+            if (!target.isRelation()) {
+                Bukkit.getLogger().warning("[CustomMobs] La skill '" + id + "' usa"
+                        + " 'target-type' pero su 'target' es " + target
+                        + "; debe ser ENEMIES, ALLIES o SELF. Se descarta.");
+                return null;
+            }
+        } else if (target == SkillTarget.LOOK) {
+            // Compatibilidad: un LOOK viejo no filtraba bando. Ahora se asume ENEMIES
+            // para que una skill de mirada no haga fuego amigo por accidente.
+            targetType = SkillTargetType.LOOK;
+            target = SkillTarget.ENEMIES;
+        } else if (target == SkillTarget.ENEMIES || target == SkillTarget.ALLIES
+                || target == SkillTarget.SELF) {
+            // Las skills viejas ENEMIES/ALLIES/SELF ya eran de radio.
+            targetType = SkillTargetType.RADIUS;
+        }
         String message = asString(entry.get("message"));
         // Si el yml no dice nada, la skill es pasiva: el comportamiento de siempre.
         SkillTrigger parsed = SkillTrigger.parse(asString(entry.get("mode")));
@@ -428,22 +457,19 @@ public final class MobLoader {
         // Los comandos y las cadenas solo valen en una interaccion. Un mob que ejecuta comandos
         // por su cuenta —en pasiva, o en mitad de un combate— es un agujero de seguridad: se
         // descarta la skill y se avisa, sin tumbar la carga del mob.
-        if ((effect == SkillEffect.CONSOLE_COMMAND || effect == SkillEffect.PLAYER_COMMAND)
-                && trigger != SkillTrigger.INTERACT) {
+        boolean commandLike = effect == SkillEffect.CONSOLE_COMMAND
+                || effect == SkillEffect.PLAYER_COMMAND || effect == SkillEffect.CHAIN;
+        if (commandLike && trigger != SkillTrigger.INTERACT && trigger != SkillTrigger.ITEM) {
             Bukkit.getLogger().warning("[CustomMobs] La skill '" + id + "' usa " + effect
-                    + " pero no es de interaccion; se descarta. Los comandos solo van con"
-                    + " 'mode: interaccion' o dentro de una cadena de interaccion.");
-            return null;
-        }
-        if (effect == SkillEffect.CHAIN && trigger != SkillTrigger.INTERACT) {
-            Bukkit.getLogger().warning("[CustomMobs] La skill '" + id + "' es una cadena pero no"
-                    + " es de interaccion; se descarta. Una cadena empieza con un clic.");
+                    + " pero no es de interaccion ni de item; se descarta. Los comandos y las"
+                    + " cadenas solo van con 'mode: interaccion' o 'mode: item'.");
             return null;
         }
         return new SkillSpec(
                 id,
                 effect,
                 target,
+                targetType,
                 trigger,
                 Math.min(MAX_SKILL_RANGE, Math.max(1.0D, asNumber(entry.get("range"), 8.0D))),
                 (int) Math.max(0L, Math.round(asNumber(entry.get("cooldown-seconds"), 5.0D))),
@@ -455,7 +481,8 @@ public final class MobLoader {
                 (int) Math.max(0L, Math.round(asNumber(entry.get("potion-amplifier"), 0.0D))),
                 normalize(asString(entry.get("summon"))),
                 asString(entry.get("command")),
-                effect == SkillEffect.CHAIN ? parseChain(entry) : ChainSpec.EMPTY
+                effect == SkillEffect.CHAIN ? parseChain(entry) : ChainSpec.EMPTY,
+                asBoolean(entry.get("porcentaje")) || asBoolean(entry.get("percent"))
         );
     }
 
@@ -575,6 +602,13 @@ public final class MobLoader {
 
     private static String asString(Object value) {
         return value == null ? null : String.valueOf(value);
+    }
+
+    private static boolean asBoolean(Object value) {
+        if (value instanceof Boolean bool) {
+            return bool;
+        }
+        return value != null && "true".equalsIgnoreCase(String.valueOf(value).trim());
     }
 
     private static double asNumber(Object value, double fallback) {

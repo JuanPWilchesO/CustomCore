@@ -7,7 +7,10 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
+import org.bukkit.event.entity.EntityShootBowEvent;
+import org.bukkit.event.entity.ProjectileLaunchEvent;
 import org.bukkit.event.inventory.CraftItemEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
@@ -17,6 +20,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -58,17 +62,26 @@ public final class ItemFactionLock implements Listener {
      *
      * <p>Un admin pasa siempre: reservar un objeto no puede dejarle sin poder revisarlo.
      */
-    private String requirement(Player player, ItemStack item) {
+    public String requirement(Player player, ItemStack item) {
         if (item == null || item.getType().isAir() || !item.hasItemMeta()) {
             return null;
         }
-        if (player.hasPermission(this.service.config().adminPermission())) {
+        // El bypass es su propio permiso: se puede quitar para probar sin perder
+        // el acceso a los comandos de administracion.
+        if (player.hasPermission(this.service.config().bypassPermission())) {
             return null;
         }
         String faction = tag(item, this.catalog.factionKey());
         if (faction != null) {
             String own = this.service.factionOf(player);
-            if (own == null || !own.equalsIgnoreCase(faction)) {
+            boolean allowed = own != null && own.equalsIgnoreCase(faction);
+            // Si el servidor lo permite, un aliado tambien vale. Por defecto, no: la
+            // restriccion es de la faccion exacta y un aliado no hereda el objeto.
+            if (!allowed && own != null && this.service.config().itemFactionAllies()) {
+                allowed = this.service.factions().isAlly(
+                        faction.toLowerCase(Locale.ROOT), own.toLowerCase(Locale.ROOT));
+            }
+            if (!allowed) {
                 return "Ese objeto es de la faccion " + faction + ": no es la tuya.";
             }
         }
@@ -134,8 +147,8 @@ public final class ItemFactionLock implements Listener {
     /** No puede usarlo ni equiparlo con el clic derecho de la mano. */
     @EventHandler(ignoreCancelled = true)
     public void onUse(PlayerInteractEvent event) {
-        if (event.getHand() != EquipmentSlot.HAND
-                || !this.service.itemLockActive(event.getPlayer().getWorld())) {
+        // Las dos manos: si no vale para la principal, tampoco para la secundaria.
+        if (!this.service.itemLockActive(event.getPlayer().getWorld())) {
             return;
         }
         Action action = event.getAction();
@@ -185,6 +198,77 @@ public final class ItemFactionLock implements Listener {
             event.setCurrentItem(null);
             this.drop(player, current);
         }
+        this.deny(player, reason);
+    }
+
+    /** Tampoco puede pegar con el objeto restringido: atacar tambien es usarlo. */
+    @EventHandler(ignoreCancelled = true)
+    public void onAttack(EntityDamageByEntityEvent event) {
+        // Solo cuerpo a cuerpo: si el dano viene de una flecha, ya se bloqueo el disparo.
+        if (!(event.getDamager() instanceof Player player)
+                || !this.service.itemLockActive(player.getWorld())) {
+            return;
+        }
+        String reason = this.requirement(player, player.getInventory().getItemInMainHand());
+        if (reason == null) {
+            return;
+        }
+        event.setCancelled(true);
+        this.deny(player, reason);
+    }
+
+    /** Ni disparar con un arco o ballesta restringidos. */
+    @EventHandler(ignoreCancelled = true)
+    public void onShoot(EntityShootBowEvent event) {
+        if (!(event.getEntity() instanceof Player player)
+                || !this.service.itemLockActive(player.getWorld())) {
+            return;
+        }
+        String reason = this.requirement(player, event.getBow());
+        if (reason == null) {
+            return;
+        }
+        event.setCancelled(true);
+        this.deny(player, reason);
+    }
+
+    /** Ni lanzar una tridente restringida. */
+    @EventHandler(ignoreCancelled = true)
+    public void onLaunch(ProjectileLaunchEvent event) {
+        if (!(event.getEntity() instanceof org.bukkit.entity.Trident)
+                || !(event.getEntity().getShooter() instanceof Player player)
+                || !this.service.itemLockActive(player.getWorld())) {
+            return;
+        }
+        String reason = this.requirement(player, player.getInventory().getItemInMainHand());
+        if (reason == null) {
+            reason = this.requirement(player, player.getInventory().getItemInOffHand());
+        }
+        if (reason == null) {
+            return;
+        }
+        event.setCancelled(true);
+        this.deny(player, reason);
+    }
+
+    /**
+     * Ni pasarlo a la mano secundaria con la tecla de intercambio: seria moverlo, y ademas
+     * dejaria el objeto accesible desde una mano que el clic derecho tambien usa.
+     */
+    @EventHandler(ignoreCancelled = true)
+    public void onSwapHands(org.bukkit.event.player.PlayerSwapHandItemsEvent event) {
+        Player player = event.getPlayer();
+        if (!this.service.itemLockActive(player.getWorld())) {
+            return;
+        }
+        String reason = this.requirement(player, event.getMainHandItem());
+        if (reason == null) {
+            reason = this.requirement(player, event.getOffHandItem());
+        }
+        if (reason == null) {
+            return;
+        }
+        event.setCancelled(true);
         this.deny(player, reason);
     }
 

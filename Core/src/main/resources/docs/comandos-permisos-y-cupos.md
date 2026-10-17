@@ -27,6 +27,7 @@ Todos bajo `/customcore` (alias `cmobs`, `cm`).
 | `glowfaccion` | (cualquier jugador) enciende o apaga su brillo de facciones |
 | `item save <nombre>` | guarda el objeto de tu mano en el catalogo, con su NBT |
 | `item list` | lista los objetos guardados |
+| `item give <nombre> [jugador]` | entrega una copia nueva del objeto (con sus marcas) |
 | `item remove <nombre>` | borra uno del catalogo |
 | `item faccion <nombre> <faccion\|nada>` | reserva el objeto a una faccion (o lo libera) |
 | `item clase <nombre> <clase\|nada>` | reserva el objeto a una clase (o lo libera) |
@@ -40,6 +41,7 @@ Todos bajo `/customcore` (alias `cmobs`, `cm`).
 | `upgrade list` | lista los items de mejora cargados |
 | `upgrade give <id> [jugador]` | reparte un item de mejora (alias `mejora`) |
 | `upgrade reload` | relee `upgrades/` y rehace las recetas |
+| `testcast <skill>` | lanza una skill desde tu mirada, sin depender del clic de un item (solo admin) |
 
 Desde consola, `spawn` pide mundo y coordenadas: `/customcore spawn <id> <mundo> <x> <y> <z>`.
 
@@ -57,6 +59,7 @@ Desde consola, `spawn` pide mundo y coordenadas: `/customcore spawn <id> <mundo>
 |---|---|---|
 | `customcore.player` | invocar mobs con los huevos | `true` |
 | `customcore.admin` | comandos de administracion | `op` |
+| `customcore.bypass` | saltarse las restricciones de faccion/clase de objetos y pociones | `op` |
 
 Un jugador raso puede hacer **cuatro cosas** por su cuenta, y nada mas:
 
@@ -77,6 +80,10 @@ Todo lo demas â€”incluido `cuota <jugador>`, `cuota recontar` y `cuota retirar`â
 
 Los permisos van por el sistema **nativo de Bukkit**, asi que sirve cualquier plugin de
 permisos, no solo LuckPerms.
+
+`customcore.bypass` va **separado** de `customcore.admin`: puedes quitar el bypass para
+probar restricciones sin quitar los comandos de administracion. Por defecto lo tiene `op`;
+en LuckPerms se concede o se niega por grupo o por usuario.
 
 ## Cupo de mobs por grupo
 

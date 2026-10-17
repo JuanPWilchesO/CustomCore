@@ -93,18 +93,23 @@ public final class ChainService {
 
         // 1) lo que dice.
         if (step.message() != null && !step.message().isBlank()) {
-            player.sendMessage(this.text(mob, player, step.message()));
+            // Mismo detalle que en las skills: el '&' hay que traducirlo a mano.
+            player.sendMessage(com.juanp.custommobs.mob.Texts.color(
+                    this.text(mob, player, step.message())));
         }
-        // 2) lo que ejecuta. Los comandos de una cadena son de una interaccion, nunca de un
-        //    combate: la cadena entera nace de un clic.
-        if (step.consoleCommand() != null && !step.consoleCommand().isBlank()) {
-            this.plugin.getServer().dispatchCommand(this.plugin.getServer().getConsoleSender(),
-                    this.text(mob, player, step.consoleCommand()));
+        // 2) los requisitos, ANTES de cobrar o de ejecutar nada: si el jugador no es de la
+        //    faccion o de la clase, no debe pagar ni ver correr los comandos del paso.
+        //    Primero la faccion y luego la clase, para que el primer fallo decida el 'no-...'.
+        if (step.checksFaction() && !this.inFaction(player, step.faction())) {
+            this.goTo(mob, player, skill, conversationId, step.noFaction(), depth + 1);
+            return;
         }
-        if (step.playerCommand() != null && !step.playerCommand().isBlank()) {
-            player.performCommand(this.text(mob, player, step.playerCommand()));
+        if (step.checksClass() && !this.inClass(player, step.clazz())) {
+            this.goTo(mob, player, skill, conversationId, step.noClass(), depth + 1);
+            return;
         }
-        // 3) lo que cobra. Si no puede pagar, se va por donde diga 'no-pay'.
+        // 3) lo que cobra. Si no puede pagar, se va por donde diga 'no-pay' y no se
+        //    ejecuta nada del paso.
         if (step.charges()) {
             if (this.economy.charge(player, step.pay())) {
                 this.goTo(mob, player, skill, conversationId, step.next(), depth + 1);
@@ -113,14 +118,14 @@ public final class ChainService {
             }
             return;
         }
-        // 3b) la faccion: si no la cumple, se va por donde diga 'no-faction'.
-        if (step.checksFaction() && !this.inFaction(player, step.faction())) {
-            this.goTo(mob, player, skill, conversationId, step.noFaction(), depth + 1);
-            return;
+        // 3b) lo que ejecuta. Los comandos de una cadena son de una interaccion, nunca de un
+        //     combate: la cadena entera nace de un clic.
+        if (step.consoleCommand() != null && !step.consoleCommand().isBlank()) {
+            this.plugin.getServer().dispatchCommand(this.plugin.getServer().getConsoleSender(),
+                    this.text(mob, player, step.consoleCommand()));
         }
-        if (step.checksClass() && !this.inClass(player, step.clazz())) {
-            this.goTo(mob, player, skill, conversationId, step.noClass(), depth + 1);
-            return;
+        if (step.playerCommand() != null && !step.playerCommand().isBlank()) {
+            player.performCommand(this.text(mob, player, step.playerCommand()));
         }
         // 4) la pregunta: se mandan los botones y se espera el clic.
         if (step.asks()) {

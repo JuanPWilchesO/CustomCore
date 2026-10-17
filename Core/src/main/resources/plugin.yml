@@ -27,3 +27,6 @@ permissions:
   customcore.admin:
     description: Acceso a los comandos de administracion de CustomCore.
     default: op
+  customcore.bypass:
+    description: Permite saltarse las restricciones de faccion y clase de objetos y pociones.
+    default: op

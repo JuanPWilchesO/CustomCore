@@ -1,6 +1,7 @@
 package com.juanp.custommobs.effect;
 
 import com.juanp.custommobs.CustomMobsPlugin;
+import com.juanp.custommobs.item.ItemFactionLock;
 import com.juanp.custommobs.mob.Texts;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -11,10 +12,12 @@ import org.bukkit.block.Block;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemConsumeEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -70,6 +73,41 @@ public final class EffectListener implements Listener {
         this.useCatalog(event.getPlayer(), item, false);
     }
 
+    /**
+     * Uso temprano: corre antes de los plugins que cancelan el clic derecho al aire.
+     * Solo actua si 'items.ignore-cancelled-use' esta activo y el objeto es del catalogo
+     * con 'usar:'. Respeta las restricciones de clase/faccion.
+     */
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = false)
+    public void onUseEarly(PlayerInteractEvent event) {
+        if (!this.plugin.config().itemIgnoreCancelledUse()) {
+            return;
+        }
+        if (event.getHand() != EquipmentSlot.HAND) {
+            return;
+        }
+        Action action = event.getAction();
+        if (action != Action.RIGHT_CLICK_AIR && action != Action.RIGHT_CLICK_BLOCK) {
+            return;
+        }
+        ItemStack item = event.getItem();
+        if (!this.hasCatalogTag(item) || item.getType().isEdible()) {
+            return;
+        }
+        boolean drinkable = item.getType() == Material.POTION
+                || item.getType() == Material.SPLASH_POTION
+                || item.getType() == Material.LINGERING_POTION;
+        if (drinkable) {
+            return;
+        }
+        if (!this.canUse(event.getPlayer(), item)) {
+            return;
+        }
+        if (this.useCatalog(event.getPlayer(), item, true)) {
+            event.setCancelled(true);
+        }
+    }
+
     /** Clic derecho: pocion que no se bebe, o cualquier objeto del catalogo con {@code usar:}. */
     @EventHandler(ignoreCancelled = true)
     public void onUse(PlayerInteractEvent event) {
@@ -100,10 +138,60 @@ public final class EffectListener implements Listener {
         if (item.getType().isEdible()) {
             return; // se maneja al comer
         }
+        if (!this.canUse(event.getPlayer(), item)) {
+            return;
+        }
         // Objeto del catalogo con 'usar:'.
         if (!drinkable && this.useCatalog(event.getPlayer(), item, true)) {
             event.setCancelled(true);
         }
+    }
+
+    /**
+     * Clic derecho sobre una entidad. Bukkit manda {@link PlayerInteractEntityEvent}, no
+     * {@link PlayerInteractEvent}; sin este handler, apuntar a un mob y clicar sobre el
+     * no disparaba el {@code usar:} del objeto.
+     */
+    @EventHandler(ignoreCancelled = true)
+    public void onUseEntity(PlayerInteractEntityEvent event) {
+        if (event.getHand() != EquipmentSlot.HAND) {
+            return;
+        }
+        Player player = event.getPlayer();
+        ItemStack item = player.getInventory().getItemInMainHand();
+        if (item.getType().isAir() || item.getType().isEdible()) {
+            return;
+        }
+        boolean drinkable = item.getType() == Material.POTION
+                || item.getType() == Material.SPLASH_POTION
+                || item.getType() == Material.LINGERING_POTION;
+        if (drinkable) {
+            return;
+        }
+        if (!this.canUse(player, item)) {
+            return;
+        }
+        // Solo se cancela si el objeto era del catalogo y tenia 'usar:'. Asi no se
+        // rompen interacciones normales (comerciar, montar, etc.).
+        if (this.useCatalog(player, item, true)) {
+            event.setCancelled(true);
+        }
+    }
+
+    /** {@code true} si el objeto lleva la marca de catalogo. */
+    private boolean hasCatalogTag(ItemStack item) {
+        if (item == null || !item.hasItemMeta()) {
+            return false;
+        }
+        return item.getItemMeta().getPersistentDataContainer().has(
+                this.plugin.drops().catalog().nameKey(), PersistentDataType.STRING);
+    }
+
+    /** {@code true} si el objeto no tiene restriccion o el jugador la cumple. */
+    private boolean canUse(Player player, ItemStack item) {
+        ItemFactionLock lock = this.plugin.itemLock();
+        // Si el lock no esta listo, se falla cerrado: mejor no usar que saltarse la regla.
+        return lock != null && lock.requirement(player, item) == null;
     }
 
     /** @return {@code false} si la faccion de la pocion no deja usarla */
@@ -112,15 +200,24 @@ public final class EffectListener implements Listener {
         if (effect == null) {
             return false;
         }
-        if (spec.faction() != null) {
+        // Mismo criterio que los objetos: el admin pasa siempre, y la faccion puede
+        // admitir aliados si el servidor lo configura asi.
+        boolean admin = player.hasPermission(this.plugin.config().bypassPermission());
+        if (!admin && spec.faction() != null) {
             String own = this.plugin.mobs().factionOf(player);
-            if (own == null || !own.equalsIgnoreCase(spec.faction())) {
+            boolean allowed = own != null && own.equalsIgnoreCase(spec.faction());
+            if (!allowed && own != null && this.plugin.config().itemFactionAllies()) {
+                allowed = this.plugin.factions().isAlly(
+                        spec.faction().toLowerCase(java.util.Locale.ROOT),
+                        own.toLowerCase(java.util.Locale.ROOT));
+            }
+            if (!allowed) {
                 player.sendMessage(Texts.color("&cEsa pocion es de la faccion &f"
                         + spec.faction() + "&c: no es la tuya."));
                 return false;
             }
         }
-        if (spec.clazz() != null) {
+        if (!admin && spec.clazz() != null) {
             String own = this.plugin.playerClasses().of(player.getUniqueId()).orElse(null);
             if (own == null || !own.equalsIgnoreCase(spec.clazz())) {
                 player.sendMessage(Texts.color("&cEsa pocion es de la clase &f"
@@ -141,6 +238,10 @@ public final class EffectListener implements Listener {
         if (item.getType().isAir() || !item.hasItemMeta()) {
             return false;
         }
+        // Vale para todas las vias (clic, entidad, comer): una sola puerta de entrada.
+        if (!this.canUse(player, item)) {
+            return false;
+        }
         var catalog = this.plugin.drops().catalog();
         String name = item.getItemMeta().getPersistentDataContainer()
                 .get(catalog.nameKey(), PersistentDataType.STRING);
@@ -151,9 +252,25 @@ public final class EffectListener implements Listener {
         if (use == null) {
             return false;
         }
-        EffectSpec effect = this.service.effect(use.effectId()).orElse(null);
-        if (effect == null) {
-            return false;
+        // Un objeto puede lanzar un efecto suelto o una lista de skills. Las skills se
+        // resuelven al usarlo, para que /cm reload las actualice sin recrear el item.
+        EffectSpec effect = null;
+        if (!use.hasSkills()) {
+            effect = this.service.effect(use.effectId()).orElse(null);
+            if (effect == null) {
+                return false;
+            }
+        }
+        // Cooldown efectivo: el mayor entre el del item y el de las skills que lanza.
+        // Asi no hay dos esperas que se sumen ni una que pise a la otra.
+        int cooldown = use.cooldownSeconds();
+        if (use.hasSkills() && this.plugin.skillCatalog() != null) {
+            for (String id : use.skillIds()) {
+                var skill = this.plugin.skillCatalog().get(id).orElse(null);
+                if (skill != null) {
+                    cooldown = Math.max(cooldown, skill.cooldownSeconds());
+                }
+            }
         }
         String key = player.getUniqueId() + ":" + name;
         long now = System.currentTimeMillis();
@@ -161,10 +278,17 @@ public final class EffectListener implements Listener {
         if (until != null && until > now) {
             return true;
         }
-        if (use.cooldownSeconds() > 0) {
-            this.cooldowns.put(key, now + use.cooldownSeconds() * 1000L);
+        if (cooldown > 0) {
+            this.cooldowns.put(key, now + cooldown * 1000L);
         }
-        this.applyEffect(player, effect, use.duration());
+        if (use.hasSkills()) {
+            if (this.plugin.skillService() == null) {
+                return false;
+            }
+            this.plugin.skillService().cast(player, use.skillIds());
+        } else {
+            this.applyEffect(player, effect, use.duration());
+        }
         if (spend && use.consume()) {
             item.setAmount(item.getAmount() - 1);
         }
@@ -173,9 +297,18 @@ public final class EffectListener implements Listener {
 
     /** Aplica un efecto ya resuelto: mensaje y, si toca, las acciones de fuera. */
     private boolean applyEffect(Player player, EffectSpec effect, int seconds) {
+        // La purga puede llevarse el sigilo; el estado de invisibilidad vive aqui, no en
+        // EffectService, asi que hay que devolver la visibilidad a mano.
+        boolean hadSigilo = this.service.hasMechanic(player, "sigilo");
         this.service.apply(player, effect, seconds);
         player.sendMessage(Texts.color("&8[&cCustomCore&8] &7" + effect.name()));
-        if ("sigilo".equals(effect.mechanic())) {
+        String mechanic = effect.mechanic();
+        if (("quitar_positivos".equals(mechanic) || "quitar_negativos".equals(mechanic))
+                && hadSigilo && !this.service.hasMechanic(player, "sigilo")) {
+            this.vanish(player, false);
+            return true;
+        }
+        if ("sigilo".equals(mechanic)) {
             this.vanish(player, true);
             int duration = seconds > 0 ? seconds : effect.duration();
             player.addPotionEffect(new org.bukkit.potion.PotionEffect(

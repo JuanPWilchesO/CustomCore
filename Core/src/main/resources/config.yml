@@ -64,12 +64,24 @@ skills:
   # Cada cuantos ticks se evaluan las skills de cada mob (20 ticks = 1 segundo).
   interval-ticks: 20
 
+items:
+  # Si un objeto del catalogo restringido con 'faccion:' lo pueden usar tambien los
+  # miembros de una faccion ALIADA. Por defecto NO: manda la faccion exacta.
+  # Lo mismo vale para las pociones con 'faccion:'.
+  faction-allies: false
+  # Si otro plugin cancela el clic derecho al aire, procesar igual el 'usar:' de los
+  # objetos del catalogo. Por defecto SI; ponlo en false para respetar la cancelacion.
+  ignore-cancelled-use: true
+
 permissions:
   # Permiso para usar los huevos custom. Se comprueba con el sistema de permisos de
   # Bukkit, asi que sirve cualquier plugin (LuckPerms incluido).
   player: customcore.player
   # Permiso para los comandos de administracion.
   admin: customcore.admin
+  # Permiso para saltarse las restricciones de faccion y clase de objetos y pociones.
+  # Va aparte de 'admin' para poder probar las restricciones sin perder los comandos.
+  bypass: customcore.bypass
 
 limits:
   # Cupo de mobs anclados al DUENO (anchor: owner) para quien no tenga grupo mapeado.

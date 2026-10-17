@@ -60,12 +60,14 @@ skills:
     potion-amplifier: 0
 ```
 
-## 2. Los cuatro efectos
+## 2. Los efectos
 
 | `effect` | Hace |
 |---|---|
 | `damage` | resta `amount` de vida |
-| `heal` | suma `amount` de vida |
+| `heal` | suma `amount` de vida; con `porcentaje: true`, es fraccion de la vida maxima |
+| `ignite` | prende fuego durante `amount` segundos |
+| `freeze` | congela durante `amount` segundos y aplica Lentitud II |
 | `message` | manda un texto a los jugadores en rango |
 | `potion` | aplica `potion` durante `potion-duration-seconds` |
 
@@ -118,14 +120,33 @@ skills:
 El `target` se ignora: siempre invoca alrededor del propio mob. Los invocados toman el dueno
 del invocador. Ver `../docs/skills.md`.
 
-## 3. Los cinco objetivos
+## 3. Objetivos: como y a quien
 
-`self`, `owner`, `target`, `enemies`, `allies`. En `effect: message` el objetivo
-**se ignora**: habla a quien este en rango.
+Ahora se separan dos cosas:
+
+```yaml
+- id: prender
+  effect: ignite
+  target-type: LOOK      # LOOK | RADIUS
+  target: ENEMIES        # ENEMIES | ALLIES | SELF
+  range: 30
+  amount: 5
+```
+
+- `LOOK + ENEMIES`: solo lo que apuntas, si es enemigo.
+- `LOOK + ALLIES`: solo lo que apuntas, si es aliado.
+- `RADIUS + ENEMIES/ALLIES`: todos los del bando en el radio.
+- `LOOK/RADIUS + SELF`: el lanzador.
+
+Asi una skill de mirada no puede hacer fuego amigo. Las skills viejas con `target: look`
+se interpretan como `LOOK + ENEMIES`; `target: enemies/allies/self` siguen siendo de radio.
+`owner` y `target` siguen valiendo como objetivos especiales de mob.
+
+En `effect: message` el objetivo **se ignora**: habla a quien este en rango.
 
 ## 4. Detalles que importan
 
-- `range` tiene tope de **32 bloques**.
+- `range` tiene tope de **128 bloques**.
 - `chance: 0.5` = acierta la mitad de las veces; si falla, **no gasta** el cooldown.
 - Los objetivos usan **la misma politica de combate que la IA**: si el mob te considera
   enemigo, sus skills tambien.
@@ -140,3 +161,6 @@ del invocador. Ver `../docs/skills.md`.
 
 Invocalo y dejate ver: debe gritarte, curarte si te haces dano y envenenar a quien lo
 agreda.
+
+Para probar una skill de item, mira `../tutorials/05-objeto-con-nbt.md`: un objeto puede
+lanzar skills con `usar.skills`, y las skills compartidas viven en `skills/`.

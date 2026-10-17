@@ -33,6 +33,7 @@ ExcellentEnchants, cualquier NBT puesto por otro plugin. Para esos esta el catal
 /customcore item save <nombre>     guarda el objeto de tu mano
 /customcore item list              lista los nombres guardados
 /customcore item remove <nombre>   borra uno
+/customcore item give <nombre> [jugador]   entrega una copia nueva
 /customcore item faccion <nombre> <faccion|nada>   lo reserva a una faccion (o lo libera)
 ```
 
@@ -99,6 +100,33 @@ puede dejarle sin poder revisarlo ni moverlo. Como un op tiene todos los permiso
 
 > No es una caja fuerte: impide **usarlo**, no quitarselo a quien ya lo tenga. Un objeto ya
 > equipado por alguien de otra faccion no se le arranca.
+
+### Uso con skills
+
+Un objeto del catalogo puede lanzar **skills** en vez de un efecto suelto. En su yml:
+
+```yaml
+clase: mago
+usar:
+  skills:
+    - balsamo_propio
+    - balsamo_aliados
+  consume: false
+  cooldown: 30
+```
+
+- `usar.skills` es una lista, en orden; `usar.skill` sirve para una sola.
+- `usar.efecto` sigue existiendo para un efecto de `effects.yml`.
+- El **cooldown efectivo** es el mayor entre `usar.cooldown` y el
+  `cooldown-seconds` de las skills. No se suman.
+- `consume` decide si se gasta una unidad.
+- Si el objeto tiene `clase` y/o `faccion`, la restriccion se comprueba **antes** de
+  lanzar la skill. Un admin pasa solo si tiene `customcore.bypass`, no por ser admin.
+- Por defecto CustomCore procesa igual el uso aunque otro plugin cancele el clic
+  (`items.ignore-cancelled-use: true`), pero sigue respetando clase/faccion. Ponlo en
+  `false` si quieres que la cancelacion del otro plugin mande.
+- Las skills con `console_command`, `player_command` o `chain` deben declarar
+  `mode: item`; el planificador de mobs no las ejecuta.
 
 ## De la mano al mob, en dos pasos
 

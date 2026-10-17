@@ -273,11 +273,24 @@ public final class ItemCatalog {
             return Optional.empty();
         }
         String effect = section.getString("efecto");
-        if (effect == null || effect.isBlank()) {
+        java.util.List<String> skills = new java.util.ArrayList<>();
+        for (String raw : section.getStringList("skills")) {
+            if (raw != null && !raw.isBlank()) {
+                skills.add(raw.trim().toLowerCase(java.util.Locale.ROOT));
+            }
+        }
+        // 'skill:' singular es un atajo para una sola skill.
+        String single = section.getString("skill");
+        if (single != null && !single.isBlank()) {
+            skills.add(single.trim().toLowerCase(java.util.Locale.ROOT));
+        }
+        if ((effect == null || effect.isBlank()) && skills.isEmpty()) {
             return Optional.empty();
         }
         return Optional.of(new com.juanp.custommobs.item.UseSpec(
-                effect.trim().toLowerCase(java.util.Locale.ROOT),
+                effect == null || effect.isBlank()
+                        ? null : effect.trim().toLowerCase(java.util.Locale.ROOT),
+                java.util.List.copyOf(skills),
                 Math.max(0, section.getInt("duracion", 0)),
                 section.getBoolean("consume", true),
                 Math.max(0, section.getInt("cooldown", 0))));

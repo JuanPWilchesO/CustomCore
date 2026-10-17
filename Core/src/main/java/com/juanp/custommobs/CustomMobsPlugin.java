@@ -46,6 +46,7 @@ import com.juanp.custommobs.mob.NaturalSpawnTask;
 import com.juanp.custommobs.recall.RecallService;
 import com.juanp.custommobs.region.RegionGate;
 import com.juanp.custommobs.skill.SkillInteractListener;
+import com.juanp.custommobs.skill.SkillCatalog;
 import com.juanp.custommobs.skill.SkillService;
 import com.juanp.custommobs.spawner.SpawnerListener;
 import com.juanp.custommobs.spawner.SpawnerRegistry;
@@ -84,6 +85,7 @@ public final class CustomMobsPlugin extends JavaPlugin {
             .build();
 
     private PluginConfig config;
+    private SkillCatalog skillCatalog;
     private MobRegistry registry;
     private MobService mobService;
     private com.juanp.custommobs.effect.EffectService effectService;
@@ -99,6 +101,7 @@ public final class CustomMobsPlugin extends JavaPlugin {
     private FactionTeams factionTeams;
     private DisguiseLink disguiseLink;
     private DropService dropService;
+    private ItemFactionLock itemFactionLock;
     private StyleService styleService;
     private SpawnerRegistry spawners;
     private CraftService craftService;
@@ -168,6 +171,10 @@ public final class CustomMobsPlugin extends JavaPlugin {
         // La firma va lo primero que escribe el plugin, para que se vea al arrancar.
         this.getComponentLogger().info(SIGNATURE);
 
+        // Las skills reutilizables van antes que los mobs: un mob puede referenciarlas
+        // con 'ref:' y necesita que ya esten cargadas.
+        this.skillCatalog = new SkillCatalog(this);
+        this.skillCatalog.reload();
         this.registry = new MobRegistry(this);
         this.registry.reload();
 
@@ -233,7 +240,8 @@ public final class CustomMobsPlugin extends JavaPlugin {
         pluginManager.registerEvents(new TransformBlockListener(this.mobService), this);
         pluginManager.registerEvents(new SpawnerListener(this.mobService), this);
         pluginManager.registerEvents(new DropListener(this.mobService, this.dropService), this);
-        pluginManager.registerEvents(new ItemFactionLock(this.mobService, this.dropService.catalog()), this);
+        this.itemFactionLock = new ItemFactionLock(this.mobService, this.dropService.catalog());
+        pluginManager.registerEvents(this.itemFactionLock, this);
         pluginManager.registerEvents(new MotdListener(this), this);
         // Con Teams instalado, ademas no se deja entrar a un team de otra faccion. La clase toca
         // la API de Teams, asi que solo se carga cuando esta: sin el, ni se toca.
@@ -397,6 +405,9 @@ public final class CustomMobsPlugin extends JavaPlugin {
     public void reloadAll() {
         this.reloadConfig();
         this.config = PluginConfig.load(this.getConfig());
+        if (this.skillCatalog != null) {
+            this.skillCatalog.reload();
+        }
         this.registry.reload();
         this.factions.reload(this);
         this.craftService.registerAll();
@@ -428,8 +439,23 @@ public final class CustomMobsPlugin extends JavaPlugin {
         return this.registry;
     }
 
+    /** Skills reutilizables de {@code skills/}. */
+    public SkillCatalog skillCatalog() {
+        return this.skillCatalog;
+    }
+
+    /** Servicio que ejecuta las skills, tambien las que dispara un item. */
+    public SkillService skillService() {
+        return this.skillService;
+    }
+
     public MobService mobs() {
         return this.mobService;
+    }
+
+    /** Restricciones de faccion/clase de los objetos; se reutilizan en el uso temprano. */
+    public ItemFactionLock itemLock() {
+        return this.itemFactionLock;
     }
 
     /** Efectos y pociones. */
