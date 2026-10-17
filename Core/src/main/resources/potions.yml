@@ -1,0 +1,46 @@
+# CustomCore - pociones.
+#
+# Cada pocion es un item que CustomCore genera: material, color del liquido, nombre y el efecto
+# que aplica al beberse. El efecto sale de effects.yml (se define una vez y se reutiliza).
+#
+#   efecto    id del efecto en effects.yml
+#   duracion  segundos (si falta, la del efecto)
+#   material  que item es (POTION por defecto)
+#   color     color del liquido (nombre de color de Minecraft; opcional)
+#   faccion   opcional: solo la puede usar esa faccion
+#   receta    opcional: como se craftea (mismo esquema que los objetos del catalogo)
+
+sangre_fria:
+  nombre: '&bSangre Fria'
+  material: POTION
+  color: AQUA
+  efecto: congelamiento
+  duracion: 300
+
+pluma_de_icaro:
+  nombre: '&fPluma de Icaro'
+  material: POTION
+  color: WHITE
+  efecto: caida
+  duracion: 300
+
+furia:
+  nombre: '&4Furia'
+  material: POTION
+  color: RED
+  efecto: robo_vida
+  duracion: 120
+
+sombra:
+  nombre: '&8Sombra'
+  material: POTION
+  color: BLACK
+  efecto: sigilo
+  duracion: 60
+
+escarcha:
+  nombre: '&bEscarcha'
+  material: POTION
+  color: LIGHT_BLUE
+  efecto: paso_helado
+  duracion: 120

@@ -1,0 +1,268 @@
+package com.juanp.custommobs.effect;
+
+import com.juanp.custommobs.CustomMobsPlugin;
+import com.juanp.custommobs.mob.Texts;
+import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Registry;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.PotionMeta;
+import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
+
+import java.io.File;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * Efectos y pociones: se cargan de {@code effects.yml} y {@code potions.yml}.
+ *
+ * <p>Un efecto se define una vez y vale para los tres usos: pocion, skill de mob y uso de un
+ * item. Aqui viven las definiciones, el estado activo por jugador y la fabrica del item de
+ * pocion.
+ */
+public final class EffectService {
+
+    private final CustomMobsPlugin plugin;
+    private final NamespacedKey potionKey;
+    private final Map<String, EffectSpec> effects = new LinkedHashMap<>();
+    private final Map<String, PotionSpec> potions = new LinkedHashMap<>();
+    /** Efectos activos: jugador -> (efecto -> instante de caducidad, en millis). */
+    private final Map<UUID, Map<String, Long>> active = new ConcurrentHashMap<>();
+
+    public EffectService(CustomMobsPlugin plugin) {
+        this.plugin = plugin;
+        this.potionKey = new NamespacedKey(plugin, "potion");
+    }
+
+    // ------------------------------------------------------------------ carga
+
+    public void reload() {
+        this.effects.clear();
+        this.potions.clear();
+
+        YamlConfiguration effectYaml = this.load("effects.yml");
+        for (String key : effectYaml.getKeys(false)) {
+            ConfigurationSection section = effectYaml.getConfigurationSection(key);
+            if (section == null) {
+                continue;
+            }
+            String id = key.toLowerCase(Locale.ROOT);
+            this.effects.put(id, new EffectSpec(id,
+                    section.getString("nombre", id),
+                    section.getString("descripcion", ""),
+                    Math.max(1, section.getInt("duracion", 300)),
+                    section.getDouble("potencia", 0.0D),
+                    section.getString("mecanica", "").toLowerCase(Locale.ROOT),
+                    section.getStringList("vanilla")));
+        }
+
+        YamlConfiguration potionYaml = this.load("potions.yml");
+        for (String key : potionYaml.getKeys(false)) {
+            ConfigurationSection section = potionYaml.getConfigurationSection(key);
+            if (section == null) {
+                continue;
+            }
+            String effectId = section.getString("efecto");
+            if (effectId == null || !this.effects.containsKey(effectId.toLowerCase(Locale.ROOT))) {
+                this.plugin.getLogger().warning("La pocion '" + key + "' apunta a un efecto que no existe: " + effectId);
+                continue;
+            }
+            Material material = Material.matchMaterial(section.getString("material", "POTION"));
+            String id = key.toLowerCase(Locale.ROOT);
+            this.potions.put(id, new PotionSpec(id,
+                    section.getString("nombre", id),
+                    material == null ? Material.POTION : material,
+                    section.getString("color"),
+                    effectId.toLowerCase(Locale.ROOT),
+                    section.getInt("duracion", 0),
+                    section.getString("faccion")));
+        }
+        this.plugin.getLogger().info("Efectos cargados: " + this.effects.size()
+                + " | pociones: " + this.potions.size() + ".");
+    }
+
+    private YamlConfiguration load(String name) {
+        File file = new File(this.plugin.getDataFolder(), name);
+        if (!file.exists()) {
+            this.plugin.saveResource(name, false);
+        }
+        return YamlConfiguration.loadConfiguration(file);
+    }
+
+    // ------------------------------------------------------------------ consulta
+
+    public Optional<EffectSpec> effect(String id) {
+        return id == null ? Optional.empty()
+                : Optional.ofNullable(this.effects.get(id.toLowerCase(Locale.ROOT)));
+    }
+
+    public Optional<PotionSpec> potion(String id) {
+        return id == null ? Optional.empty()
+                : Optional.ofNullable(this.potions.get(id.toLowerCase(Locale.ROOT)));
+    }
+
+    public Map<String, EffectSpec> effects() {
+        return Map.copyOf(this.effects);
+    }
+
+    public Map<String, PotionSpec> potions() {
+        return Map.copyOf(this.potions);
+    }
+
+    // ------------------------------------------------------------------ activos
+
+    /** Aplica un efecto a un jugador. {@code seconds <= 0} usa la duracion del efecto. */
+    public void apply(Player player, EffectSpec spec, int seconds) {
+        int duration = seconds > 0 ? seconds : spec.duration();
+        this.active.computeIfAbsent(player.getUniqueId(), key -> new ConcurrentHashMap<>())
+                .put(spec.id(), System.currentTimeMillis() + duration * 1000L);
+        for (String raw : spec.vanilla()) {
+            String[] parts = raw.split(":");
+            PotionEffectType type = Registry.EFFECT.get(
+                    NamespacedKey.minecraft(parts[0].trim().toLowerCase(Locale.ROOT)));
+            if (type == null) {
+                continue;
+            }
+            int level = parts.length > 1 ? Math.max(1, parseInt(parts[1], 1)) : 1;
+            player.addPotionEffect(new PotionEffect(type, duration * 20, level - 1, true, true, true));
+        }
+    }
+
+    /** {@code true} si el jugador tiene activo algun efecto con esa mecanica. */
+    public boolean hasMechanic(Player player, String mechanic) {
+        Map<String, Long> mine = this.active.get(player.getUniqueId());
+        if (mine == null) {
+            return false;
+        }
+        long now = System.currentTimeMillis();
+        for (Map.Entry<String, Long> entry : mine.entrySet()) {
+            if (entry.getValue() <= now) {
+                continue;
+            }
+            EffectSpec spec = this.effects.get(entry.getKey());
+            if (spec != null && mechanic.equals(spec.mechanic())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** La potencia de la mecanica activa, o 0 si no la tiene. */
+    public double powerOf(Player player, String mechanic) {
+        Map<String, Long> mine = this.active.get(player.getUniqueId());
+        if (mine == null) {
+            return 0.0D;
+        }
+        long now = System.currentTimeMillis();
+        for (Map.Entry<String, Long> entry : mine.entrySet()) {
+            if (entry.getValue() <= now) {
+                continue;
+            }
+            EffectSpec spec = this.effects.get(entry.getKey());
+            if (spec != null && mechanic.equals(spec.mechanic())) {
+                return spec.power();
+            }
+        }
+        return 0.0D;
+    }
+
+    /** Quita los efectos caducados y devuelve los ids que se han ido. */
+    public List<String> expire(Player player) {
+        Map<String, Long> mine = this.active.get(player.getUniqueId());
+        if (mine == null) {
+            return List.of();
+        }
+        long now = System.currentTimeMillis();
+        List<String> gone = new ArrayList<>();
+        for (Map.Entry<String, Long> entry : mine.entrySet()) {
+            if (entry.getValue() <= now) {
+                gone.add(entry.getKey());
+            }
+        }
+        for (String id : gone) {
+            mine.remove(id);
+        }
+        if (mine.isEmpty()) {
+            this.active.remove(player.getUniqueId());
+        }
+        return gone;
+    }
+
+    /** Efectos activos del jugador (ids), sin tocar los caducados. */
+    public List<String> activeOf(Player player) {
+        Map<String, Long> mine = this.active.get(player.getUniqueId());
+        if (mine == null) {
+            return List.of();
+        }
+        long now = System.currentTimeMillis();
+        List<String> ids = new ArrayList<>();
+        for (Map.Entry<String, Long> entry : mine.entrySet()) {
+            if (entry.getValue() > now) {
+                ids.add(entry.getKey());
+            }
+        }
+        return ids;
+    }
+
+    // ------------------------------------------------------------------ item
+
+    public NamespacedKey potionKey() {
+        return this.potionKey;
+    }
+
+    /** Fabrica el item de una pocion, con su marca en el NBT. */
+    public ItemStack item(PotionSpec spec) {
+        ItemStack item = new ItemStack(spec.material());
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) {
+            return item;
+        }
+        meta.setDisplayName(Texts.color(spec.name()));
+        if (meta instanceof PotionMeta potionMeta) {
+            potionMeta.setBasePotionType(org.bukkit.potion.PotionType.WATER);
+            if (spec.color() != null) {
+                try {
+                    org.bukkit.Color color = org.bukkit.DyeColor
+                            .valueOf(spec.color().trim().toUpperCase(Locale.ROOT)).getColor();
+                    potionMeta.setColor(color);
+                } catch (IllegalArgumentException ignored) {
+                    // Un color que no existe se ignora: la pocion funciona igual.
+                }
+            }
+        }
+        meta.getPersistentDataContainer().set(this.potionKey,
+                PersistentDataType.STRING, spec.id());
+        item.setItemMeta(meta);
+        return item;
+    }
+
+    /** Id de la pocion que representa ese item, si es una. */
+    public Optional<String> potionOf(ItemStack item) {
+        if (item == null || item.getType().isAir() || !item.hasItemMeta()) {
+            return Optional.empty();
+        }
+        String id = item.getItemMeta().getPersistentDataContainer()
+                .get(this.potionKey, PersistentDataType.STRING);
+        return id == null ? Optional.empty() : Optional.of(id);
+    }
+
+    private static int parseInt(String raw, int fallback) {
+        try {
+            return Integer.parseInt(raw.trim());
+        } catch (NumberFormatException ex) {
+            return fallback;
+        }
+    }
+}

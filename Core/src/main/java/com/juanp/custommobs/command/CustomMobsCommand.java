@@ -99,6 +99,8 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
             case "kill" -> this.kill(sender, args);
             case "enchants" -> this.enchants(sender, args);
             case "item" -> this.item(sender, args);
+            case "effects" -> this.effects(sender, args);
+            case "potion" -> this.potion(sender, args);
             case "spawner" -> this.spawner(sender, args);
             case "book", "libro" -> this.book(sender, args);
             case "upgrade", "mejora" -> this.upgrade(sender, args);
@@ -983,6 +985,57 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
         }
     }
 
+    /** Efectos custom: listarlos o ver uno. */
+    private void effects(CommandSender sender, String[] args) {
+        var all = this.plugin.effects().effects();
+        if (args.length >= 2 && !"list".equalsIgnoreCase(args[1])) {
+            var spec = this.plugin.effects().effect(args[1]).orElse(null);
+            if (spec == null) {
+                sender.sendMessage(TAG + " No existe ese efecto. Miralos con /customcore effects list.");
+                return;
+            }
+            sender.sendMessage(TAG + " " + spec.name() + " (" + spec.id() + ")");
+            sender.sendMessage(" - " + spec.description());
+            sender.sendMessage(" - Duracion: " + spec.duration() + "s | mecanica: "
+                    + (spec.mechanic().isEmpty() ? "ninguna" : spec.mechanic())
+                    + (spec.power() > 0.0D ? " | potencia: " + spec.power() : ""));
+            return;
+        }
+        sender.sendMessage(TAG + " Efectos custom (" + all.size() + "):");
+        for (var spec : all.values()) {
+            sender.sendMessage(" - " + spec.id() + " - " + spec.name()
+                    + (spec.mechanic().isEmpty() ? "" : " [" + spec.mechanic() + "]"));
+        }
+    }
+
+    /** Pociones: listarlas o repartirlas. */
+    private void potion(CommandSender sender, String[] args) {
+        var all = this.plugin.effects().potions();
+        if (args.length < 2 || "list".equalsIgnoreCase(args[1])) {
+            sender.sendMessage(TAG + " Pociones (" + all.size() + "):");
+            for (var spec : all.values()) {
+                sender.sendMessage(" - " + spec.id() + " - " + spec.name()
+                        + " (efecto: " + spec.effectId() + ")");
+            }
+            return;
+        }
+        if (!"give".equalsIgnoreCase(args[1]) || args.length < 3) {
+            sender.sendMessage(TAG + " Uso: /customcore potion list | potion give <id> [jugador]");
+            return;
+        }
+        var spec = this.plugin.effects().potion(args[2]).orElse(null);
+        if (spec == null) {
+            sender.sendMessage(TAG + " No existe esa pocion: " + args[2]);
+            return;
+        }
+        Player target = this.targetPlayer(sender, args, 3);
+        if (target == null) {
+            return;
+        }
+        this.deliver(target, this.plugin.effects().item(spec));
+        sender.sendMessage(TAG + " Pocion '" + spec.id() + "' entregada a " + target.getName() + ".");
+    }
+
     /** Lista las claves de encantamiento disponibles (incluye las de ExcellentEnchants). */
     private void enchants(CommandSender sender, String[] args) {
         String filter = args.length > 1 ? args[1].toLowerCase(Locale.ROOT) : "";
@@ -1025,7 +1078,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
             List<String> options = admin
                     ? List.of("reload", "list", "give", "spawn", "remove", "active", "kill",
                             "enchants", "cuota", "item", "color", "glow", "spawner", "book", "upgrade",
-                            "despedir", "faction")
+                            "despedir", "faction", "effects", "potion")
                     : List.of("cuota", "color", "glow", "despedir");
             for (String option : options) {
                 if (option.startsWith(args[0].toLowerCase(Locale.ROOT))) {
@@ -1092,6 +1145,34 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
             for (var spec : this.plugin.upgrades().all()) {
                 if (spec.id().startsWith(args[2].toLowerCase(Locale.ROOT))) {
                     out.add(spec.id());
+                }
+            }
+            return out;
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("effects")) {
+            if ("list".startsWith(args[1].toLowerCase(Locale.ROOT))) {
+                out.add("list");
+            }
+            for (String id : this.plugin.effects().effects().keySet()) {
+                if (id.startsWith(args[1].toLowerCase(Locale.ROOT))) {
+                    out.add(id);
+                }
+            }
+            return out;
+        }
+        if (args.length == 2 && args[0].equalsIgnoreCase("potion")) {
+            for (String option : List.of("list", "give")) {
+                if (option.startsWith(args[1].toLowerCase(Locale.ROOT))) {
+                    out.add(option);
+                }
+            }
+            return out;
+        }
+        if (args.length == 3 && args[0].equalsIgnoreCase("potion")
+                && args[1].equalsIgnoreCase("give")) {
+            for (String id : this.plugin.effects().potions().keySet()) {
+                if (id.startsWith(args[2].toLowerCase(Locale.ROOT))) {
+                    out.add(id);
                 }
             }
             return out;

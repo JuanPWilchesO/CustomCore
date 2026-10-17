@@ -1,0 +1,50 @@
+# CustomCore - efectos reutilizables.
+#
+# Un efecto se define UNA vez y se usa en los tres sitios:
+#   1. en una pocion (potions.yml)
+#   2. como skill de un mob (en el yml del mob)
+#   3. como uso de un item (items/<nombre>.yml -> usar: efecto: <id>)
+#
+# Campos:
+#   nombre       nombre visible
+#   descripcion  que hace (lo muestra /customcore effects info)
+#   duracion     segundos por defecto
+#   potencia     numero propio de la mecanica (ej. robo de vida: 0.25 = 25%)
+#   vanilla      efectos de Minecraft que aplica ademas (tipo + nivel), opcional
+#   mecanica     lo que hace CustomCore:
+#                  congelamiento -> inmune al dano de congelacion y el hielo no agarra
+#                  caida         -> inmune al dano de caida
+#                  robo_vida     -> cura un % del dano que haces
+#                  sigilo        -> oculta tu nombre a los demas
+#                  paso_helado   -> congela el agua bajo tus pies
+
+congelamiento:
+  nombre: 'Inmunidad al congelamiento'
+  descripcion: 'No sufres dano por congelacion y el hielo no te agarra.'
+  duracion: 300
+  mecanica: congelamiento
+
+caida:
+  nombre: 'Inmunidad a la caida'
+  descripcion: 'No sufres dano al caer.'
+  duracion: 300
+  mecanica: caida
+
+robo_vida:
+  nombre: 'Robo de vida'
+  descripcion: 'Te curas un 25% del dano que haces.'
+  duracion: 120
+  potencia: 0.25
+  mecanica: robo_vida
+
+sigilo:
+  nombre: 'Sigilo'
+  descripcion: 'Los demas no te ven el nombre.'
+  duracion: 60
+  mecanica: sigilo
+
+paso_helado:
+  nombre: 'Paso helado'
+  descripcion: 'Congelas el agua bajo tus pies mientras caminas.'
+  duracion: 120
+  mecanica: paso_helado

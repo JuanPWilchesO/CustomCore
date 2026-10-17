@@ -86,6 +86,7 @@ public final class CustomMobsPlugin extends JavaPlugin {
     private PluginConfig config;
     private MobRegistry registry;
     private MobService mobService;
+    private com.juanp.custommobs.effect.EffectService effectService;
     private TeamLink teamLink;
     private GroupLink groupLink;
     private FactionBook factions;
@@ -235,6 +236,14 @@ public final class CustomMobsPlugin extends JavaPlugin {
         }
         pluginManager.registerEvents(new SkillInteractListener(this.craftService, this.mobService, this.skillService), this);
         pluginManager.registerEvents(new MobItemListener(this, this.mobService, this.upgradeService, this.book), this);
+
+        // Efectos y pociones: definiciones, mecanicas y la tarea que las mantiene.
+        this.effectService = new com.juanp.custommobs.effect.EffectService(this);
+        this.effectService.reload();
+        com.juanp.custommobs.effect.EffectListener effectListener =
+                new com.juanp.custommobs.effect.EffectListener(this, this.effectService);
+        pluginManager.registerEvents(effectListener, this);
+        this.getServer().getScheduler().runTaskTimer(this, effectListener::tick, 20L, 20L);
 
         PluginCommand command = this.getCommand("customcore");
         if (command != null) {
@@ -391,6 +400,9 @@ public final class CustomMobsPlugin extends JavaPlugin {
         if (this.mobService != null) {
             this.mobService.playerMobs().load();
         }
+        if (this.effectService != null) {
+            this.effectService.reload();
+        }
     }
 
     /**
@@ -411,6 +423,11 @@ public final class CustomMobsPlugin extends JavaPlugin {
 
     public MobService mobs() {
         return this.mobService;
+    }
+
+    /** Efectos y pociones. */
+    public com.juanp.custommobs.effect.EffectService effects() {
+        return this.effectService;
     }
 
     public DropService drops() {
