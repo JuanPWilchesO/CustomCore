@@ -1,6 +1,10 @@
 # CustomMobs - configuracion general
 debug: false
 
+# Diagnostico: guarda los ultimos paquetes enviados a cada jugador y los vuelca al log cuando
+# se desconecta. Sirve para cazar un "Error de protocolo de red" del cliente. Dejalo apagado.
+debug-packets: false
+
 # ---------------------------------------------------------------------------
 # Firma y mensaje de bienvenida.
 # ---------------------------------------------------------------------------

@@ -244,6 +244,28 @@ public final class CustomMobsPlugin extends JavaPlugin {
         this.glow = new FactionGlowService(this, this.mobService);
         this.glow.runTaskTimer(this, 20L, 20L);
 
+        // Diagnostico opcional: traza de los paquetes enviados a cada jugador, volcada al
+        // desconectarse. Es la unica forma de cazar un "Error de protocolo de red" del cliente,
+        // porque ahi el servidor no ve nada.
+        if (this.getConfig().getBoolean("debug-packets", false)) {
+            try {
+                com.juanp.custommobs.glow.PacketTrace trace =
+                        new com.juanp.custommobs.glow.PacketTrace(this);
+                com.github.retrooper.packetevents.PacketEvents.getAPI().getEventManager()
+                        .registerListener(trace);
+                pluginManager.registerEvents(new org.bukkit.event.Listener() {
+                    @org.bukkit.event.EventHandler
+                    public void onQuit(org.bukkit.event.player.PlayerQuitEvent event) {
+                        trace.dump(event.getPlayer());
+                    }
+                }, this);
+                this.getLogger().info("Traza de paquetes ACTIVA (debug-packets).");
+            } catch (Throwable throwable) {
+                this.getLogger().warning("No se pudo activar la traza de paquetes: "
+                        + throwable.getMessage());
+            }
+        }
+
         long skillInterval = this.config.skillIntervalTicks();
         this.skillService.runTaskTimer(this, skillInterval, skillInterval);
 
