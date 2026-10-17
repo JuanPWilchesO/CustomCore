@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.2 — mobs invulnerables
+
+- **`invulnerable: true`** en el yml de un mob: no recibe dano de **ninguna** causa (golpes,
+  fuego, caida, pociones, vacio...). Por dentro rellena la lista `immune` con todas las causas,
+  asi que se comporta igual que escribirlas todas. No impide retirarlo por comando.
+
 ## 0.5.1 — comprobar clase en las cadenas y fuera el nombre viejo
 
 - **Cadenas de interaccion**: un paso puede exigir **clase** ademas de faccion, y decidir por

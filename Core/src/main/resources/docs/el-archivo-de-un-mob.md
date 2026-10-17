@@ -287,6 +287,7 @@ immune:
 | `immune` | lista de causas de dano que ignora | vacia |
 | `attacks-monsters` | ataca a los monstruos hostiles vanilla (`category: server`) | `false` |
 | `transformable` | si el juego puede convertirlo (aldeano -> bruja, zombi -> ahogado...) | `true` |
+| `invulnerable` | no recibe **ningun** dano, de ninguna causa (ver abajo) | `false` |
 
 ### Transformaciones
 
@@ -301,6 +302,22 @@ ahoga pasa a ahogado, un cerdo con un rayo se vuelve piglin zombificado...
 Con `transformable: false` **ninguna** de esas conversiones le pasa. Por defecto se transforma
 como cualquier otro mob, que es como se ha comportado siempre — asi que nada de lo que ya
 tenias cambia.
+
+### Invulnerable
+
+```yaml
+invulnerable: true
+```
+
+El mob **no recibe dano de nada**: ni golpes, ni fuego, ni caida, ni pociones, ni el vacio. Por
+dentro se traduce en que ignora todas las causas de dano (la misma lista que `immune`), asi que
+se comporta igual que poner todas, pero sin escribirlas.
+
+Sirve para un guardian, un mob de mision o un jefe que solo debe caer por su propia mecanica.
+
+> Ojo: sigue siendo un mob normal. Lo que **no** frena es que lo retiren por fuera — `/cm kill`,
+> `/cm despedir`, o el hueco de su huevo—, porque eso no pasa por el dano. La invulnerabilidad
+> protege de lo que hace dano, no de la administracion.
 
 ### Atacar monstruos
 

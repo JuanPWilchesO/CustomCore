@@ -226,6 +226,11 @@ public final class MobLoader {
      * tumba la carga del mob.
      */
     private static Set<EntityDamageEvent.DamageCause> parseImmune(ConfigurationSection cfg) {
+        // Un mob invulnerable ignora TODAS las causas. Se resuelve aqui, en la misma lista que
+        // ya se consulta al recibir dano: asi no hay un camino paralelo que se pueda olvidar.
+        if (cfg.getBoolean("invulnerable", false)) {
+            return Set.copyOf(EnumSet.allOf(EntityDamageEvent.DamageCause.class));
+        }
         List<String> raw = cfg.getStringList("immune");
         if (raw.isEmpty()) {
             return Set.of();
