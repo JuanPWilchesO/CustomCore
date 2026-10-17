@@ -20,6 +20,10 @@ Todos bajo `/custommobs` (alias `cmobs`, `cm`).
 | `faction get <jugador>` | consulta su faccion |
 | `faction clear <jugador>` | se la quita |
 | `faction list` | lista los jugadores con faccion |
+| `class set <jugador> <clase>` | asigna clase a un jugador (solo admin) |
+| `class get <jugador>` | consulta su clase |
+| `class clear <jugador>` | se la quita |
+| `class list` | lista los jugadores con clase |
 | `glowfaccion` | (cualquier jugador) enciende o apaga su brillo de facciones |
 | `item save <nombre>` | guarda el objeto de tu mano en el catalogo, con su NBT |
 | `item list` | lista los objetos guardados |

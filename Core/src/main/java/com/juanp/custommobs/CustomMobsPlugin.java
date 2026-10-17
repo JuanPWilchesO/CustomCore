@@ -91,6 +91,8 @@ public final class CustomMobsPlugin extends JavaPlugin {
     private GroupLink groupLink;
     private FactionBook factions;
     private PlayerFactions playerFactions;
+    private com.juanp.custommobs.classes.PlayerClasses playerClasses;
+    private com.juanp.custommobs.classes.ClassBook classBook;
     private EconomyLink economy;
     private ChainService chains;
     private FactionGlowService glow;
@@ -177,6 +179,10 @@ public final class CustomMobsPlugin extends JavaPlugin {
         this.factionTeams = new FactionTeams(this);
         this.playerFactions = new PlayerFactions(this);
         this.playerFactions.load();
+        this.classBook = new com.juanp.custommobs.classes.ClassBook();
+        this.classBook.reload(this);
+        this.playerClasses = new com.juanp.custommobs.classes.PlayerClasses(this);
+        this.playerClasses.load();
 
         this.teamLink = TeamLinkResolver.resolve(this);
         this.groupLink = GroupLinkResolver.resolve(this);
@@ -472,6 +478,15 @@ public final class CustomMobsPlugin extends JavaPlugin {
     }
 
     /** Facciones asignadas a jugadores, para las reglas de ataque por faccion. */
+    /** Clases: catalogo y asignaciones. */
+    public com.juanp.custommobs.classes.ClassBook classes() {
+        return this.classBook;
+    }
+
+    public com.juanp.custommobs.classes.PlayerClasses playerClasses() {
+        return this.playerClasses;
+    }
+
     public PlayerFactions playerFactions() {
         return this.playerFactions;
     }

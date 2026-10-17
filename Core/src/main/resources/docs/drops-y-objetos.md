@@ -74,6 +74,19 @@ objeto se queda donde estaba.
 El aviso de "no es la tuya" tiene un **enfriamiento de 3 segundos**: a clics seguidos no
 inunda el chat.
 
+### Reservar un objeto a una clase
+
+```yaml
+clase: guerrero
+```
+
+El objeto queda reservado a esa **clase** (`/customcore class set <jugador> <clase>`). La clase no
+tiene relaciones de alianza: solo restringe objetos.
+
+Si el objeto declara **las dos**, `faccion:` y `clase:`, solo lo usa quien sea de **esa faccion y
+esa clase**. Por ejemplo, un objeto de `atherea` y `guerrero` no lo usa nadie mas: ni un atherea
+mago, ni un guerrero de otra faccion. Eso permite montar escenarios clase-faccion.
+
 Un **admin** (quien tenga el permiso de administracion) pasa siempre: reservar un objeto no
 puede dejarle sin poder revisarlo ni moverlo. Como un op tiene todos los permisos, cae ahi solo.
 

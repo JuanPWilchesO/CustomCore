@@ -22,15 +22,13 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Exclusividad de faccion de un objeto del catalogo.
+ * Restricciones de un objeto del catalogo: <b>faccion</b> y/o <b>clase</b>.
  *
- * <p>Un objeto guardado con {@code /customcore item faccion <nombre> <faccion>} queda
- * reservado: solo un jugador de esa faccion puede <b>recogerlo</b>, <b>equiparlo</b> o
- * <b>usarlo</b>. La marca viaja dentro del propio objeto (su NBT), asi que sobrevive a que
- * lo suelten, lo guarden en un cofre o lo reparta otro plugin.
+ * <p>Si su yml declara {@code faccion:} y {@code clase:}, el objeto solo lo usa quien cumpla
+ * <b>las dos</b>. La marca viaja dentro del propio objeto (su NBT), asi que sobrevive a que lo
+ * suelten, lo guarden en un cofre o lo reparta otro plugin.
  *
- * <p>No es una caja fuerte: el objeto sigue siendo un objeto normal. Lo que se impide es
- * que alguien de otra faccion lo use; no se le quita de las manos a quien ya lo tenga.
+ * <p>No es una caja fuerte: impide usarlo, no quitarselo a quien ya lo tenga.
  */
 public final class ItemFactionLock implements Listener {
 
@@ -46,61 +44,53 @@ public final class ItemFactionLock implements Listener {
         this.catalog = catalog;
     }
 
-    /** La faccion a la que pertenece el objeto, o {@code null} si es de todos. */
-    private String factionOf(ItemStack item) {
+    private static String tag(ItemStack item, org.bukkit.NamespacedKey key) {
         if (item == null || item.getType().isAir() || !item.hasItemMeta()) {
             return null;
         }
         ItemMeta meta = item.getItemMeta();
-        if (meta == null) {
+        return meta == null ? null
+                : meta.getPersistentDataContainer().get(key, PersistentDataType.STRING);
+    }
+
+    /**
+     * El motivo por el que ese jugador no puede usar el objeto, o {@code null} si puede.
+     *
+     * <p>Un admin pasa siempre: reservar un objeto no puede dejarle sin poder revisarlo.
+     */
+    private String requirement(Player player, ItemStack item) {
+        if (item == null || item.getType().isAir() || !item.hasItemMeta()) {
             return null;
         }
-        return meta.getPersistentDataContainer().get(this.catalog.factionKey(), PersistentDataType.STRING);
-    }
-
-    /** {@code true} si el jugador es de esa faccion (o el objeto es libre). */
-    private boolean mayUse(Player player, String faction) {
-        if (faction == null) {
-            return true;
-        }
-        // Un admin pasa siempre: reservar un objeto no puede dejarle sin poder moverlo ni
-        // revisarlo. Un op tiene todos los permisos, asi que cae aqui solo.
         if (player.hasPermission(this.service.config().adminPermission())) {
-            return true;
+            return null;
         }
-        String own = this.service.factionOf(player);
-        return own != null && own.equalsIgnoreCase(faction);
+        String faction = tag(item, this.catalog.factionKey());
+        if (faction != null) {
+            String own = this.service.factionOf(player);
+            if (own == null || !own.equalsIgnoreCase(faction)) {
+                return "Ese objeto es de la faccion " + faction + ": no es la tuya.";
+            }
+        }
+        String clazz = tag(item, this.catalog.classKey());
+        if (clazz != null) {
+            String own = this.service.plugin().playerClasses().of(player.getUniqueId()).orElse(null);
+            if (own == null || !own.equalsIgnoreCase(clazz)) {
+                return "Ese objeto es de la clase " + clazz + ": no es la tuya.";
+            }
+        }
+        return null;
     }
 
-    private void deny(Player player, String faction) {
+    /** Avisa con enfriamiento: a clics seguidos no inunda el chat. */
+    private void deny(Player player, String reason) {
         long now = System.currentTimeMillis();
         Long previous = this.lastNotice.get(player.getUniqueId());
         if (previous != null && now - previous < NOTICE_COOLDOWN_MS) {
             return;
         }
         this.lastNotice.put(player.getUniqueId(), now);
-        player.sendMessage(Texts.color("&cEse objeto es de la faccion &f" + faction
-                + "&c: no es la tuya."));
-    }
-
-    /**
-     * Un objeto reservado solo lo <b>craftea</b> quien es de esa faccion.
-     *
-     * <p>La receta puede salir en el libro de recetas de cualquiera —eso no se puede
-     * esconder por jugador—, pero el crafteo no se completa.
-     */
-    @EventHandler(ignoreCancelled = true)
-    public void onCraft(CraftItemEvent event) {
-        if (!(event.getWhoClicked() instanceof Player player)
-                || !this.service.itemLockActive(player.getWorld())) {
-            return;
-        }
-        String faction = this.factionOf(event.getCurrentItem());
-        if (faction == null || this.mayUse(player, faction)) {
-            return;
-        }
-        event.setCancelled(true);
-        this.deny(player, faction);
+        player.sendMessage(Texts.color("&c" + reason));
     }
 
     /** Lo suelta en el suelo: el objeto no es suyo, asi que no le ocupa el inventario. */
@@ -111,6 +101,21 @@ public final class ItemFactionLock implements Listener {
         player.getWorld().dropItemNaturally(player.getLocation(), item);
     }
 
+    /** No puede craftearlo. */
+    @EventHandler(ignoreCancelled = true)
+    public void onCraft(CraftItemEvent event) {
+        if (!(event.getWhoClicked() instanceof Player player)
+                || !this.service.itemLockActive(player.getWorld())) {
+            return;
+        }
+        String reason = this.requirement(player, event.getCurrentItem());
+        if (reason == null) {
+            return;
+        }
+        event.setCancelled(true);
+        this.deny(player, reason);
+    }
+
     /** No puede recogerlo del suelo. */
     @EventHandler(ignoreCancelled = true)
     public void onPickup(EntityPickupItemEvent event) {
@@ -118,12 +123,12 @@ public final class ItemFactionLock implements Listener {
                 || !this.service.itemLockActive(player.getWorld())) {
             return;
         }
-        String faction = this.factionOf(event.getItem().getItemStack());
-        if (faction == null || this.mayUse(player, faction)) {
+        String reason = this.requirement(player, event.getItem().getItemStack());
+        if (reason == null) {
             return;
         }
         event.setCancelled(true);
-        this.deny(player, faction);
+        this.deny(player, reason);
     }
 
     /** No puede usarlo ni equiparlo con el clic derecho de la mano. */
@@ -137,12 +142,12 @@ public final class ItemFactionLock implements Listener {
         if (action != Action.RIGHT_CLICK_AIR && action != Action.RIGHT_CLICK_BLOCK) {
             return;
         }
-        String faction = this.factionOf(event.getItem());
-        if (faction == null || this.mayUse(event.getPlayer(), faction)) {
+        String reason = this.requirement(event.getPlayer(), event.getItem());
+        if (reason == null) {
             return;
         }
         event.setCancelled(true);
-        this.deny(event.getPlayer(), faction);
+        this.deny(event.getPlayer(), reason);
     }
 
     /**
@@ -157,19 +162,18 @@ public final class ItemFactionLock implements Listener {
                 || !this.service.itemLockActive(player.getWorld())) {
             return;
         }
-        // Lo que trae el cursor manda: si es de otra faccion, se cae al suelo.
         ItemStack cursor = event.getCursor();
-        String faction = this.lockedFor(player, cursor);
-        if (faction != null) {
+        String reason = this.requirement(player, cursor);
+        if (reason != null) {
             event.setCancelled(true);
             player.setItemOnCursor(null);
             this.drop(player, cursor);
-            this.deny(player, faction);
+            this.deny(player, reason);
             return;
         }
         ItemStack current = event.getCurrentItem();
-        faction = this.lockedFor(player, current);
-        if (faction == null) {
+        reason = this.requirement(player, current);
+        if (reason == null) {
             return;
         }
         event.setCancelled(true);
@@ -181,7 +185,7 @@ public final class ItemFactionLock implements Listener {
             event.setCurrentItem(null);
             this.drop(player, current);
         }
-        this.deny(player, faction);
+        this.deny(player, reason);
     }
 
     /** Tampoco puede arrastrarlo por encima de varias ranuras. */
@@ -192,23 +196,12 @@ public final class ItemFactionLock implements Listener {
             return;
         }
         for (ItemStack stack : event.getNewItems().values()) {
-            String faction = this.lockedFor(player, stack);
-            if (faction != null) {
+            String reason = this.requirement(player, stack);
+            if (reason != null) {
                 event.setCancelled(true);
-                this.deny(player, faction);
+                this.deny(player, reason);
                 return;
             }
         }
-    }
-
-    /** La faccion del objeto si el jugador NO puede usarlo; {@code null} si puede o es libre. */
-    private String lockedFor(Player player, ItemStack... items) {
-        for (ItemStack item : items) {
-            String faction = this.factionOf(item);
-            if (faction != null && !this.mayUse(player, faction)) {
-                return faction;
-            }
-        }
-        return null;
     }
 }

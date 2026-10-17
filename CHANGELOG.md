@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.5.0 — clases de jugador
+
+- **Clases**: se definen en `classes.yml` (`guerrero`, `mago`, `picaro`...) y se asignan con
+  `/customcore class set|get|clear|list`. **No** definen alianzas ni enemistades: un jugador
+  puede ser de cualquier clase en cualquier faccion.
+- **Objetos con clase**: en `items/<nombre>.yml`, `clase: <id>`. Si el objeto declara tambien
+  `faccion:`, solo lo usa quien sea de esa faccion **y** de esa clase (recoger, cofre, mover,
+  equipar, usar y craftear). Un admin pasa siempre. Eso permite escenarios clase-faccion:
+  un objeto de `atherea` + `guerrero` no lo usa nadie mas.
+- **Pociones con clase**: `clase:` en `potions.yml`, con la misma regla.
+- El repositorio de GitHub pasa a llamarse **CustomCore**.
+
+## 0.4.0 — el proyecto pasa a CustomCore
+
+- **Renombre**: plugin `CustomCore`, comando `/customcore` con alias `/cm`, `/cmobs` y
+  `/custommobs`; la carpeta de datos se migra **por copia** desde `plugins/CustomMobs`.
+- **Efectos y pociones custom**: `effects.yml` define un efecto y se usa en una pocion, una skill
+  de mob o el `usar:` de un objeto. Cinco de arranque: congelamiento, caida, robo de vida,
+  sigilo (vanish) y paso helado. `/customcore effects list|info` y `/customcore potion list|give`;
+  recetas de pociones en `potions.yml`.
+- **Action bar**: al mirar un mob custom dice Enemigo / Aliado / Neutral por jugador.
+- **Arreglos**: el "Error de protocolo de red" al matar o guardar mobs (fuera el pintado de mobs
+  por paquetes) y las placas fantasma.
+
 ## 0.3.8 — los objetos del catalogo no valen para recetas vanilla
 
 - Un objeto guardado en el catalogo (con NBT) **ya no sirve de ingrediente** en una receta que no

@@ -32,12 +32,14 @@ public final class ItemCatalog {
     private final CustomMobsPlugin plugin;
     private final File folder;
     private final NamespacedKey factionKey;
+    private final NamespacedKey classKey;
     private final NamespacedKey nameKey;
 
     public ItemCatalog(CustomMobsPlugin plugin) {
         this.plugin = plugin;
         this.folder = new File(plugin.getDataFolder(), "items");
         this.factionKey = new NamespacedKey(plugin, "item_faccion");
+        this.classKey = new NamespacedKey(plugin, "item_clase");
         this.nameKey = new NamespacedKey(plugin, "item_catalogo");
     }
 
@@ -107,10 +109,15 @@ public final class ItemCatalog {
             if (meta != null) {
                 meta.getPersistentDataContainer().set(this.nameKey,
                         PersistentDataType.STRING, name);
-                String faction = factionOf(yaml);
+                String faction = factionOf(yaml, "faccion");
                 if (faction != null) {
                     meta.getPersistentDataContainer().set(this.factionKey,
                             PersistentDataType.STRING, faction);
+                }
+                String clazz = factionOf(yaml, "clase");
+                if (clazz != null) {
+                    meta.getPersistentDataContainer().set(this.classKey,
+                            PersistentDataType.STRING, clazz);
                 }
                 item.setItemMeta(meta);
             }
@@ -199,6 +206,23 @@ public final class ItemCatalog {
         return this.factionKey;
     }
 
+    /** Clave con la que se marca, dentro del objeto, su clase. */
+    public NamespacedKey classKey() {
+        return this.classKey;
+    }
+
+    /** La clase del objeto, si su yml la declara. */
+    public Optional<String> classOf(String rawName) {
+        String name = clean(rawName);
+        if (name == null) {
+            return Optional.empty();
+        }
+        File file = this.fileOf(name);
+        return file.exists()
+                ? Optional.ofNullable(factionOf(YamlConfiguration.loadConfiguration(file), "clase"))
+                : Optional.empty();
+    }
+
     /** Clave con la que se marca, dentro del objeto, de que catalogo salio. */
     public NamespacedKey nameKey() {
         return this.nameKey;
@@ -283,7 +307,11 @@ public final class ItemCatalog {
     }
 
     private static String factionOf(YamlConfiguration yaml) {
-        String value = yaml.getString("faccion");
+        return factionOf(yaml, "faccion");
+    }
+
+    private static String factionOf(YamlConfiguration yaml, String key) {
+        String value = yaml.getString(key);
         return value == null || value.isBlank() ? null : value.trim().toLowerCase(Locale.ROOT);
     }
 

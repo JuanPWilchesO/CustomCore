@@ -120,6 +120,14 @@ public final class EffectListener implements Listener {
                 return false;
             }
         }
+        if (spec.clazz() != null) {
+            String own = this.plugin.playerClasses().of(player.getUniqueId()).orElse(null);
+            if (own == null || !own.equalsIgnoreCase(spec.clazz())) {
+                player.sendMessage(Texts.color("&cEsa pocion es de la clase &f"
+                        + spec.clazz() + "&c: no es la tuya."));
+                return false;
+            }
+        }
         return this.applyEffect(player, effect, spec.duration());
     }
 

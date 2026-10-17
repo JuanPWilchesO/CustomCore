@@ -108,6 +108,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
             case "_chain" -> this.chainStep(sender, args);
             case "glowfaccion" -> this.factionGlow(sender);
             case "faction", "faccion" -> this.faction(sender, args);
+            case "class", "clase" -> this.clazz(sender, args);
             case "color" -> this.setStyle(sender, args, "name");
             case "glow" -> this.setStyle(sender, args, "glow");
             default -> this.help(sender);
@@ -144,6 +145,72 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
      * suyos y los aliados son intocables, los enemigos son objetivo. Sin faccion, decide la
      * actitud del mob, como hasta ahora.
      */
+    /**
+     * Clases: asignarlas, consultarlas y listarlas.
+     *
+     * <p>A diferencia de la faccion, la clase no cambia a quien atacas ni a quien proteges:
+     * solo restringe objetos. Un jugador puede ser de cualquier clase en cualquier faccion.
+     */
+    private void clazz(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            sender.sendMessage(TAG + " Uso: /customcore class <set|get|clear|list>");
+            return;
+        }
+        String action = args[1].toLowerCase(Locale.ROOT);
+        if (action.equals("list")) {
+            Map<UUID, String> all = this.plugin.playerClasses().all();
+            if (all.isEmpty()) {
+                sender.sendMessage(TAG + " Nadie tiene clase todavia.");
+                return;
+            }
+            sender.sendMessage(TAG + " Jugadores con clase (" + all.size() + "):");
+            for (Map.Entry<UUID, String> entry : all.entrySet()) {
+                OfflinePlayer player = Bukkit.getOfflinePlayer(entry.getKey());
+                String label = player.getName() != null ? player.getName() : entry.getKey().toString();
+                sender.sendMessage(" - " + label + " -> " + entry.getValue());
+            }
+            return;
+        }
+        if (args.length < 3) {
+            sender.sendMessage(TAG + " Uso: /customcore class " + action + " <jugador>"
+                    + (action.equals("set") ? " <clase>" : ""));
+            return;
+        }
+        OfflinePlayer target = this.resolvePlayer(args[2]);
+        if (target == null) {
+            sender.sendMessage(TAG + " No encuentro a '" + args[2] + "'.");
+            return;
+        }
+        String label = target.getName() != null ? target.getName() : args[2];
+        switch (action) {
+            case "get" -> sender.sendMessage(TAG + " " + label + ": " + this.plugin.playerClasses()
+                    .of(target.getUniqueId()).orElse("sin clase"));
+            case "clear" -> {
+                if (this.plugin.playerClasses().clear(target.getUniqueId())) {
+                    sender.sendMessage(TAG + " " + label + " ya no tiene clase.");
+                } else {
+                    sender.sendMessage(TAG + " " + label + " no tenia clase.");
+                }
+            }
+            case "set" -> {
+                if (args.length < 4) {
+                    sender.sendMessage(TAG + " Uso: /customcore class set <jugador> <clase>");
+                    return;
+                }
+                String clazz = args[3].toLowerCase(Locale.ROOT);
+                if (!this.plugin.classes().exists(clazz)) {
+                    sender.sendMessage(TAG + " Esa clase no existe. Conocidas: "
+                            + String.join(", ", this.plugin.classes().known())
+                            + " (se definen en classes.yml).");
+                    return;
+                }
+                this.plugin.playerClasses().set(target.getUniqueId(), clazz);
+                sender.sendMessage(TAG + " " + label + " ahora es de la clase '" + clazz + "'.");
+            }
+            default -> sender.sendMessage(TAG + " Uso: /customcore class <set|get|clear|list>");
+        }
+    }
+
     private void faction(CommandSender sender, String[] args) {
         if (args.length < 2) {
             sender.sendMessage(TAG + " Uso: /customcore faction <set|get|clear|list>");
@@ -1078,7 +1145,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
             List<String> options = admin
                     ? List.of("reload", "list", "give", "spawn", "remove", "active", "kill",
                             "enchants", "cuota", "item", "color", "glow", "spawner", "book", "upgrade",
-                            "despedir", "faction", "effects", "potion")
+                            "despedir", "faction", "class", "effects", "potion")
                     : List.of("cuota", "color", "glow", "despedir");
             for (String option : options) {
                 if (option.startsWith(args[0].toLowerCase(Locale.ROOT))) {
@@ -1145,6 +1212,33 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
             for (var spec : this.plugin.upgrades().all()) {
                 if (spec.id().startsWith(args[2].toLowerCase(Locale.ROOT))) {
                     out.add(spec.id());
+                }
+            }
+            return out;
+        }
+        if (args.length == 2 && (args[0].equalsIgnoreCase("class") || args[0].equalsIgnoreCase("clase"))) {
+            for (String option : List.of("set", "get", "clear", "list")) {
+                if (option.startsWith(args[1].toLowerCase(Locale.ROOT))) {
+                    out.add(option);
+                }
+            }
+            return out;
+        }
+        if (args.length == 3 && (args[0].equalsIgnoreCase("class") || args[0].equalsIgnoreCase("clase"))
+                && (args[1].equalsIgnoreCase("set") || args[1].equalsIgnoreCase("get")
+                || args[1].equalsIgnoreCase("clear"))) {
+            for (Player online : Bukkit.getOnlinePlayers()) {
+                if (online.getName().toLowerCase(Locale.ROOT).startsWith(args[2].toLowerCase(Locale.ROOT))) {
+                    out.add(online.getName());
+                }
+            }
+            return out;
+        }
+        if (args.length == 4 && (args[0].equalsIgnoreCase("class") || args[0].equalsIgnoreCase("clase"))
+                && args[1].equalsIgnoreCase("set")) {
+            for (String clazz : this.plugin.classes().known()) {
+                if (clazz.startsWith(args[3].toLowerCase(Locale.ROOT))) {
+                    out.add(clazz);
                 }
             }
             return out;

@@ -92,6 +92,7 @@ public final class EffectService {
                     effectId.toLowerCase(Locale.ROOT),
                     section.getInt("duracion", 0),
                     section.getString("faccion"),
+                    section.getString("clase"),
                     recipe));
         }
         this.plugin.getLogger().info("Efectos cargados: " + this.effects.size()

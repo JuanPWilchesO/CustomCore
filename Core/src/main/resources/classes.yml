@@ -1,0 +1,16 @@
+# CustomCore - clases de jugador.
+#
+# La clase NO define alianzas ni enemistades: un jugador puede ser de cualquier clase en
+# cualquier faccion. Sirve para restringir objetos del catalogo: un objeto puede pedir una
+# faccion (campo 'faccion:' en su yml) y/o una clase (campo 'clase:').
+#
+# Un objeto con los dos campos solo lo usa quien sea de ESA faccion Y de ESA clase.
+
+guerrero:
+  nombre: 'Guerrero'
+
+mago:
+  nombre: 'Mago'
+
+picaro:
+  nombre: 'Picaro'
