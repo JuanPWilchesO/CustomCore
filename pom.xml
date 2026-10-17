@@ -6,7 +6,7 @@
 
     <groupId>com.juanp.custommobs</groupId>
     <artifactId>CustomMobs</artifactId>
-    <version>0.3.8</version>
+    <version>0.4.0</version>
     <packaging>pom</packaging>
     <name>CustomMobs</name>
     <description>Mobs custom definidos por YAML, invocables por crafteo, con vinculo a Teams.</description>

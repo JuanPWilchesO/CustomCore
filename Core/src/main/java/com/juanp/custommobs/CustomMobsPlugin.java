@@ -113,8 +113,44 @@ public final class CustomMobsPlugin extends JavaPlugin {
     private MobBookService book;
     private CustomMobsApiImpl api;
 
+    /**
+     * Migracion de identidad: la carpeta de datos paso de 'CustomMobs' a 'CustomCore'. Si existe
+     * la vieja y la nueva esta vacia, se COPIA su contenido —nunca se mueve— para no perder
+     * configs, mobs ni objetos. La carpeta vieja se queda donde esta.
+     */
+    private void migrateLegacyFolder() {
+        File current = this.getDataFolder();
+        File legacy = new File(current.getParentFile(), "CustomMobs");
+        if (current.equals(legacy) || !legacy.isDirectory()
+                || new File(current, "config.yml").exists()) {
+            return;
+        }
+        try {
+            java.nio.file.Path from = legacy.toPath();
+            java.nio.file.Path to = current.toPath();
+            java.nio.file.Files.walk(from).forEach(source -> {
+                try {
+                    java.nio.file.Path target = to.resolve(from.relativize(source));
+                    if (java.nio.file.Files.isDirectory(source)) {
+                        java.nio.file.Files.createDirectories(target);
+                    } else {
+                        java.nio.file.Files.createDirectories(target.getParent());
+                        java.nio.file.Files.copy(source, target,
+                                java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                    }
+                } catch (java.io.IOException ignored) {
+                    // Un archivo que no se copie no debe impedir el arranque.
+                }
+            });
+            this.getLogger().info("Datos migrados desde 'CustomMobs' (la carpeta vieja se conserva).");
+        } catch (java.io.IOException ex) {
+            this.getLogger().warning("No se pudo migrar la carpeta antigua: " + ex.getMessage());
+        }
+    }
+
     @Override
     public void onEnable() {
+        this.migrateLegacyFolder();
         this.saveDefaultConfig();
         this.config = PluginConfig.load(this.getConfig());
 
@@ -200,7 +236,7 @@ public final class CustomMobsPlugin extends JavaPlugin {
         pluginManager.registerEvents(new SkillInteractListener(this.craftService, this.mobService, this.skillService), this);
         pluginManager.registerEvents(new MobItemListener(this, this.mobService, this.upgradeService, this.book), this);
 
-        PluginCommand command = this.getCommand("custommobs");
+        PluginCommand command = this.getCommand("customcore");
         if (command != null) {
             CustomMobsCommand executor = new CustomMobsCommand(this);
             command.setExecutor(executor);

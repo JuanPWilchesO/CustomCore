@@ -1,9 +1,9 @@
-name: CustomMobs
+name: CustomCore
 version: '${project.version}'
 main: com.juanp.custommobs.CustomMobsPlugin
 api-version: '1.21'
 author: Juan Pablo
-description: Mobs custom definidos por YAML, invocables por crafteo, con vinculo a Teams.
+description: Mobs, objetos, recetas, facciones y pociones custom definidos por YAML.
 website: https://github.com/JuanPWilchesO/CustomMobs
 
 softdepend:
@@ -13,10 +13,10 @@ softdepend:
   - WorldGuard
 
 commands:
-  custommobs:
-    description: Administracion de CustomMobs.
-    usage: /custommobs <reload|list|give|spawn|cuota>
-    aliases: [cmobs, cm]
+  customcore:
+    description: Administracion de CustomCore.
+    usage: /customcore <reload|list|give|spawn|cuota>
+    aliases: [cm, cmobs, custommobs]
     # Sin 'permission' aqui a proposito: el permiso se comprueba en el codigo, por
     # subcomando, para que un jugador raso pueda usar 'cuota' y ver su propio cupo.
 

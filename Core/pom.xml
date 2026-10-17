@@ -7,7 +7,7 @@
     <parent>
         <groupId>com.juanp.custommobs</groupId>
         <artifactId>CustomMobs</artifactId>
-        <version>0.3.8</version>
+        <version>0.4.0</version>
     </parent>
 
     <artifactId>CustomMobs-Core</artifactId>
@@ -75,7 +75,7 @@
     </dependencies>
 
     <build>
-        <finalName>CustomMobs-${project.version}</finalName>
+        <finalName>CustomCore-${project.version}</finalName>
 
         <resources>
             <resource>
