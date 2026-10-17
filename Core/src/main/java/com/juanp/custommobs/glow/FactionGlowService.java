@@ -270,19 +270,11 @@ public final class FactionGlowService extends BukkitRunnable {
         if (glowing) {
             flags |= GLOW_FLAG;
         }
+        // Solo los flags. El nombre NO se manda aqui: ese campo de metadatos es el que dependia
+        // de la version del servidor y el que tiraba a los jugadores con "Error de protocolo de
+        // red" al morir el mob. El color del nombre lo pone el EQUIPO, que es un paquete estable.
         List<EntityData<?>> data = new ArrayList<>();
         data.add(new EntityData<>(0, EntityDataTypes.BYTE, flags));
-        // En los mobs, el nombre va en el color del estado de PvP: un nombre con color propio (el
-        // del yml, o el que eligio el dueno) no lo tapa el equipo. En un disfraz de jugador el
-        // cliente usa el nombre del perfil, asi que ahi esto no llega: manda lo que pone
-        // LibsDisguises (y por eso el disfraz lleva su color de faccion dentro del nombre).
-        String custom = target.getCustomName();
-        if (!(target instanceof Player) && custom != null) {
-            Component name = nameColor == null
-                    ? LegacyComponentSerializer.legacySection().deserialize(custom)
-                    : Component.text(ChatColor.stripColor(custom)).color(nameColor);
-            data.add(new EntityData<>(2, EntityDataTypes.OPTIONAL_ADV_COMPONENT, Optional.of(name)));
-        }
         return new WrapperPlayServerEntityMetadata(target.getEntityId(), data);
     }
 
