@@ -13,6 +13,12 @@ public enum SkillEffect {
     IGNITE,
     /** Congela a cada objetivo durante {@code amount} segundos. */
     FREEZE,
+    /** Convierte los bloques bajo el objetivo en {@code block}. */
+    BLOCK_BELOW,
+    /** Explota al lado del objetivo, como un ender crystal. */
+    EXPLOSION,
+    /** Repara todos los objetos con durabilidad del inventario/equipo del objetivo. */
+    REPAIR_ALL,
     /** El mob habla: el texto va a los jugadores dentro del radio. */
     MESSAGE,
     /** Aplica un efecto de pocion a cada objetivo. */
@@ -33,6 +39,12 @@ public enum SkillEffect {
         return switch (raw.toLowerCase(Locale.ROOT).trim()) {
             case "ignite", "burn", "fuego", "prender", "quemar" -> IGNITE;
             case "freeze", "congelar", "hielo", "helar" -> FREEZE;
+            case "block-below", "block_below", "bloque-abajo", "bloque_abajo",
+                 "transformar-bloque", "transformar_bloque" -> BLOCK_BELOW;
+            case "explosion", "explosión", "end-crystal", "end_crystal",
+                 "cristal", "crystal" -> EXPLOSION;
+            case "repair-all", "repair_all", "repair", "reparar",
+                 "reparar-todo", "reparar_todo" -> REPAIR_ALL;
             default -> {
                 try {
                     yield valueOf(raw.toUpperCase(Locale.ROOT).trim());

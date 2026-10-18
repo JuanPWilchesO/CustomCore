@@ -31,6 +31,7 @@ Todos bajo `/customcore` (alias `cmobs`, `cm`).
 | `item remove <nombre>` | borra uno del catalogo |
 | `item faccion <nombre> <faccion\|nada>` | reserva el objeto a una faccion (o lo libera) |
 | `item clase <nombre> <clase\|nada>` | reserva el objeto a una clase (o lo libera) |
+| `item mod <nombre> <clave> <si\|no>` | prohibe o permite una modificacion (yunque, mesa, nombre, reparar, grindstone, herreria) |
 | `color <color\|nada>` | color del nombre de tus player mobs |
 | `glow <color\|nada>` | brillo de tus player mobs |
 | `spawner list` | lista los spawners: id, mob, mundo, coordenadas y reaparicion |
@@ -42,6 +43,8 @@ Todos bajo `/customcore` (alias `cmobs`, `cm`).
 | `upgrade give <id> [jugador]` | reparte un item de mejora (alias `mejora`) |
 | `upgrade reload` | relee `upgrades/` y rehace las recetas |
 | `testcast <skill>` | lanza una skill desde tu mirada, sin depender del clic de un item (solo admin) |
+
+Un jugador tiene **una sola clase**: `class set` **reemplaza** la anterior, no la suma.
 
 Desde consola, `spawn` pide mundo y coordenadas: `/customcore spawn <id> <mundo> <x> <y> <z>`.
 

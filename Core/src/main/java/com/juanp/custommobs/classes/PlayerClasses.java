@@ -63,6 +63,8 @@ public final class PlayerClasses {
     }
 
     public void set(UUID playerId, String clazz) {
+        // Una sola clase por jugador: el mapa guarda un unico valor; esto reemplaza
+        // cualquier clase anterior, no la suma.
         this.entries.put(playerId, clazz.trim().toLowerCase(Locale.ROOT));
         this.save();
     }

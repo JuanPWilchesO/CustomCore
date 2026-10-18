@@ -69,14 +69,18 @@ siendo objetivos especiales de mob.
 | Campo | Valores | Por defecto |
 |---|---|---|
 | `id` | texto unico dentro del mob | — |
-| `effect` | `damage` \| `heal` \| `ignite` \| `freeze` \| `message` \| `potion` \| `summon` | — |
+| `effect` | `damage` \| `heal` \| `ignite` \| `freeze` \| `block_below` \| `explosion` \| `message` \| `potion` \| `summon` | — |
 | `target-type` | `LOOK` \| `RADIUS` | se infiere del `target` viejo |
 | `target` | `ENEMIES` \| `ALLIES` \| `SELF`; legado: `owner` \| `target` \| `look` | `self` en cadenas, invocaciones y comandos; obligatorio en el resto |
 | `mode` | `pasiva` \| `activa` \| `interaccion` | `pasiva` |
 | `range` | bloques (tope 128) | `8.0` |
 | `cooldown-seconds` | entero | `5` |
 | `chance` | `0.0` a `1.0` | `1.0` |
-| `amount` | dano o curacion | `0.0` |
+| `amount` | dano, curacion o potencia de explosion | `0.0` |
+| `block` | material para `block_below`, ej. `MAGMA_BLOCK` | — |
+| `block-radius` | radio del area de `block_below` (0-5; 0 = solo el bloque de abajo) | `0` |
+| `block-depth` | profundidad de `block_below` (1-5) | `1` |
+| `break-blocks` | si `explosion` rompe terreno | `false` |
 | `message` | texto con `&` | — |
 | `potion` | `poison`, `speed`, `weakness`… | — |
 | `summon` | la definicion que invoca (SUMMON), tal como su `id` | — |
@@ -198,10 +202,31 @@ skills:
 | `next` | a donde sigue sin preguntar |
 | `end` | cierra la conversacion |
 | `pay` | cuanto dinero exige para seguir |
-| `no-pay` | a donde va si **no** puede pagar (o `end: true` por otro lado) |
+| `pay-item` | objeto del inventario que acepta como pago (material o id del catálogo) |
+| `pay-item-count` | cuántos objetos pide (por defecto `1`) |
+| `pay-xp` | niveles de experiencia que acepta como pago |
+| `no-pay` | a donde va si **no** puede pagar con ninguna opción (o `end: true` por otro lado) |
 | `faction` | faccion que se le exige al jugador (`*` = que tenga cualquiera) |
 | `no-faction` | a donde va si **no** cumple la faccion |
 | `console-command` / `player-command` | lo que ejecuta el paso |
+
+Si un paso declara **varias** formas de pago, son **alternativas**: se intenta dinero,
+luego objeto y luego niveles de XP; la primera que el jugador pueda pagar se consume. Si no
+puede con ninguna, va a `no-pay`.
+
+```yaml
+- id: pago
+  message: '&ePuedes pagarme 100 monedas, 3 diamantes o 5 niveles.'
+  pay: 100
+  pay-item: DIAMOND
+  pay-item-count: 3
+  pay-xp: 5
+  next: premio
+  no-pay: sin_pago
+```
+
+`pay-item` también acepta el **id de un objeto del catálogo**; en ese caso cuenta solo
+copias de ese objeto (por su marca NBT), no un material parecido.
 
 - El jugador avanza **pulsando los botones** del chat.
 - El **paso no viaja en el clic**: se usa el que el servidor tiene apuntado para ese jugador, asi
@@ -260,6 +285,9 @@ skills:
 | `heal` | suma `amount` de vida; con `porcentaje: true`, `amount` es fraccion de la vida maxima |
 | `ignite` | prende fuego al objetivo durante `amount` segundos |
 | `freeze` | congela al objetivo durante `amount` segundos y aplica Lentitud II |
+| `block_below` | convierte los bloques bajo el objetivo en `block` |
+| `explosion` | explosion al lado del objetivo; `amount` es la potencia (1-10) y `break-blocks` decide si rompe terreno |
+| `repair_all` | repara todos los objetos con durabilidad del inventario/equipo del objetivo; respeta `reparar: false` |
 | `message` | manda un texto a los jugadores en rango |
 | `potion` | aplica `potion` durante `potion-duration-seconds`, a nivel `potion-amplifier` |
 | `summon` | invoca copias de otra definicion alrededor del mob |

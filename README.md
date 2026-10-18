@@ -8,6 +8,15 @@ Pensado para **Paper**. Se apoya en tres plugins opcionales: **Teams** (bandos d
 jugadores), **LibsDisguises** (apariencias) y **LuckPerms** (grupos y cupos). Sin
 cualquiera de ellos el plugin sigue funcionando: cada uno degrada por su cuenta.
 
+## Novedades 0.6.1
+
+- **Objetos protegidos**: claves `modificable`, `encantar-libros`, `encantar-mesa`,
+  `renombrar`, `reparar`, `desencantar` y `tallar`; se cambian con `item mod`.
+- **Una sola clase por jugador**: asignar una clase reemplaza la anterior.
+- **Pagos de cadena** con objetos, niveles de XP o dinero.
+- **Skills de terreno**: `block_below` y `explosion`.
+- **`repair_all`**: repara todo el equipo/inventario del objetivo.
+
 ## Novedades 0.6.0
 
 - **Skills reutilizables** en `skills/`: un archivo por skill, referenciables con `ref:`.

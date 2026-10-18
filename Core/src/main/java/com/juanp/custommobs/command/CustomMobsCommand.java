@@ -973,7 +973,8 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
      */
     private void item(CommandSender sender, String[] args) {
         String usage = TAG + " Uso: /customcore item save <nombre> | list | remove <nombre>"
-                + " | faccion <nombre> <faccion|nada>";
+                + " | faccion <nombre> <faccion|nada> | clase <nombre> <clase|nada>"
+                + " | mod <nombre> <clave> <si|no>";
         if (args.length < 2) {
             sender.sendMessage(usage);
             return;
@@ -1038,6 +1039,39 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
                     sender.sendMessage(TAG + " Las copias ya repartidas no cambian. Reparte copias"
                             + " marcadas con /customcore item give " + itemName + " [jugador].");
                 }
+            }
+            case "mod", "modificacion", "proteccion" -> {
+                if (args.length < 5) {
+                    sender.sendMessage(TAG + " Uso: /customcore item mod <nombre> <clave> <si|no>");
+                    sender.sendMessage(TAG + " Claves: " + String.join(", ",
+                            com.juanp.custommobs.drop.ItemCatalog.MOD_KEYS));
+                    return;
+                }
+                String key = com.juanp.custommobs.drop.ItemCatalog.normalizeModKey(args[3]);
+                if (key == null) {
+                    sender.sendMessage(TAG + " Clave desconocida: " + args[3]
+                            + ". Usa: " + String.join(", ",
+                            com.juanp.custommobs.drop.ItemCatalog.MOD_KEYS));
+                    return;
+                }
+                String value = args[4].toLowerCase(Locale.ROOT);
+                boolean allowed = value.equals("si") || value.equals("sí")
+                        || value.equals("true") || value.equals("1") || value.equals("on");
+                boolean denied = value.equals("no") || value.equals("false")
+                        || value.equals("0") || value.equals("off");
+                if (!allowed && !denied) {
+                    sender.sendMessage(TAG + " Valor invalido: usa 'si' o 'no'.");
+                    return;
+                }
+                String itemName = args[2].toLowerCase(Locale.ROOT);
+                if (!this.plugin.drops().catalog().setModification(args[2], key, allowed)) {
+                    sender.sendMessage(TAG + " No existe ese item: " + itemName);
+                    return;
+                }
+                sender.sendMessage(TAG + " Item '" + itemName + "': " + key
+                        + (allowed ? " permitido." : " prohibido."));
+                sender.sendMessage(TAG + " Las copias ya repartidas no cambian; reparte copias"
+                        + " nuevas con /customcore item give " + itemName + " [jugador].");
             }
             case "give" -> {
                 if (args.length < 3) {

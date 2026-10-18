@@ -16,7 +16,10 @@ import java.util.List;
  * @param next            a donde sigue sin esperar a nadie
  * @param end             si cierra la conversacion
  * @param pay             cuanto dinero exige para seguir ({@code 0} = nada)
- * @param noPay           a donde va si no puede pagar; {@code null} = cierra
+ * @param payItem         objeto del inventario que acepta como pago (material o id del catalogo)
+ * @param payItemCount    cuantos objetos pide (minimo 1)
+ * @param payXp           niveles de experiencia que acepta como pago ({@code 0} = nada)
+ * @param noPay           a donde va si no puede pagar con ninguna opcion; {@code null} = cierra
  * @param faction         faccion exigida al jugador ({@code *} = cualquiera, {@code null} = no se mira)
  * @param noFaction       a donde va si no cumple la faccion; {@code null} = cierra
  * @param clazz           clase exigida al jugador ({@code *} = cualquiera, {@code null} = no se mira)
@@ -31,6 +34,9 @@ public record ChainStep(
         String next,
         boolean end,
         double pay,
+        String payItem,
+        int payItemCount,
+        int payXp,
         String noPay,
         String faction,
         String noFaction,
@@ -45,9 +51,9 @@ public record ChainStep(
         return !this.options.isEmpty();
     }
 
-    /** {@code true} si pide dinero para seguir. */
+    /** {@code true} si pide algo para seguir: dinero, objetos o niveles. */
     public boolean charges() {
-        return this.pay > 0.0D;
+        return this.pay > 0.0D || this.payItem != null || this.payXp > 0;
     }
 
     /** {@code true} si exige pertenecer a una faccion. */

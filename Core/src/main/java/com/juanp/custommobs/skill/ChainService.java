@@ -8,7 +8,10 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.persistence.PersistentDataType;
 
 import java.util.Map;
 import java.util.UUID;
@@ -111,7 +114,7 @@ public final class ChainService {
         // 3) lo que cobra. Si no puede pagar, se va por donde diga 'no-pay' y no se
         //    ejecuta nada del paso.
         if (step.charges()) {
-            if (this.economy.charge(player, step.pay())) {
+            if (this.pay(player, step)) {
                 this.goTo(mob, player, skill, conversationId, step.next(), depth + 1);
             } else {
                 this.goTo(mob, player, skill, conversationId, step.noPay(), depth + 1);
@@ -141,6 +144,81 @@ public final class ChainService {
             return;
         }
         this.goTo(mob, player, skill, conversationId, step.next(), depth + 1);
+    }
+
+    /**
+     * Cobra el paso. Si hay varias opciones configuradas son **alternativas**: se intenta
+     * dinero, luego objeto y luego niveles; la primera que se pueda pagar se consume.
+     */
+    private boolean pay(Player player, ChainStep step) {
+        if (step.pay() > 0.0D && this.economy.charge(player, step.pay())) {
+            return true;
+        }
+        if (step.payItem() != null
+                && this.takeItem(player, step.payItem(), step.payItemCount())) {
+            return true;
+        }
+        if (step.payXp() > 0 && player.getLevel() >= step.payXp()) {
+            player.setLevel(player.getLevel() - step.payXp());
+            return true;
+        }
+        return false;
+    }
+
+    /** Quita del inventario los objetos del pago, si hay suficientes. */
+    private boolean takeItem(Player player, String raw, int amount) {
+        String wanted = raw == null ? "" : raw.trim();
+        int count = Math.max(1, amount);
+        var catalog = this.plugin.drops().catalog();
+        boolean fromCatalog = catalog.get(wanted).isPresent();
+        Material material = fromCatalog ? null : Material.matchMaterial(wanted);
+        if (!fromCatalog && material == null) {
+            return false;
+        }
+
+        ItemStack[] contents = player.getInventory().getStorageContents();
+        int total = 0;
+        for (ItemStack stack : contents) {
+            if (this.matches(stack, wanted, fromCatalog, catalog)) {
+                total += stack.getAmount();
+            }
+        }
+        if (total < count) {
+            return false;
+        }
+
+        int remaining = count;
+        for (int index = 0; index < contents.length && remaining > 0; index++) {
+            ItemStack stack = contents[index];
+            if (!this.matches(stack, wanted, fromCatalog, catalog)) {
+                continue;
+            }
+            int take = Math.min(stack.getAmount(), remaining);
+            stack.setAmount(stack.getAmount() - take);
+            if (stack.getAmount() <= 0) {
+                contents[index] = null;
+            }
+            remaining -= take;
+        }
+        player.getInventory().setStorageContents(contents);
+        return true;
+    }
+
+    private boolean matches(ItemStack stack, String raw, boolean fromCatalog,
+                            com.juanp.custommobs.drop.ItemCatalog catalog) {
+        if (stack == null || stack.getType().isAir()) {
+            return false;
+        }
+        if (fromCatalog) {
+            if (!stack.hasItemMeta()) {
+                return false;
+            }
+            String name = stack.getItemMeta().getPersistentDataContainer()
+                    .get(catalog.nameKey(), PersistentDataType.STRING);
+            return name != null && raw.equalsIgnoreCase(name);
+        }
+        Material material = Material.matchMaterial(raw);
+        return material != null && stack.getType() == material;
     }
 
     private void goTo(CustomMob mob, Player player, SkillSpec skill, UUID conversationId,

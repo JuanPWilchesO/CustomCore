@@ -34,6 +34,12 @@ public final class ItemCatalog {
     private final NamespacedKey factionKey;
     private final NamespacedKey classKey;
     private final NamespacedKey nameKey;
+    private final NamespacedKey modificationKey;
+
+    /** Claves de modificacion. Falta = permitido; false = prohibido. */
+    public static final List<String> MOD_KEYS = List.of(
+            "modificable", "encantar-libros", "encantar-mesa",
+            "renombrar", "reparar", "desencantar", "tallar");
 
     public ItemCatalog(CustomMobsPlugin plugin) {
         this.plugin = plugin;
@@ -41,6 +47,7 @@ public final class ItemCatalog {
         this.factionKey = new NamespacedKey(plugin, "item_faccion");
         this.classKey = new NamespacedKey(plugin, "item_clase");
         this.nameKey = new NamespacedKey(plugin, "item_catalogo");
+        this.modificationKey = new NamespacedKey(plugin, "item_mod");
     }
 
     /**
@@ -65,6 +72,16 @@ public final class ItemCatalog {
             String previous = factionOf(previousYaml);
             if (previous != null) {
                 yaml.set("faccion", previous);
+            }
+            String previousClass = factionOf(previousYaml, "clase");
+            if (previousClass != null) {
+                yaml.set("clase", previousClass);
+            }
+            // Las protecciones de modificacion tambien son del catalogo.
+            for (String key : MOD_KEYS) {
+                if (!previousYaml.getBoolean(key, true)) {
+                    yaml.set(key, false);
+                }
             }
             // La receta tambien es del catalogo: re-guardar el objeto no debe borrarla.
             Object previousRecipe = previousYaml.get("receta");
@@ -118,6 +135,13 @@ public final class ItemCatalog {
                 if (clazz != null) {
                     meta.getPersistentDataContainer().set(this.classKey,
                             PersistentDataType.STRING, clazz);
+                }
+                java.util.Set<String> denied = deniedModifications(yaml);
+                if (denied.isEmpty()) {
+                    meta.getPersistentDataContainer().remove(this.modificationKey);
+                } else {
+                    meta.getPersistentDataContainer().set(this.modificationKey,
+                            PersistentDataType.STRING, String.join(",", denied));
                 }
                 item.setItemMeta(meta);
             }
@@ -251,6 +275,102 @@ public final class ItemCatalog {
     /** Clave con la que se marca, dentro del objeto, de que catalogo salio. */
     public NamespacedKey nameKey() {
         return this.nameKey;
+    }
+
+    /** Clave con la que se marcan las protecciones de modificacion. */
+    public NamespacedKey modificationKey() {
+        return this.modificationKey;
+    }
+
+    /**
+     * Normaliza una clave de modificacion, con alias en espanol.
+     *
+     * @return la clave canonica, o {@code null} si no existe
+     */
+    public static String normalizeModKey(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        String key = raw.toLowerCase(Locale.ROOT).trim().replace('_', '-');
+        key = switch (key) {
+            case "todo", "all", "todo-lo-demais" -> "modificable";
+            case "libros", "libro", "book", "books", "encantar-con-libros" -> "encantar-libros";
+            case "mesa", "table", "encantar-con-mesa" -> "encantar-mesa";
+            case "nombre", "rename", "renombrar-objeto" -> "renombrar";
+            case "reparar-objeto", "repair" -> "reparar";
+            case "grindstone", "desencantado", "quitar-encantamientos" -> "desencantar";
+            case "smithing", "smith", "forja", "tallar-objeto" -> "tallar";
+            default -> key;
+        };
+        return MOD_KEYS.contains(key) ? key : null;
+    }
+
+    /**
+     * Cambia una proteccion de modificacion. {@code allowed=false} la prohibe;
+     * {@code true} la vuelve a permitir.
+     *
+     * @return {@code false} si el item o la clave no existen
+     */
+    public boolean setModification(String rawName, String rawKey, boolean allowed) {
+        String name = clean(rawName);
+        String key = normalizeModKey(rawKey);
+        if (name == null || key == null) {
+            return false;
+        }
+        File file = this.fileOf(name);
+        if (!file.exists()) {
+            return false;
+        }
+        YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
+        yaml.set(key, allowed ? null : false);
+        try {
+            yaml.save(file);
+            return true;
+        } catch (IOException ex) {
+            this.plugin.getLogger().warning("No se pudo escribir items/" + name + ".yml: " + ex.getMessage());
+            return false;
+        }
+    }
+
+    /** Protecciones guardadas en el yml del item. */
+    private static java.util.Set<String> deniedModifications(YamlConfiguration yaml) {
+        java.util.Set<String> denied = new java.util.LinkedHashSet<>();
+        for (String key : MOD_KEYS) {
+            if (!yaml.getBoolean(key, true)) {
+                denied.add(key);
+            }
+        }
+        return denied;
+    }
+
+    /** Protecciones que lleva el objeto en su NBT. */
+    public java.util.Set<String> deniedModifications(ItemStack item) {
+        java.util.Set<String> denied = new java.util.LinkedHashSet<>();
+        if (item == null || item.getType().isAir() || !item.hasItemMeta()) {
+            return denied;
+        }
+        String raw = item.getItemMeta().getPersistentDataContainer()
+                .get(this.modificationKey, PersistentDataType.STRING);
+        if (raw == null || raw.isBlank()) {
+            return denied;
+        }
+        for (String key : raw.split(",")) {
+            String normalized = normalizeModKey(key);
+            if (normalized != null) {
+                denied.add(normalized);
+            }
+        }
+        return denied;
+    }
+
+    /** {@code true} si esa modificacion esta prohibida para el objeto. */
+    public boolean modificationDenied(ItemStack item, String key) {
+        String normalized = normalizeModKey(key);
+        if (normalized == null) {
+            return false;
+        }
+        java.util.Set<String> denied = deniedModifications(item);
+        return denied.contains("modificable") || denied.contains(normalized);
     }
 
     /**

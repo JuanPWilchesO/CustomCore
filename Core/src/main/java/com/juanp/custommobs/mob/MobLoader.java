@@ -189,6 +189,13 @@ public final class MobLoader {
                     normalize(asString(map.get("next"))),
                     Boolean.TRUE.equals(map.get("end")),
                     Math.max(0.0D, asNumber(map.get("pay"), 0.0D)),
+                    normalize(asString(map.containsKey("pay-item") ? map.get("pay-item")
+                            : map.containsKey("pay_item") ? map.get("pay_item")
+                            : map.get("pagar-objeto"))),
+                    (int) Math.max(1L, Math.round(asNumber(map.get("pay-item-count"),
+                            asNumber(map.get("cantidad-objeto"), 1.0D)))),
+                    (int) Math.max(0L, Math.round(asNumber(map.get("pay-xp"),
+                            asNumber(map.get("niveles"), 0.0D)))),
                     normalize(asString(map.get("no-pay"))),
                     normalize(asString(map.get("faction"))),
                     normalize(asString(map.get("no-faction"))),
@@ -465,6 +472,27 @@ public final class MobLoader {
                     + " cadenas solo van con 'mode: interaccion' o 'mode: item'.");
             return null;
         }
+        // matchMaterial(null) lanza IllegalArgumentException en Paper: solo se llama
+        // cuando la clave existe y no esta vacia.
+        String blockName = asString(entry.get("block"));
+        org.bukkit.Material block = null;
+        if (blockName != null && !blockName.isBlank()) {
+            block = Material.matchMaterial(blockName);
+        }
+        if (block != null && (!block.isBlock() || block.isAir())) {
+            block = null;
+        }
+        if (effect == SkillEffect.BLOCK_BELOW && block == null) {
+            Bukkit.getLogger().warning("[CustomMobs] La skill '" + id + "' es block_below pero"
+                    + " no tiene un 'block' valido; se descarta.");
+            return null;
+        }
+        int blockRadius = (int) Math.min(5L, Math.max(0L,
+                Math.round(asNumber(entry.get("block-radius"), 0.0D))));
+        int blockDepth = (int) Math.min(5L, Math.max(1L,
+                Math.round(asNumber(entry.get("block-depth"), 1.0D))));
+        boolean breakBlocks = asBoolean(entry.get("break-blocks"))
+                || asBoolean(entry.get("romper-bloques"));
         return new SkillSpec(
                 id,
                 effect,
@@ -482,7 +510,11 @@ public final class MobLoader {
                 normalize(asString(entry.get("summon"))),
                 asString(entry.get("command")),
                 effect == SkillEffect.CHAIN ? parseChain(entry) : ChainSpec.EMPTY,
-                asBoolean(entry.get("porcentaje")) || asBoolean(entry.get("percent"))
+                asBoolean(entry.get("porcentaje")) || asBoolean(entry.get("percent")),
+                block,
+                blockRadius,
+                blockDepth,
+                breakBlocks
         );
     }
 

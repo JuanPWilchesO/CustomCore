@@ -128,6 +128,31 @@ usar:
 - Las skills con `console_command`, `player_command` o `chain` deben declarar
   `mode: item`; el planificador de mobs no las ejecuta.
 
+### Modificaciones del objeto
+
+Un objeto puede impedir que lo modifiquen. En su yml:
+
+```yaml
+modificable: false          # master: bloquea todo
+encantar-libros: false      # yunque con libro encantado
+encantar-mesa: false        # mesa de encantamientos
+renombrar: false            # yunque
+reparar: false              # yunque y Mending
+desencantar: false          # grindstone
+tallar: false               # mesa de herreria
+```
+
+Si una clave no aparece, esa modificacion esta **permitida**. `modificable: false`
+bloquea todas. Por comando:
+
+```
+/customcore item mod <nombre> <clave> <si|no>
+```
+
+Claves: `modificable`, `encantar-libros`, `encantar-mesa`, `renombrar`, `reparar`,
+`desencantar`, `tallar`. Las copias ya repartidas no cambian; las nuevas copias de
+`item give` llevan la marca dentro del NBT.
+
 ## De la mano al mob, en dos pasos
 
 1. Sostien el objeto con su NBT y ejecuta `/customcore item save mi_espada`.

@@ -25,6 +25,10 @@ package com.juanp.custommobs.skill;
  * @param command               comando a ejecutar (CONSOLE_COMMAND, PLAYER_COMMAND)
  * @param chain                 pasos de la conversacion (CHAIN)
  * @param percent               si {@code amount} es una fraccion de la vida maxima (HEAL)
+ * @param block                 bloque que coloca BLOCK_BELOW
+ * @param blockRadius           radio en bloques de BLOCK_BELOW (0 = solo el de abajo)
+ * @param blockDepth            profundidad hacia abajo de BLOCK_BELOW
+ * @param breakBlocks           si EXPLOSION rompe bloques
  */
 public record SkillSpec(
         String id,
@@ -43,7 +47,11 @@ public record SkillSpec(
         String summon,
         String command,
         ChainSpec chain,
-        boolean percent
+        boolean percent,
+        org.bukkit.Material block,
+        int blockRadius,
+        int blockDepth,
+        boolean breakBlocks
 ) {
 
     public boolean hasMessage() {

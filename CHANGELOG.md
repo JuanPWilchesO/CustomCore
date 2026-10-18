@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.6.1 — proteccion de objetos y mecanicas de terreno
+
+- **Modificaciones de objetos**: claves `modificable`, `encantar-libros`,
+  `encantar-mesa`, `renombrar`, `reparar`, `desencantar` y `tallar` en `items/<nombre>.yml`.
+  Se pueden cambiar con `/customcore item mod <nombre> <clave> <si|no>`.
+  Bloquea yunque, mesa de encantamientos, libros, grindstone, mesa de herreria y Mending.
+  La marca viaja en el NBT; las copias ya repartidas no cambian, las nuevas de `item give` si.
+- **Una sola clase por jugador**: `class set` reemplaza la anterior; no se acumulan.
+- **Pagos de cadena**: `pay-item` (material o id del catalogo), `pay-item-count` y `pay-xp`
+  (niveles). Si se declaran varias formas, son alternativas; `no-pay` decide si no puede
+  pagar con ninguna.
+- **Nuevas mecanicas de skill**:
+  - `block_below`: convierte los bloques bajo el objetivo (`block`, `block-radius`, `block-depth`).
+  - `explosion`: explosion al lado del objetivo como ender crystal (`amount` = potencia,
+    `break-blocks` para decidir si rompe terreno).
+  - `repair_all`: repara todo el inventario/equipo del objetivo; respeta `reparar: false`.
+- Documentacion y tutoriales actualizados.
+
 ## 0.6.0 — skills reutilizables, objetivos por mirada y efectos nuevos
 
 - **Skills reutilizables**: un archivo por skill en `skills/` (id = nombre del archivo),

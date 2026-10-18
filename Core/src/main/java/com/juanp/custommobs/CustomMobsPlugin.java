@@ -25,6 +25,7 @@ import com.juanp.custommobs.docs.DocsInstaller;
 import com.juanp.custommobs.drop.DropListener;
 import com.juanp.custommobs.drop.DropService;
 import com.juanp.custommobs.item.ItemFactionLock;
+import com.juanp.custommobs.item.ItemModificationLock;
 import com.juanp.custommobs.economy.EconomyLink;
 import com.juanp.custommobs.faction.FactionBook;
 import com.juanp.custommobs.faction.PlayerFactions;
@@ -242,6 +243,7 @@ public final class CustomMobsPlugin extends JavaPlugin {
         pluginManager.registerEvents(new DropListener(this.mobService, this.dropService), this);
         this.itemFactionLock = new ItemFactionLock(this.mobService, this.dropService.catalog());
         pluginManager.registerEvents(this.itemFactionLock, this);
+        pluginManager.registerEvents(new ItemModificationLock(this.dropService.catalog()), this);
         pluginManager.registerEvents(new MotdListener(this), this);
         // Con Teams instalado, ademas no se deja entrar a un team de otra faccion. La clase toca
         // la API de Teams, asi que solo se carga cuando esta: sin el, ni se toca.

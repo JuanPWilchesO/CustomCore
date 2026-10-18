@@ -5,11 +5,13 @@ import com.juanp.custommobs.mob.MobDefinition;
 import com.juanp.custommobs.mob.MobService;
 import org.bukkit.FluidCollisionMode;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.Registry;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
@@ -17,6 +19,10 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.EntityEquipment;
+import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.Damageable;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -218,6 +224,9 @@ public final class SkillService extends BukkitRunnable {
             case HEAL -> this.heal(target, skill.amount(), skill.percent());
             case IGNITE -> this.ignite(target, skill.amount());
             case FREEZE -> this.freeze(target, skill.amount());
+            case BLOCK_BELOW -> this.blockBelow(target, skill);
+            case EXPLOSION -> this.explosion(target, skill, customMob.entity());
+            case REPAIR_ALL -> this.repairAll(target);
             case POTION -> this.potion(target, skill);
             case CONSOLE_COMMAND -> this.consoleCommand(customMob, skill,
                     target instanceof Player player ? player : this.onlineOwner(customMob));
@@ -266,6 +275,105 @@ public final class SkillService extends BukkitRunnable {
         target.setFreezeTicks(Math.max(target.getFreezeTicks(), ticks));
         target.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS,
                 ticks, 1, false, true, true));
+    }
+
+    /**
+     * Convierte los bloques bajo el objetivo en {@code block}. Salta aire, liquidos y
+     * bloques irrompibles; el radio y la profundidad ya vienen limitados del parser.
+     */
+    private void blockBelow(LivingEntity target, SkillSpec skill) {
+        Material material = skill.block();
+        if (material == null) {
+            return;
+        }
+        int radius = Math.max(0, Math.min(5, skill.blockRadius()));
+        int depth = Math.max(1, Math.min(5, skill.blockDepth()));
+        Block base = target.getLocation().getBlock().getRelative(BlockFace.DOWN);
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dz = -radius; dz <= radius; dz++) {
+                for (int dy = 0; dy < depth; dy++) {
+                    Block block = base.getRelative(dx, -dy, dz);
+                    Material current = block.getType();
+                    if (current.isAir() || block.isLiquid()
+                            || current == Material.BEDROCK
+                            || current == Material.BARRIER
+                            || current == Material.END_PORTAL_FRAME) {
+                        continue;
+                    }
+                    block.setType(material, false);
+                }
+            }
+        }
+    }
+
+    /**
+     * Explosion al lado del objetivo, como un ender crystal. {@code amount} es la potencia
+     * (1-10) y {@code break-blocks} decide si rompe terreno.
+     */
+    private void explosion(LivingEntity target, SkillSpec skill, LivingEntity source) {
+        Location location = target.getLocation().add(0, 0.5, 0);
+        if (source != null) {
+            Vector direction = target.getLocation().toVector()
+                    .subtract(source.getLocation().toVector());
+            direction.setY(0);
+            if (direction.lengthSquared() < 0.01D) {
+                direction = target.getLocation().getDirection().setY(0);
+            }
+            if (direction.lengthSquared() > 0.0D) {
+                direction.normalize();
+                Vector side = new Vector(-direction.getZ(), 0, direction.getX())
+                        .normalize().multiply(0.8D);
+                location.add(side);
+            }
+        }
+        float power = (float) Math.max(1.0D, Math.min(10.0D, skill.amount()));
+        target.getWorld().createExplosion(location, power, false, skill.breakBlocks(), source);
+    }
+
+    /**
+     * Repara todos los objetos con durabilidad del inventario del jugador o del equipo
+     * del mob. Respeta la proteccion 'reparar' del catalogo.
+     */
+    private void repairAll(LivingEntity target) {
+        if (target instanceof Player player) {
+            ItemStack[] contents = player.getInventory().getContents();
+            for (ItemStack stack : contents) {
+                this.repair(stack);
+            }
+            player.getInventory().setContents(contents);
+            player.updateInventory();
+            return;
+        }
+        EntityEquipment equipment = target.getEquipment();
+        if (equipment == null) {
+            return;
+        }
+        for (EquipmentSlot slot : EquipmentSlot.values()) {
+            ItemStack stack = equipment.getItem(slot);
+            if (this.repair(stack)) {
+                equipment.setItem(slot, stack);
+            }
+        }
+    }
+
+    /** {@code true} si el objeto tenia dano y se repara. */
+    private boolean repair(ItemStack stack) {
+        if (stack == null || stack.getType().isAir()) {
+            return false;
+        }
+        if (!(stack.getItemMeta() instanceof Damageable damageable)) {
+            return false;
+        }
+        if (damageable.getDamage() <= 0) {
+            return false;
+        }
+        if (this.service.plugin().drops().catalog()
+                .modificationDenied(stack, "reparar")) {
+            return false;
+        }
+        damageable.setDamage(0);
+        stack.setItemMeta(damageable);
+        return true;
     }
 
     /**
@@ -640,6 +748,9 @@ public final class SkillService extends BukkitRunnable {
                 case DAMAGE -> target.damage(skill.amount(), caster);
                 case IGNITE -> this.ignite(target, skill.amount());
                 case FREEZE -> this.freeze(target, skill.amount());
+                case BLOCK_BELOW -> this.blockBelow(target, skill);
+                case EXPLOSION -> this.explosion(target, skill, caster);
+                case REPAIR_ALL -> this.repairAll(target);
                 case POTION -> this.potion(target, skill);
                 default -> {
                 }
