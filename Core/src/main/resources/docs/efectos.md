@@ -32,8 +32,8 @@ congelamiento:
 ```
 
 `mecanica` es lo que hace CustomCore: `congelamiento`, `caida`, `robo_vida`, `sigilo`,
-`paso_helado`, `quitar_positivos` o `quitar_negativos`. `potencia` la usan las mecánicas
-que la necesitan (robo de vida).
+`paso_helado`, `quitar_positivos`, `quitar_negativos`, `invulnerabilidad` o `atributos`.
+`potencia` la usan las mecánicas que la necesitan (robo de vida).
 
 `tipo` clasifica el efecto del plugin como `positivo`, `negativo` o `neutro`. Lo usan las
 purgas: `quitar_positivos` borra los del plugin marcados como positivos y todos los
@@ -83,11 +83,17 @@ usar:
   duracion: 120
   consume: false      # true = gasta una unidad
   cooldown: 60        # segundos por jugador
+  inicio: '&aCaída segura activada.'
+  fin: '&7La caída segura terminó.'
+  cooldown-aviso: '&cEspera {segundos}s.'
 ```
 
 - Si el objeto es **comida** → se aplica al comer (el juego lo consume).
 - Si no → **clic derecho** → se aplica y, con `consume: true`, se gasta una unidad.
 - La **facción** del objeto se respeta igual que en el resto del catálogo.
+- `inicio`, `fin` y `cooldown-aviso` son avisos al jugador. `fin` solo vale para
+  efectos del plugin con duración; `cooldown-aviso` admite `{segundos}`, `{tiempo}`
+  o `{cooldown}`.
 
 ## Fuego y hielo (skills)
 

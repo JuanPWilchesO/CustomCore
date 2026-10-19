@@ -69,10 +69,10 @@ siendo objetivos especiales de mob.
 | Campo | Valores | Por defecto |
 |---|---|---|
 | `id` | texto unico dentro del mob | — |
-| `effect` | `damage` \| `heal` \| `ignite` \| `freeze` \| `block_below` \| `explosion` \| `message` \| `potion` \| `summon` | — |
+| `effect` | `damage` \| `heal` \| `ignite` \| `freeze` \| `block_below` \| `explosion` \| `repair_all` \| `teleport_behind` \| `backstep` \| `message` \| `potion` \| `summon` \| `chain` \| `console_command` \| `player_command` | — |
 | `target-type` | `LOOK` \| `RADIUS` | se infiere del `target` viejo |
 | `target` | `ENEMIES` \| `ALLIES` \| `SELF`; legado: `owner` \| `target` \| `look` | `self` en cadenas, invocaciones y comandos; obligatorio en el resto |
-| `mode` | `pasiva` \| `activa` \| `interaccion` | `pasiva` |
+| `mode` | `pasiva` \| `activa` \| `interaccion` \| `item` | `pasiva` |
 | `range` | bloques (tope 128) | `8.0` |
 | `cooldown-seconds` | entero | `5` |
 | `chance` | `0.0` a `1.0` | `1.0` |
@@ -84,12 +84,37 @@ siendo objetivos especiales de mob.
 | `distance` | distancia para `teleport_behind`/`backstep` (0.5-5) | `1.0` |
 | `message` | texto con `&` | — |
 | `inicio` | aviso al lanzar la skill (solo si castea un jugador) | — |
-| `fin` | aviso cuando caduca el efecto que aplica la skill | — |
-| `cooldown-aviso` | aviso al intentar usarla en espera; admite `{segundos}` | — |
+| `fin` | aviso cuando caduca el efecto del plugin que aplica la skill (solo si castea un jugador) | — |
+| `cooldown-aviso` | aviso del objeto que la lanza al intentar usarlo en espera; admite `{segundos}` | — |
 | `potion` | `poison`, `speed`, `weakness`… | — |
 | `summon` | la definicion que invoca (SUMMON), tal como su `id` | — |
 | `potion-duration-seconds` | entero | `5` |
 | `potion-amplifier` | entero (`0` = nivel I) | `0` |
+
+## Avisos al jugador
+
+Las skills que castea un jugador pueden avisar por chat:
+
+```yaml
+- id: manto
+  effect: potion
+  target: self
+  potion: invulnerabilidad
+  potion-duration-seconds: 10
+  inicio: '&bManto activado: 10 s.'
+  fin: '&7El manto se apagó.'
+  cooldown-aviso: '&cFaltan {segundos}s.'
+```
+
+- `inicio`: se manda al lanzar la skill. Solo si el lanzador es un jugador.
+- `fin`: se manda cuando caduca el efecto del plugin que aplica la skill. No vale para
+  efectos instantáneos como `damage` o `heal`.
+- `cooldown-aviso`: lo usa el objeto que lanza la skill cuando está en espera. Admite
+  `{segundos}`, `{tiempo}` o `{cooldown}`; también `{jugador}`.
+- Los avisos van a quien castea, no al objetivo.
+- Si el objeto define `usar.inicio` o `usar.cooldown-aviso`, esos mandan sobre los de la
+  skill. El `usar.fin` del objeto solo aplica a `usar.efecto`; con `usar.skills`, el
+  fin lo pone cada skill.
 
 ## Cuando se dispara (`mode`)
 
@@ -98,6 +123,7 @@ siendo objetivos especiales de mob.
 | `pasiva` | **siempre**, mientras el mob este cargado. Es el valor por defecto |
 | `activa` | solo **en combate**, es decir, cuando el mob tiene a alguien a quien atacar |
 | `interaccion` | cuando un jugador hace **clic derecho** sobre el mob |
+| `item` | solo lo lanza un objeto con `usar.skill`/`usar.skills`; el planificador de mobs lo ignora. Obligatorio para comandos y cadenas desde objetos |
 
 ```yaml
 skills:
@@ -150,10 +176,10 @@ skills:
 |---|---|
 | `command` | el comando, sin la barra. Admite `{mob}` y `{jugador}` |
 
-**Solo funcionan con `mode: interaccion`.** En `pasiva` o `activa` (combate) la skill **se
-descarta al cargar**, con un aviso en el log: un mob que ejecuta comandos por su cuenta —y mas
-en mitad de una pelea— es un agujero de seguridad, no una funcion. Dentro de una cadena
-tambien valen, porque una cadena entera nace de un clic.
+**Solo funcionan con `mode: interaccion` o `mode: item`.** En `pasiva` o `activa`
+(combate) la skill **se descarta al cargar**, con un aviso en el log: un mob que ejecuta
+comandos por su cuenta —y mas en mitad de una pelea— es un agujero de seguridad, no una
+funcion. Dentro de una cadena tambien valen, porque una cadena entera nace de un clic.
 
 Con un clic, **el actor es quien hace clic**: `{jugador}` es el, aunque el `target` diga otra
 cosa.
@@ -299,7 +325,7 @@ skills:
 | `summon` | invoca copias de otra definicion alrededor del mob |
 | `console_command` | ejecuta un comando desde la consola (**solo interaccion o item**) |
 | `player_command` | el jugador ejecuta un comando (**solo interaccion o item**) |
-| `chain` | una conversacion por pasos, a base de clics (**solo interaccion o item**) |
+| `chain` | una conversacion por pasos, a base de clics (**solo interaccion**) |
 
 ## Objetivos
 

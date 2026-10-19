@@ -38,6 +38,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * Las mecanicas de los efectos: dano (congelacion, caida, robo de vida), beber una pocion,
  * usar un objeto del catalogo, sigilo y paso helado.
  *
+ * <p>El sigilo oculta al jugador del resto (armadura y equipo incluidos) y ademas corta
+ * la deteccion de los mobs: no pueden fijarlo como objetivo ni mantenerlo.
+ *
  * <p>La tarea corre <b>cada tick</b>: la congelacion hay que limpiarla todo el rato (si no,
  * entre un reseteo y el siguiente el hielo agarra) y el paso helado tiene que ir por delante
  * del jugador, no detras. Lo caro (caducidades) va cada 20 ticks.
@@ -50,7 +53,7 @@ public final class EffectListener implements Listener {
     private final EffectService service;
     /** Bloques que hemos helado nosotros: clave mundo:x:y:z -> cuando descongelar. */
     private final Map<String, Long> frost = new ConcurrentHashMap<>();
-    /** Jugadores en sigilo (tipo vanish): ocultos para los demas. */
+    /** Jugadores en sigilo: ocultos para los demas y sin objetivo para los mobs. */
     private final Set<UUID> vanished = ConcurrentHashMap.newKeySet();
     /** Enfriamiento de los objetos con {@code usar:}: jugador:objeto -> cuando se puede usar. */
     private final Map<String, Long> cooldowns = new ConcurrentHashMap<>();
@@ -517,7 +520,11 @@ public final class EffectListener implements Listener {
         }
     }
 
-    /** Sigilo tipo vanish: oculto para los demas (armadura y equipo incluidos) e invisible. */
+    /**
+     * Oculta al jugador para los demas (armadura y equipo incluidos). Al activarlo,
+     * suelta a los mobs que ya lo tuvieran como objetivo; el evento de objetivo y el
+     * barrido periodico impiden que vuelvan a fijarlo.
+     */
     private void vanish(Player player, boolean on) {
         if (on) {
             this.vanished.add(player.getUniqueId());

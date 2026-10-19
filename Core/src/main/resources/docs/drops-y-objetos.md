@@ -116,21 +116,48 @@ usar:
 ```
 
 - `usar.skills` es una lista, en orden; `usar.skill` sirve para una sola.
-- `usar.efecto` sigue existiendo para un efecto de `effects.yml`.
+- `usar.efecto` sigue existiendo para un efecto de `effects.yml`. Si un item define
+  `usar.skills` y `usar.efecto`, se ejecutan las skills y el efecto se ignora.
 - El **cooldown efectivo** es el mayor entre `usar.cooldown` y el
   `cooldown-seconds` de las skills. No se suman.
 - `consume` decide si se gasta una unidad.
 - `usar.inicio` y `usar.fin`: avisos en el chat del jugador al usarlo y al caducar
-  el efecto. `usar.fin` solo aplica a efectos del plugin con duración.
+  el efecto. `usar.fin` solo aplica cuando el item usa `usar.efecto`; con
+  `usar.skills`, el fin lo pone el `fin` de cada skill.
 - `usar.cooldown-aviso`: aviso al intentar usarlo en espera; admite `{segundos}`,
   `{tiempo}` o `{cooldown}`. Si falta, se usa el `cooldown-aviso` de la primera skill.
+- Los avisos van al jugador que usa el objeto, no al objetivo.
 - Si el objeto tiene `clase` y/o `faccion`, la restriccion se comprueba **antes** de
   lanzar la skill. Un admin pasa solo si tiene `customcore.bypass`, no por ser admin.
 - Por defecto CustomCore procesa igual el uso aunque otro plugin cancele el clic
   (`items.ignore-cancelled-use: true`), pero sigue respetando clase/faccion. Ponlo en
   `false` si quieres que la cancelacion del otro plugin mande.
-- Las skills con `console_command`, `player_command` o `chain` deben declarar
-  `mode: item`; el planificador de mobs no las ejecuta.
+- Las skills con `console_command` o `player_command` deben declarar `mode: item`;
+  el planificador de mobs no las ejecuta. `chain` no se admite desde objetos: solo
+  desde `mode: interaccion`.
+
+Un ejemplo completo con avisos:
+
+```yaml
+usar:
+  skill: invul_paladin
+  consume: false
+  cooldown: 120
+  inicio: '&bCristal activado: 10 s de invulnerabilidad.'
+  cooldown-aviso: '&cEspera {segundos}s para volver a usarlo.'
+```
+
+Para un efecto directo, donde sí vale `usar.fin`:
+
+```yaml
+usar:
+  efecto: caida
+  duracion: 120
+  cooldown: 60
+  inicio: '&aCaída segura activada.'
+  fin: '&7La caída segura terminó.'
+  cooldown-aviso: '&cEspera {segundos}s.'
+```
 
 ### Modificaciones del objeto
 

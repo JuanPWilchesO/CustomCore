@@ -64,6 +64,8 @@ usar:
     - balsamo_aliados
   consume: false
   cooldown: 30
+  inicio: '&bBálsamo listo.'
+  cooldown-aviso: '&cEspera {segundos}s.'
 ```
 
 - `usar.skills` es una lista, en orden; `usar.skill` sirve para una sola.
@@ -72,6 +74,10 @@ usar:
 - La `clase` y la `faccion` se comprueban antes de lanzar la skill.
 - `console_command`, `player_command` y `chain` exigen `mode: item`; un mob no las
   ejecuta aunque las referencie.
+- `usar.inicio` y `usar.cooldown-aviso` son del item. El `fin` de un item con
+  `usar.skills` no se usa: pon el `fin` en cada skill.
+- `{segundos}`, `{tiempo}` y `{cooldown}` muestran la espera restante; `{jugador}`,
+  el nombre de quien usa el objeto.
 
 Las skills compartidas viven en `plugins/CustomCore/skills/<id>.yml` y se referencian
 por su id. Para probar sin depender del clic: `/customcore testcast <skill>`.

@@ -15,7 +15,7 @@ import java.util.Map;
  * @param duration    segundos por defecto
  * @param power       numero propio de la mecanica (ej. robo de vida: 0.25)
  * @param mechanic    que hace CustomCore: congelamiento, caida, robo_vida, sigilo, paso_helado,
- *                    quitar_positivos o quitar_negativos
+ *                    quitar_positivos, quitar_negativos, invulnerabilidad o atributos
  * @param vanilla     efectos de Minecraft que aplica ademas, como "SLOW_FALL" o "SPEED:2"
  * @param type        positivo, negativo o neutro: lo usan las mecanicas de purga
  * @param attributes  atributos que modifica (mecanica 'atributos'); vacio en el resto

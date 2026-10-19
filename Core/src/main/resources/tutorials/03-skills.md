@@ -70,6 +70,29 @@ skills:
 | `freeze` | congela durante `amount` segundos y aplica Lentitud II |
 | `message` | manda un texto a los jugadores en rango |
 | `potion` | aplica `potion` durante `potion-duration-seconds` |
+| `repair_all` | repara todo el inventario/equipo con durabilidad |
+| `teleport_behind` | aparece detrás del objetivo, mirándolo |
+| `backstep` | retrocede y mira al punto de origen |
+
+## Avisos de la skill
+
+Una skill casteada por un jugador puede avisar por chat:
+
+```yaml
+  - id: manto
+    effect: potion
+    target: self
+    potion: invulnerabilidad
+    potion-duration-seconds: 10
+    inicio: '&bManto activado.'
+    fin: '&7El manto se apagó.'
+    cooldown-aviso: '&cFaltan {segundos}s.'
+```
+
+- `inicio` se manda al lanzarla; `fin`, cuando caduca el efecto del plugin.
+- `fin` no vale para efectos instantáneos como `damage` o `heal`.
+- `cooldown-aviso` lo usa el objeto que lanza la skill cuando está en espera.
+- Los avisos van a quien castea, no al objetivo.
 
 ## Conversaciones y comandos
 
@@ -98,8 +121,9 @@ skills:
         end: true
 ```
 
-Los comandos (`console_command`, `player_command`) **solo** valen con `mode: interaccion`:
-fuera de ahi se descartan y el log lo avisa.
+Los comandos (`console_command`, `player_command`) valen con `mode: interaccion` o
+`mode: item`; fuera de ahi se descartan y el log lo avisa. Las cadenas (`chain`) solo
+valen con `mode: interaccion`.
 
 ## Invocar a otros
 

@@ -55,6 +55,7 @@ cualquiera de ellos el plugin sigue funcionando: cada uno degrada por su cuenta.
 |---|---|
 | `el-archivo-de-un-mob.md` | Referencia de todas las claves de `mobs/*.yml` |
 | `skills.md` | Efectos, objetivos, rango, cooldown y probabilidad |
+| `efectos.md` | Catálogo de efectos, pociones y mecánicas |
 | `drops-y-objetos.md` | Tabla de drops y catalogo de objetos con NBT |
 | `libro-y-mejoras.md` | Libro de inspeccion e items de mejora de mobs |
 | `facciones-equipos-y-combate.md` | Facciones, Teams, actitudes y politica de ataque |

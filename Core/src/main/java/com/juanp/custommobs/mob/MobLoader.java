@@ -474,8 +474,14 @@ public final class MobLoader {
                 || effect == SkillEffect.PLAYER_COMMAND || effect == SkillEffect.CHAIN;
         if (commandLike && trigger != SkillTrigger.INTERACT && trigger != SkillTrigger.ITEM) {
             Bukkit.getLogger().warning("[CustomMobs] La skill '" + id + "' usa " + effect
-                    + " pero no es de interaccion ni de item; se descarta. Los comandos y las"
-                    + " cadenas solo van con 'mode: interaccion' o 'mode: item'.");
+                    + " pero no es de interaccion ni de item; se descarta. Los comandos van"
+                    + " con 'mode: interaccion' o 'mode: item'; las cadenas, solo con"
+                    + " 'mode: interaccion'.");
+            return null;
+        }
+        if (effect == SkillEffect.CHAIN && trigger != SkillTrigger.INTERACT) {
+            Bukkit.getLogger().warning("[CustomMobs] La skill '" + id + "' es una cadena y"
+                    + " solo vale con 'mode: interaccion'; se descarta.");
             return null;
         }
         // matchMaterial(null) lanza IllegalArgumentException en Paper: solo se llama

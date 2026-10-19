@@ -8,6 +8,16 @@ Pensado para **Paper**. Se apoya en tres plugins opcionales: **Teams** (bandos d
 jugadores), **LibsDisguises** (apariencias) y **LuckPerms** (grupos y cupos). Sin
 cualquiera de ellos el plugin sigue funcionando: cada uno degrada por su cuenta.
 
+## Novedades 0.6.4
+
+- **`sigilo`** ahora también corta la detección de los mobs: no pueden fijarte como
+  objetivo ni mantenerte como objetivo mientras dure.
+
+## Novedades 0.6.3
+
+- **Avisos de skill y de objeto**: `inicio`, `fin` y `cooldown-aviso`, con
+  `{segundos}` para la espera restante. Se muestran a quien castea o usa el objeto.
+
 ## Novedades 0.6.2
 
 - **Invulnerabilidad** temporal que cancela todo el daño.
@@ -55,7 +65,7 @@ cualquiera de ellos el plugin sigue funcionando: cada uno degrada por su cuenta.
 2. Arranca el servidor una vez. Se crean:
    - `plugins/CustomCore/config.yml` — configuracion general.
    - `plugins/CustomCore/factions.yml` — relaciones entre facciones.
-   - `plugins/CustomCore/mobs/` — un archivo por mob. Se copian **cinco ejemplos
+   - `plugins/CustomCore/mobs/` — un archivo por mob. Se copian **seis ejemplos
      numerados** que funcionan como tutorial: abrelos en orden.
    - `plugins/CustomCore/skills/` — skills reutilizables, una por archivo.
 3. Edita lo que quieras.

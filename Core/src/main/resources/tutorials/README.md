@@ -6,7 +6,7 @@ Guias paso a paso. Se leen en orden; cada una anade una funcionalidad sobre la a
 |---|---|
 | `01-primer-mob.md` | crear un mob, invocarlo, recogerlo y re-desplegarlo |
 | `02-equipo-y-encantamientos.md` | equipar por slot, encantamientos vanilla y custom, objetos con NBT |
-| `03-skills.md` | los cuatro efectos y los cinco objetivos |
+| `03-skills.md` | efectos, objetivos y avisos de skill |
 | `04-faccion-y-spawner.md` | mobs de servidor, facciones, actitud y reaparicion |
 | `05-objeto-con-nbt.md` | el catalogo de objetos con NBT |
 | `06-disfraz-sonidos-y-colores.md` | apariencia, sonidos y estilo por jugador o team |
