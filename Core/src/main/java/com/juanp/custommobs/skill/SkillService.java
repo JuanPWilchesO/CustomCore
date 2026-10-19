@@ -237,7 +237,7 @@ public final class SkillService extends BukkitRunnable {
                     this.backstep(customMob.entity(), skill);
                 }
             }
-            case POTION -> this.potion(target, skill);
+            case POTION -> this.potion(customMob.entity(), target, skill);
             case CONSOLE_COMMAND -> this.consoleCommand(customMob, skill,
                     target instanceof Player player ? player : this.onlineOwner(customMob));
             case PLAYER_COMMAND -> {
@@ -502,14 +502,19 @@ public final class SkillService extends BukkitRunnable {
         return hit != null && hit.getHitEntity() instanceof LivingEntity living ? living : null;
     }
 
-    private void potion(LivingEntity target, SkillSpec skill) {
+    private void potion(LivingEntity caster, LivingEntity target, SkillSpec skill) {
         // Un efecto del plugin (effects.yml) manda sobre los de Minecraft, y vale tambien para
         // buffear al propio mob con target: self.
         var effects = this.service.plugin().effects();
         if (effects != null) {
             var custom = effects.effect(skill.potion()).orElse(null);
             if (custom != null) {
-                effects.apply(target, custom, skill.potionDurationSeconds());
+                UUID notify = caster instanceof Player player ? player.getUniqueId() : null;
+                String end = skill.endMessage();
+                if (end != null && caster instanceof Player player) {
+                    end = end.replace("{jugador}", player.getName());
+                }
+                effects.apply(target, custom, skill.potionDurationSeconds(), notify, end);
                 return;
             }
         }
@@ -821,6 +826,10 @@ public final class SkillService extends BukkitRunnable {
                     + skill.effect() + "; ese efecto no se admite desde un item.");
             return;
         }
+        if (skill.hasStartMessage()) {
+            caster.sendMessage(com.juanp.custommobs.mob.Texts.color(
+                    skill.startMessage().replace("{jugador}", caster.getName())));
+        }
         if (skill.effect() == SkillEffect.CONSOLE_COMMAND) {
             this.consoleCommandFromPlayer(caster, skill);
             return;
@@ -856,7 +865,7 @@ public final class SkillService extends BukkitRunnable {
                         this.backstep(caster, skill);
                     }
                 }
-                case POTION -> this.potion(target, skill);
+                case POTION -> this.potion(caster, target, skill);
                 default -> {
                 }
             }

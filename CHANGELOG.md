@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.3 — avisos de skill y de objeto
+
+- **Mensajes de inicio y fin** en skills (`inicio`, `fin`) y en objetos
+  (`usar.inicio`, `usar.fin`). El aviso de fin se manda cuando caduca el efecto del plugin.
+- **Aviso de espera** (`cooldown-aviso` / `usar.cooldown-aviso`) con `{segundos}`,
+  `{tiempo}` o `{cooldown}`; se manda a quien intenta usar el objeto en espera.
+- Los avisos van al jugador que castea o usa el objeto, no al objetivo.
+
 ## 0.6.2 — invulnerabilidad, atributos y teleport
 
 - **Invulnerabilidad**: mecanica de efecto que cancela todo el dano mientras dure.

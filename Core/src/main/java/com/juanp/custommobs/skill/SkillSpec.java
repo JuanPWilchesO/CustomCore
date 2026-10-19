@@ -30,6 +30,9 @@ package com.juanp.custommobs.skill;
  * @param blockDepth            profundidad hacia abajo de BLOCK_BELOW
  * @param breakBlocks           si EXPLOSION rompe bloques
  * @param distance              distancia detras del objetivo para TELEPORT_BEHIND
+ * @param startMessage          aviso al lanzar la skill; {@code null} si no hay
+ * @param endMessage            aviso cuando caduca el efecto que aplica; {@code null} si no hay
+ * @param cooldownMessage       aviso al intentar usarla en espera; admite {@code {segundos}}
  */
 public record SkillSpec(
         String id,
@@ -53,10 +56,25 @@ public record SkillSpec(
         int blockRadius,
         int blockDepth,
         boolean breakBlocks,
-        double distance
+        double distance,
+        String startMessage,
+        String endMessage,
+        String cooldownMessage
 ) {
 
     public boolean hasMessage() {
         return this.message != null && !this.message.isBlank();
+    }
+
+    public boolean hasStartMessage() {
+        return this.startMessage != null && !this.startMessage.isBlank();
+    }
+
+    public boolean hasEndMessage() {
+        return this.endMessage != null && !this.endMessage.isBlank();
+    }
+
+    public boolean hasCooldownMessage() {
+        return this.cooldownMessage != null && !this.cooldownMessage.isBlank();
     }
 }

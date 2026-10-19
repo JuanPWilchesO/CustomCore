@@ -2,6 +2,7 @@ package com.juanp.custommobs.effect;
 
 import com.juanp.custommobs.CustomMobsPlugin;
 import com.juanp.custommobs.mob.Texts;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Registry;
@@ -47,6 +48,12 @@ public final class EffectService {
     private final Map<String, PotionSpec> potions = new LinkedHashMap<>();
     /** Efectos activos: jugador -> (efecto -> instante de caducidad, en millis). */
     private final Map<UUID, Map<String, Long>> active = new ConcurrentHashMap<>();
+    /** Avisos de fin: objetivo -> (efecto -> a quien avisar y que decir). */
+    private final Map<UUID, Map<String, EndNotice>> notices = new ConcurrentHashMap<>();
+
+    /** Un aviso de fin de efecto, dirigido a quien lanzo la skill. */
+    private record EndNotice(UUID receiver, String message) {
+    }
 
     /** Atributos que se admiten en la mecanica 'atributos'. */
     private static final Set<String> ALLOWED_ATTRIBUTES = Set.of(
@@ -149,6 +156,17 @@ public final class EffectService {
 
     /** Aplica un efecto a un jugador. {@code seconds <= 0} usa la duracion del efecto. */
     public void apply(LivingEntity player, EffectSpec spec, int seconds) {
+        this.apply(player, spec, seconds, null, null);
+    }
+
+    /**
+     * Aplica un efecto y, si se indica, avisa al jugador cuando caduque.
+     *
+     * @param notify     a quien se le manda el aviso de fin; {@code null} para no avisar
+     * @param endMessage texto del aviso de fin; {@code null} o vacio para no avisar
+     */
+    public void apply(LivingEntity player, EffectSpec spec, int seconds,
+                      UUID notify, String endMessage) {
         // Las purgas son instantaneas: no se quedan en la lista de efectos activos.
         if ("quitar_positivos".equals(spec.mechanic())) {
             this.clearByType(player, true);
@@ -161,6 +179,7 @@ public final class EffectService {
         int duration = seconds > 0 ? seconds : spec.duration();
         this.active.computeIfAbsent(player.getUniqueId(), key -> new ConcurrentHashMap<>())
                 .put(spec.id(), System.currentTimeMillis() + duration * 1000L);
+        this.rememberNotice(player.getUniqueId(), spec.id(), notify, endMessage);
         this.applyAttributes(player, spec);
         for (String raw : spec.vanilla()) {
             String[] parts = raw.split(":");
@@ -190,7 +209,8 @@ public final class EffectService {
         if (mine != null) {
             Iterator<Map.Entry<String, Long>> iterator = mine.entrySet().iterator();
             while (iterator.hasNext()) {
-                EffectSpec spec = this.effects.get(iterator.next().getKey());
+                Map.Entry<String, Long> entry = iterator.next();
+                EffectSpec spec = this.effects.get(entry.getKey());
                 if (spec == null) {
                     continue;
                 }
@@ -199,6 +219,7 @@ public final class EffectService {
                         : "negativo".equals(spec.type());
                 if (match) {
                     this.removeAttributes(player, spec);
+                    this.forgetNotice(player.getUniqueId(), entry.getKey());
                     iterator.remove();
                     removed++;
                 }
@@ -358,11 +379,52 @@ public final class EffectService {
         }
         for (String goneId : gone) {
             mine.remove(goneId);
+            this.notifyEnd(id, goneId);
         }
         if (mine.isEmpty()) {
             this.active.remove(id);
         }
         return gone;
+    }
+
+    /** Guarda (o borra, si no hay aviso) el aviso de fin de un efecto. */
+    private void rememberNotice(UUID target, String effectId, UUID notify, String message) {
+        if (notify == null || message == null || message.isBlank()) {
+            this.forgetNotice(target, effectId);
+            return;
+        }
+        this.notices.computeIfAbsent(target, key -> new ConcurrentHashMap<>())
+                .put(effectId, new EndNotice(notify, message));
+    }
+
+    private void forgetNotice(UUID target, String effectId) {
+        Map<String, EndNotice> mine = this.notices.get(target);
+        if (mine == null) {
+            return;
+        }
+        mine.remove(effectId);
+        if (mine.isEmpty()) {
+            this.notices.remove(target);
+        }
+    }
+
+    /** Envia el aviso de fin, si lo habia, al jugador que lanzo la skill. */
+    private void notifyEnd(UUID target, String effectId) {
+        Map<String, EndNotice> mine = this.notices.get(target);
+        if (mine == null) {
+            return;
+        }
+        EndNotice notice = mine.remove(effectId);
+        if (mine.isEmpty()) {
+            this.notices.remove(target);
+        }
+        if (notice == null) {
+            return;
+        }
+        Player player = Bukkit.getPlayer(notice.receiver());
+        if (player != null && player.isOnline()) {
+            player.sendMessage(Texts.color(notice.message()));
+        }
     }
 
     /** Efectos activos del jugador (ids), sin tocar los caducados. */

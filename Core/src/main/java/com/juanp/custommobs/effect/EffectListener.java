@@ -2,6 +2,7 @@ package com.juanp.custommobs.effect;
 
 import com.juanp.custommobs.CustomMobsPlugin;
 import com.juanp.custommobs.item.ItemFactionLock;
+import com.juanp.custommobs.item.UseSpec;
 import com.juanp.custommobs.mob.Texts;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -276,10 +277,15 @@ public final class EffectListener implements Listener {
         long now = System.currentTimeMillis();
         Long until = this.cooldowns.get(key);
         if (until != null && until > now) {
+            this.warnCooldown(player, use, until - now);
             return true;
         }
         if (cooldown > 0) {
             this.cooldowns.put(key, now + cooldown * 1000L);
+        }
+        if (use.hasStartMessage()) {
+            player.sendMessage(Texts.color(use.startMessage()
+                    .replace("{jugador}", player.getName())));
         }
         if (use.hasSkills()) {
             if (this.plugin.skillService() == null) {
@@ -287,7 +293,9 @@ public final class EffectListener implements Listener {
             }
             this.plugin.skillService().cast(player, use.skillIds());
         } else {
-            this.applyEffect(player, effect, use.duration());
+            // El aviso de inicio del item, si lo hay, ya se mando arriba: no se repite
+            // el nombre del efecto.
+            this.applyEffect(player, effect, use.duration(), null, use.endMessage());
         }
         if (spend && use.consume()) {
             item.setAmount(item.getAmount() - 1);
@@ -295,13 +303,52 @@ public final class EffectListener implements Listener {
         return true;
     }
 
+    /** Aviso de espera: usa el del item o, si falta, el de la primera skill. */
+    private void warnCooldown(Player player, UseSpec use, long millis) {
+        long seconds = Math.max(1L, (millis + 999L) / 1000L);
+        String warning = use.cooldownMessage();
+        if ((warning == null || warning.isBlank()) && this.plugin.skillCatalog() != null) {
+            for (String id : use.skillIds()) {
+                var skill = this.plugin.skillCatalog().get(id).orElse(null);
+                if (skill != null && skill.hasCooldownMessage()) {
+                    warning = skill.cooldownMessage();
+                    break;
+                }
+            }
+        }
+        if (warning == null || warning.isBlank()) {
+            return;
+        }
+        player.sendMessage(Texts.color(warning
+                .replace("{segundos}", Long.toString(seconds))
+                .replace("{tiempo}", Long.toString(seconds))
+                .replace("{cooldown}", Long.toString(seconds))
+                .replace("{jugador}", player.getName())));
+    }
+
     /** Aplica un efecto ya resuelto: mensaje y, si toca, las acciones de fuera. */
     private boolean applyEffect(Player player, EffectSpec effect, int seconds) {
+        return this.applyEffect(player, effect, seconds, null, null);
+    }
+
+    /**
+     * Aplica un efecto con avisos opcionales.
+     *
+     * @param startMessage aviso al aplicarlo; {@code null} deja el nombre del efecto
+     * @param endMessage   aviso cuando caduque; {@code null} para no avisar
+     */
+    private boolean applyEffect(Player player, EffectSpec effect, int seconds,
+                                String startMessage, String endMessage) {
         // La purga puede llevarse el sigilo; el estado de invisibilidad vive aqui, no en
         // EffectService, asi que hay que devolver la visibilidad a mano.
         boolean hadSigilo = this.service.hasMechanic(player, "sigilo");
-        this.service.apply(player, effect, seconds);
-        player.sendMessage(Texts.color("&8[&cCustomCore&8] &7" + effect.name()));
+        this.service.apply(player, effect, seconds, player.getUniqueId(), endMessage);
+        if (startMessage == null || startMessage.isBlank()) {
+            player.sendMessage(Texts.color("&8[&cCustomCore&8] &7" + effect.name()));
+        } else {
+            player.sendMessage(Texts.color(startMessage
+                    .replace("{jugador}", player.getName())));
+        }
         String mechanic = effect.mechanic();
         if (("quitar_positivos".equals(mechanic) || "quitar_negativos".equals(mechanic))
                 && hadSigilo && !this.service.hasMechanic(player, "sigilo")) {

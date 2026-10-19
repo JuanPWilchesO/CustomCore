@@ -457,6 +457,12 @@ public final class MobLoader {
             targetType = SkillTargetType.RADIUS;
         }
         String message = asString(entry.get("message"));
+        String startMessage = messageOf(entry, "inicio", "mensaje-inicio",
+                "start-message", "start");
+        String endMessage = messageOf(entry, "fin", "mensaje-fin",
+                "end-message", "end");
+        String cooldownMessage = messageOf(entry, "cooldown-aviso", "aviso-cooldown",
+                "mensaje-cooldown", "cooldown-message");
         // Si el yml no dice nada, la skill es pasiva: el comportamiento de siempre.
         SkillTrigger parsed = SkillTrigger.parse(asString(entry.get("mode")));
         SkillTrigger trigger = parsed == null ? SkillTrigger.DEFAULT : parsed;
@@ -517,7 +523,10 @@ public final class MobLoader {
                 blockRadius,
                 blockDepth,
                 breakBlocks,
-                distance
+                distance,
+                startMessage,
+                endMessage,
+                cooldownMessage
         );
     }
 
@@ -637,6 +646,17 @@ public final class MobLoader {
 
     private static String asString(Object value) {
         return value == null ? null : String.valueOf(value);
+    }
+
+    /** Primer mensaje no vacio de las claves dadas, ya con colores. */
+    private static String messageOf(Map<?, ?> entry, String... keys) {
+        for (String key : keys) {
+            String raw = asString(entry.get(key));
+            if (raw != null && !raw.isBlank()) {
+                return Texts.color(raw);
+            }
+        }
+        return null;
     }
 
     private static boolean asBoolean(Object value) {

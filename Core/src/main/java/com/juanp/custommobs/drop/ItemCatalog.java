@@ -1,6 +1,7 @@
 package com.juanp.custommobs.drop;
 
 import com.juanp.custommobs.CustomMobsPlugin;
+import com.juanp.custommobs.mob.Texts;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -413,7 +414,23 @@ public final class ItemCatalog {
                 java.util.List.copyOf(skills),
                 Math.max(0, section.getInt("duracion", 0)),
                 section.getBoolean("consume", true),
-                Math.max(0, section.getInt("cooldown", 0))));
+                Math.max(0, section.getInt("cooldown", 0)),
+                messageOf(section, "inicio", "mensaje-inicio", "start-message", "start"),
+                messageOf(section, "fin", "mensaje-fin", "end-message", "end"),
+                messageOf(section, "cooldown-aviso", "aviso-cooldown",
+                        "mensaje-cooldown", "cooldown-message")));
+    }
+
+    /** Primer mensaje no vacio de las claves dadas, ya con colores. */
+    private static String messageOf(org.bukkit.configuration.ConfigurationSection section,
+                                    String... keys) {
+        for (String key : keys) {
+            String raw = section.getString(key);
+            if (raw != null && !raw.isBlank()) {
+                return Texts.color(raw);
+            }
+        }
+        return null;
     }
 
     /**

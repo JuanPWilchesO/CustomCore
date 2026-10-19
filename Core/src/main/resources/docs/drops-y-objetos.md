@@ -120,6 +120,10 @@ usar:
 - El **cooldown efectivo** es el mayor entre `usar.cooldown` y el
   `cooldown-seconds` de las skills. No se suman.
 - `consume` decide si se gasta una unidad.
+- `usar.inicio` y `usar.fin`: avisos en el chat del jugador al usarlo y al caducar
+  el efecto. `usar.fin` solo aplica a efectos del plugin con duración.
+- `usar.cooldown-aviso`: aviso al intentar usarlo en espera; admite `{segundos}`,
+  `{tiempo}` o `{cooldown}`. Si falta, se usa el `cooldown-aviso` de la primera skill.
 - Si el objeto tiene `clase` y/o `faccion`, la restriccion se comprueba **antes** de
   lanzar la skill. Un admin pasa solo si tiene `customcore.bypass`, no por ser admin.
 - Por defecto CustomCore procesa igual el uso aunque otro plugin cancele el clic

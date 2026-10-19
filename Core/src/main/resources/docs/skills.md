@@ -83,6 +83,9 @@ siendo objetivos especiales de mob.
 | `break-blocks` | si `explosion` rompe terreno | `false` |
 | `distance` | distancia para `teleport_behind`/`backstep` (0.5-5) | `1.0` |
 | `message` | texto con `&` | — |
+| `inicio` | aviso al lanzar la skill (solo si castea un jugador) | — |
+| `fin` | aviso cuando caduca el efecto que aplica la skill | — |
+| `cooldown-aviso` | aviso al intentar usarla en espera; admite `{segundos}` | — |
 | `potion` | `poison`, `speed`, `weakness`… | — |
 | `summon` | la definicion que invoca (SUMMON), tal como su `id` | — |
 | `potion-duration-seconds` | entero | `5` |
