@@ -11,6 +11,7 @@ import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.block.Block;
 import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -18,6 +19,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemConsumeEvent;
@@ -428,6 +430,9 @@ public final class EffectListener implements Listener {
                 this.freezeUnder(player);
             }
         }
+        if (this.ticks % 10 == 0) {
+            this.clearSigiloTargets();
+        }
         if (this.ticks % 20 != 0) {
             return;
         }
@@ -521,10 +526,47 @@ public final class EffectListener implements Listener {
                     other.hidePlayer(this.plugin, player);
                 }
             }
+            this.clearTargets(player);
         } else {
             this.vanished.remove(player.getUniqueId());
             for (Player other : Bukkit.getOnlinePlayers()) {
                 other.showPlayer(this.plugin, player);
+            }
+        }
+    }
+
+    /**
+     * El sigilo tambien vale contra mobs: en cuanto intentan fijarte como objetivo,
+     * se cancela la adquisicion. Los que ya te tenian de objetivo se limpian aqui y
+     * en {@link #clearSigiloTargets()} cada 10 ticks.
+     */
+    @EventHandler(ignoreCancelled = true)
+    public void onSigiloTarget(EntityTargetLivingEntityEvent event) {
+        if (!(event.getEntity() instanceof Mob)) {
+            return;
+        }
+        if (event.getTarget() instanceof Player player
+                && this.service.hasMechanic(player, "sigilo")) {
+            event.setCancelled(true);
+        }
+    }
+
+    /** Suelta a los mobs cercanos que esten apuntando a un jugador en sigilo. */
+    private void clearSigiloTargets() {
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            if (this.service.hasMechanic(player, "sigilo")) {
+                this.clearTargets(player);
+            }
+        }
+    }
+
+    /** Quita el objetivo a los mobs en 64 bloques que apunten a ese jugador. */
+    private void clearTargets(Player player) {
+        for (var entity : player.getWorld().getNearbyEntities(
+                player.getLocation(), 64.0D, 64.0D, 64.0D)) {
+            if (entity instanceof Mob mob && mob.getTarget() != null
+                    && mob.getTarget().getUniqueId().equals(player.getUniqueId())) {
+                mob.setTarget(null);
             }
         }
     }

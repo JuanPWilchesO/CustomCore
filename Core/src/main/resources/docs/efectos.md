@@ -10,7 +10,7 @@ de mob o el uso de un objeto del catálogo.
 | `congelamiento` | No sufres daño por congelación, el hielo no te agarra y se te quita la lentitud del frío. |
 | `caida` | No sufres daño al caer. |
 | `robo_vida` | Te curas un 25% del daño que haces (en cada golpe, no al matar). |
-| `sigilo` | Desapareces para los demás, armadura incluida, y te vuelves invisible (F5). |
+| `sigilo` | Desapareces para los demás jugadores, armadura y equipo incluidos; los mobs también pierden tu objetivo y no pueden fijarte mientras dure. |
 | `paso_helado` | Congelas el agua bajo tus pies y por delante. Se descongela a los 5 s. |
 | `quitar_positivos` | Quita todos los efectos positivos, del plugin y de Minecraft. |
 | `quitar_negativos` | Quita todos los efectos negativos, del plugin y de Minecraft. |

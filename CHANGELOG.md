@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.4 — sigilo tambien contra mobs
+
+- **`sigilo`** ahora corta la deteccion de los mobs: cancela
+  `EntityTargetLivingEntityEvent` cuando el objetivo esta en sigilo y suelta cada
+  10 ticks a los mobs cercanos que ya lo tenian como objetivo. Sigue ocultando al
+  jugador (armadura y equipo incluidos) para los demas jugadores.
+
 ## 0.6.3 — avisos de skill y de objeto
 
 - **Mensajes de inicio y fin** en skills (`inicio`, `fin`) y en objetos
