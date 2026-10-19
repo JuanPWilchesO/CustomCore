@@ -493,6 +493,8 @@ public final class MobLoader {
                 Math.round(asNumber(entry.get("block-depth"), 1.0D))));
         boolean breakBlocks = asBoolean(entry.get("break-blocks"))
                 || asBoolean(entry.get("romper-bloques"));
+        double distance = Math.min(5.0D, Math.max(0.5D,
+                asNumber(entry.get("distance"), 1.0D)));
         return new SkillSpec(
                 id,
                 effect,
@@ -514,7 +516,8 @@ public final class MobLoader {
                 block,
                 blockRadius,
                 blockDepth,
-                breakBlocks
+                breakBlocks,
+                distance
         );
     }
 

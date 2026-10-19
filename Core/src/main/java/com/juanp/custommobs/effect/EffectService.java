@@ -5,6 +5,9 @@ import com.juanp.custommobs.mob.Texts;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Registry;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeInstance;
+import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.LivingEntity;
@@ -25,6 +28,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -43,6 +47,12 @@ public final class EffectService {
     private final Map<String, PotionSpec> potions = new LinkedHashMap<>();
     /** Efectos activos: jugador -> (efecto -> instante de caducidad, en millis). */
     private final Map<UUID, Map<String, Long>> active = new ConcurrentHashMap<>();
+
+    /** Atributos que se admiten en la mecanica 'atributos'. */
+    private static final Set<String> ALLOWED_ATTRIBUTES = Set.of(
+            "max_health", "attack_damage", "attack_speed", "movement_speed",
+            "armor", "armor_toughness", "knockback_resistance", "attack_knockback",
+            "max_absorption", "safe_fall_distance");
 
     public EffectService(CustomMobsPlugin plugin) {
         this.plugin = plugin;
@@ -72,7 +82,8 @@ public final class EffectService {
                     section.getString("mecanica", "").toLowerCase(Locale.ROOT).trim()
                             .replace('-', '_'),
                     section.getStringList("vanilla"),
-                    typeOf(section.getString("tipo"))));
+                    typeOf(section.getString("tipo")),
+                    this.attributesOf(section.getConfigurationSection("atributos"))));
         }
 
         YamlConfiguration potionYaml = this.load("potions.yml");
@@ -150,6 +161,7 @@ public final class EffectService {
         int duration = seconds > 0 ? seconds : spec.duration();
         this.active.computeIfAbsent(player.getUniqueId(), key -> new ConcurrentHashMap<>())
                 .put(spec.id(), System.currentTimeMillis() + duration * 1000L);
+        this.applyAttributes(player, spec);
         for (String raw : spec.vanilla()) {
             String[] parts = raw.split(":");
             PotionEffectType type = Registry.EFFECT.get(
@@ -186,6 +198,7 @@ public final class EffectService {
                         ? "positivo".equals(spec.type())
                         : "negativo".equals(spec.type());
                 if (match) {
+                    this.removeAttributes(player, spec);
                     iterator.remove();
                     removed++;
                 }
@@ -205,6 +218,69 @@ public final class EffectService {
             }
         }
         return removed;
+    }
+
+    /** Lee el bloque `atributos:` de un efecto; ignora los que no esten permitidos. */
+    private Map<Attribute, Double> attributesOf(ConfigurationSection section) {
+        if (section == null) {
+            return Map.of();
+        }
+        Map<Attribute, Double> attributes = new LinkedHashMap<>();
+        for (String raw : section.getKeys(false)) {
+            String key = raw.toLowerCase(Locale.ROOT).trim().replace('-', '_');
+            if (!ALLOWED_ATTRIBUTES.contains(key)) {
+                this.plugin.getLogger().warning("Atributo no permitido en effects.yml: " + raw);
+                continue;
+            }
+            Attribute attribute = Registry.ATTRIBUTE.get(NamespacedKey.minecraft(key));
+            if (attribute == null) {
+                this.plugin.getLogger().warning("Atributo desconocido: " + raw);
+                continue;
+            }
+            attributes.put(attribute, section.getDouble(raw));
+        }
+        return Map.copyOf(attributes);
+    }
+
+    /** Aplica o renueva los modificadores de atributo de un efecto. */
+    private void applyAttributes(LivingEntity entity, EffectSpec spec) {
+        for (Map.Entry<Attribute, Double> entry : spec.attributes().entrySet()) {
+            AttributeInstance instance = entity.getAttribute(entry.getKey());
+            if (instance == null) {
+                continue;
+            }
+            NamespacedKey key = this.attributeKey(spec.id(), entry.getKey());
+            this.removeModifier(instance, key);
+            instance.addModifier(new AttributeModifier(key, entry.getValue(),
+                    AttributeModifier.Operation.ADD_NUMBER));
+        }
+    }
+
+    /** Quita los modificadores de atributo de un efecto y ajusta la vida si hace falta. */
+    private void removeAttributes(LivingEntity entity, EffectSpec spec) {
+        for (Map.Entry<Attribute, Double> entry : spec.attributes().entrySet()) {
+            AttributeInstance instance = entity.getAttribute(entry.getKey());
+            if (instance != null) {
+                this.removeModifier(instance, this.attributeKey(spec.id(), entry.getKey()));
+            }
+        }
+        AttributeInstance health = entity.getAttribute(Attribute.MAX_HEALTH);
+        if (health != null && entity.getHealth() > health.getValue()) {
+            entity.setHealth(health.getValue());
+        }
+    }
+
+    private void removeModifier(AttributeInstance instance, NamespacedKey key) {
+        for (AttributeModifier modifier : new ArrayList<>(instance.getModifiers())) {
+            if (modifier.getKey().equals(key)) {
+                instance.removeModifier(modifier);
+            }
+        }
+    }
+
+    private NamespacedKey attributeKey(String effectId, Attribute attribute) {
+        return new NamespacedKey(this.plugin, "attr_" + effectId + "_"
+                + attribute.getKey().getKey());
     }
 
     /** Normaliza el tipo del yml; lo que no se reconoce se trata como positivo. */
@@ -257,7 +333,14 @@ public final class EffectService {
 
     /** Quita los efectos caducados y devuelve los ids que se han ido. */
     public List<String> expire(LivingEntity player) {
-        return this.expire(player.getUniqueId());
+        List<String> gone = this.expire(player.getUniqueId());
+        for (String id : gone) {
+            EffectSpec spec = this.effects.get(id);
+            if (spec != null) {
+                this.removeAttributes(player, spec);
+            }
+        }
+        return gone;
     }
 
     /** Quita los efectos caducados de un uuid (vale para jugadores y para mobs). */

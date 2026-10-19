@@ -81,6 +81,7 @@ siendo objetivos especiales de mob.
 | `block-radius` | radio del area de `block_below` (0-5; 0 = solo el bloque de abajo) | `0` |
 | `block-depth` | profundidad de `block_below` (1-5) | `1` |
 | `break-blocks` | si `explosion` rompe terreno | `false` |
+| `distance` | distancia para `teleport_behind`/`backstep` (0.5-5) | `1.0` |
 | `message` | texto con `&` | — |
 | `potion` | `poison`, `speed`, `weakness`… | — |
 | `summon` | la definicion que invoca (SUMMON), tal como su `id` | — |
@@ -288,6 +289,8 @@ skills:
 | `block_below` | convierte los bloques bajo el objetivo en `block` |
 | `explosion` | explosion al lado del objetivo; `amount` es la potencia (1-10) y `break-blocks` decide si rompe terreno |
 | `repair_all` | repara todos los objetos con durabilidad del inventario/equipo del objetivo; respeta `reparar: false` |
+| `teleport_behind` | teletransporta al lanzador detrás del objetivo, mirándolo; `distance` son bloques |
+| `backstep` | retrocede al lanzador y lo deja mirando al punto de origen; `distance` son bloques |
 | `message` | manda un texto a los jugadores en rango |
 | `potion` | aplica `potion` durante `potion-duration-seconds`, a nivel `potion-amplifier` |
 | `summon` | invoca copias de otra definicion alrededor del mob |
@@ -352,6 +355,28 @@ amount: 5
 
 Las skills con `mode: item` solo las dispara el uso de un objeto; el planificador de mobs
 las ignora aunque un mob las referencie.
+
+### Teletransporte detrás
+
+```yaml
+- id: emboscada
+  effect: teleport_behind
+  target-type: LOOK
+  target: ENEMIES
+  distance: 1.0
+  range: 20
+```
+
+```yaml
+- id: escapar
+  effect: backstep
+  target-type: RADIUS
+  target: SELF
+  distance: 8
+```
+
+Busca un punto libre detrás del objetivo y deja al lanzador mirándolo. Con
+`teleports.respect-protections: true` consulta las protecciones; por defecto es `false`.
 
 ## Detalles que importan
 

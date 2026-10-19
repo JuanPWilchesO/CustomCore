@@ -1,6 +1,9 @@
 package com.juanp.custommobs.effect;
 
+import org.bukkit.attribute.Attribute;
+
 import java.util.List;
+import java.util.Map;
 
 /**
  * Un efecto reutilizable: se define en {@code effects.yml} y sirve para una pocion, una skill
@@ -15,7 +18,9 @@ import java.util.List;
  *                    quitar_positivos o quitar_negativos
  * @param vanilla     efectos de Minecraft que aplica ademas, como "SLOW_FALL" o "SPEED:2"
  * @param type        positivo, negativo o neutro: lo usan las mecanicas de purga
+ * @param attributes  atributos que modifica (mecanica 'atributos'); vacio en el resto
  */
 public record EffectSpec(String id, String name, String description, int duration,
-                         double power, String mechanic, List<String> vanilla, String type) {
+                         double power, String mechanic, List<String> vanilla, String type,
+                         Map<Attribute, Double> attributes) {
 }

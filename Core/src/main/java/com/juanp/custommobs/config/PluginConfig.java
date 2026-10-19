@@ -49,6 +49,7 @@ import java.util.Map;
  * @param spawnGlobalCap      tope de mobs naturales vivos a la vez
  * @param itemFactionAllies   si un objeto de faccion vale tambien para sus aliados
  * @param itemIgnoreCancelledUse procesar el 'usar:' aunque otro plugin cancele el clic
+ * @param teleportRespectProtections si las skills de teletransporte respetan protecciones
  */
 public record PluginConfig(
         boolean debug,
@@ -87,7 +88,8 @@ public record PluginConfig(
         boolean playerPvpAnyWorld,
         boolean factionGlowAnyWorld,
         boolean itemFactionAllies,
-        boolean itemIgnoreCancelledUse
+        boolean itemIgnoreCancelledUse,
+        boolean teleportRespectProtections
 ) {
 
     public static PluginConfig load(FileConfiguration cfg) {
@@ -140,7 +142,9 @@ public record PluginConfig(
                 // Por defecto, la faccion exacta: un aliado NO hereda el objeto.
                 cfg.getBoolean("items.faction-allies", false),
                 // Por defecto se procesa el uso aunque otro plugin cancele el clic.
-                cfg.getBoolean("items.ignore-cancelled-use", true)
+                cfg.getBoolean("items.ignore-cancelled-use", true),
+                // Por defecto el plugin no consulta protecciones al teletransportar.
+                cfg.getBoolean("teleports.respect-protections", false)
         );
     }
 

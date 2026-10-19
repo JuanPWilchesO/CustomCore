@@ -19,6 +19,10 @@ public enum SkillEffect {
     EXPLOSION,
     /** Repara todos los objetos con durabilidad del inventario/equipo del objetivo. */
     REPAIR_ALL,
+    /** Teletransporta al lanzador detras del objetivo, mirandolo. */
+    TELEPORT_BEHIND,
+    /** Retrocede al lanzador mirando al punto de origen. */
+    BACKSTEP,
     /** El mob habla: el texto va a los jugadores dentro del radio. */
     MESSAGE,
     /** Aplica un efecto de pocion a cada objetivo. */
@@ -45,6 +49,10 @@ public enum SkillEffect {
                  "cristal", "crystal" -> EXPLOSION;
             case "repair-all", "repair_all", "repair", "reparar",
                  "reparar-todo", "reparar_todo" -> REPAIR_ALL;
+            case "teleport-behind", "teleport_behind", "detras", "detrás",
+                 "emboscada", "behind" -> TELEPORT_BEHIND;
+            case "backstep", "back-step", "back_step", "retroceso",
+                 "escapar", "escape" -> BACKSTEP;
             default -> {
                 try {
                     yield valueOf(raw.toUpperCase(Locale.ROOT).trim());

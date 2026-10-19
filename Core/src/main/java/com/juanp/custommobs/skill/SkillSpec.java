@@ -29,6 +29,7 @@ package com.juanp.custommobs.skill;
  * @param blockRadius           radio en bloques de BLOCK_BELOW (0 = solo el de abajo)
  * @param blockDepth            profundidad hacia abajo de BLOCK_BELOW
  * @param breakBlocks           si EXPLOSION rompe bloques
+ * @param distance              distancia detras del objetivo para TELEPORT_BEHIND
  */
 public record SkillSpec(
         String id,
@@ -51,7 +52,8 @@ public record SkillSpec(
         org.bukkit.Material block,
         int blockRadius,
         int blockDepth,
-        boolean breakBlocks
+        boolean breakBlocks,
+        double distance
 ) {
 
     public boolean hasMessage() {

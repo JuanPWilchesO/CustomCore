@@ -60,6 +60,11 @@ targeting:
 
 # El huevo NO se consume: es la ficha del mob, sirve para recogerlo y re-colocarlo.
 
+teleports:
+  # Si true, las skills de teletransporte consultan protecciones/claims antes de mover.
+  # Por defecto false: el plugin no hace su propia comprobacion.
+  respect-protections: false
+
 skills:
   # Cada cuantos ticks se evaluan las skills de cada mob (20 ticks = 1 segundo).
   interval-ticks: 20

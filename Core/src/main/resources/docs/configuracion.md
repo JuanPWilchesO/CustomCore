@@ -88,6 +88,7 @@ book:
 | `permissions.bypass` | permiso para saltarse las restricciones de objetos y pociones |
 | `items.faction-allies` | si un objeto/pocion de faccion vale tambien para sus aliados (por defecto `false`) |
 | `items.ignore-cancelled-use` | procesar el `usar:` aunque otro plugin cancele el clic (por defecto `true`) |
+| `teleports.respect-protections` | consultar protecciones/claims en las skills de teletransporte (por defecto `false`) |
 | `limits.default-player-mobs` | cupo de mobs anclados al dueno, sin grupo mapeado |
 | `limits.default-point-mobs` | cupo de mobs anclados a un bloque, sin grupo mapeado |
 | `limits.groups` | cupo por grupo de LuckPerms (anclados al dueno) |

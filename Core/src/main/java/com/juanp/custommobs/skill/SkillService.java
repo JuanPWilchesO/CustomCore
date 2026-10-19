@@ -6,6 +6,7 @@ import com.juanp.custommobs.mob.MobService;
 import org.bukkit.FluidCollisionMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
+
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.util.RayTraceResult;
@@ -19,6 +20,9 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
+import org.bukkit.event.entity.EntityTeleportEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
+import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
 import org.bukkit.inventory.EntityEquipment;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
@@ -227,6 +231,12 @@ public final class SkillService extends BukkitRunnable {
             case BLOCK_BELOW -> this.blockBelow(target, skill);
             case EXPLOSION -> this.explosion(target, skill, customMob.entity());
             case REPAIR_ALL -> this.repairAll(target);
+            case TELEPORT_BEHIND -> this.teleportBehind(customMob.entity(), target, skill);
+            case BACKSTEP -> {
+                if (target.getUniqueId().equals(customMob.entity().getUniqueId())) {
+                    this.backstep(customMob.entity(), skill);
+                }
+            }
             case POTION -> this.potion(target, skill);
             case CONSOLE_COMMAND -> this.consoleCommand(customMob, skill,
                     target instanceof Player player ? player : this.onlineOwner(customMob));
@@ -328,6 +338,95 @@ public final class SkillService extends BukkitRunnable {
         }
         float power = (float) Math.max(1.0D, Math.min(10.0D, skill.amount()));
         target.getWorld().createExplosion(location, power, false, skill.breakBlocks(), source);
+    }
+
+    /**
+     * Coloca al lanzador detras del objetivo y lo orienta hacia el. Busca un punto
+     * seguro y, si la config lo pide, consulta las protecciones.
+     */
+    private void teleportBehind(Entity caster, LivingEntity target, SkillSpec skill) {
+        Location destination = this.safeBehind(target, skill.distance());
+        if (destination == null) {
+            return;
+        }
+        double eye = caster instanceof Player ? 1.62D : caster.getHeight() * 0.5D;
+        Vector look = target.getEyeLocation().toVector()
+                .subtract(destination.clone().add(0, eye, 0).toVector());
+        destination.setDirection(look);
+        this.teleport(caster, destination);
+    }
+
+    /** Retrocede al lanzador y lo deja mirando al punto de origen. */
+    private void backstep(Entity caster, SkillSpec skill) {
+        Vector facing = caster.getLocation().getDirection().setY(0);
+        if (facing.lengthSquared() < 0.001D) {
+            facing = new Vector(0, 0, 1);
+        }
+        facing.normalize();
+        Location base = caster.getLocation().subtract(facing.multiply(
+                Math.max(0.5D, Math.min(5.0D, skill.distance()))));
+        Location destination = this.safeSpot(base);
+        if (destination == null) {
+            return;
+        }
+        double eye = caster instanceof Player ? 1.62D : caster.getHeight() * 0.5D;
+        Location origin = caster.getLocation().clone().add(0, eye, 0);
+        destination.setDirection(origin.toVector()
+                .subtract(destination.clone().add(0, eye, 0).toVector()));
+        this.teleport(caster, destination);
+    }
+
+    /** Aplica protecciones si la config lo pide y teletransporta. */
+    private void teleport(Entity caster, Location destination) {
+        if (this.service.plugin().config().teleportRespectProtections()) {
+            if (caster instanceof Player player) {
+                PlayerTeleportEvent event = new PlayerTeleportEvent(player,
+                        player.getLocation(), destination, TeleportCause.PLUGIN);
+                this.service.plugin().getServer().getPluginManager().callEvent(event);
+                if (event.isCancelled()) {
+                    return;
+                }
+            } else {
+                EntityTeleportEvent event = new EntityTeleportEvent(caster,
+                        caster.getLocation(), destination);
+                this.service.plugin().getServer().getPluginManager().callEvent(event);
+                if (event.isCancelled()) {
+                    return;
+                }
+            }
+        }
+        caster.teleport(destination);
+    }
+
+    /** Punto libre detras del objetivo, o {@code null} si no hay sitio. */
+    private Location safeBehind(LivingEntity target, double distance) {
+        Vector facing = target.getLocation().getDirection().setY(0);
+        if (facing.lengthSquared() < 0.001D) {
+            facing = new Vector(0, 0, 1);
+        }
+        facing.normalize();
+        Location base = target.getLocation().subtract(facing.multiply(
+                Math.max(0.5D, Math.min(5.0D, distance))));
+        return this.safeSpot(base);
+    }
+
+    /** Busca dos bloques libres con suelo solido a partir de una base. */
+    private Location safeSpot(Location base) {
+        World world = base.getWorld();
+        for (int dy = 0; dy <= 3; dy++) {
+            Location candidate = base.clone().add(0, dy, 0);
+            if (candidate.getY() <= world.getMinHeight() + 1
+                    || candidate.getY() >= world.getMaxHeight() - 1) {
+                continue;
+            }
+            Block feet = candidate.getBlock();
+            Block head = feet.getRelative(BlockFace.UP);
+            Block below = feet.getRelative(BlockFace.DOWN);
+            if (feet.isPassable() && head.isPassable() && below.getType().isSolid()) {
+                return candidate;
+            }
+        }
+        return null;
     }
 
     /**
@@ -751,6 +850,12 @@ public final class SkillService extends BukkitRunnable {
                 case BLOCK_BELOW -> this.blockBelow(target, skill);
                 case EXPLOSION -> this.explosion(target, skill, caster);
                 case REPAIR_ALL -> this.repairAll(target);
+                case TELEPORT_BEHIND -> this.teleportBehind(caster, target, skill);
+                case BACKSTEP -> {
+                    if (target.getUniqueId().equals(caster.getUniqueId())) {
+                        this.backstep(caster, skill);
+                    }
+                }
                 case POTION -> this.potion(target, skill);
                 default -> {
                 }

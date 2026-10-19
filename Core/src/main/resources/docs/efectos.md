@@ -14,6 +14,8 @@ de mob o el uso de un objeto del catálogo.
 | `paso_helado` | Congelas el agua bajo tus pies y por delante. Se descongela a los 5 s. |
 | `quitar_positivos` | Quita todos los efectos positivos, del plugin y de Minecraft. |
 | `quitar_negativos` | Quita todos los efectos negativos, del plugin y de Minecraft. |
+| `invulnerabilidad` | No recibe ningún daño mientras dure. |
+| `furia` | Aplica modificadores temporales de atributos (ejemplo). |
 
 En el juego: `/customcore effects list` y `/customcore effects info <id>`.
 
@@ -109,6 +111,27 @@ No son efectos de `effects.yml`: son efectos de skill que se aplican al objetivo
 
 `ignite` pone fuego; `freeze` pone freeze ticks y Lentitud II. El daño depende de la
 inmunidad del mob, el agua/lluvia y las protecciones del servidor.
+
+## Atributos temporales (`mecanica: atributos`)
+
+```yaml
+furia:
+  nombre: 'Furia'
+  duracion: 10
+  mecanica: atributos
+  tipo: positivo
+  atributos:
+    attack_damage: 4
+    attack_speed: 0.5
+    armor: 2
+    movement_speed: 0.02
+```
+
+Se aplican como `AttributeModifier` de tipo `ADD_NUMBER` y se retiran al expirar. Si el
+efecto se vuelve a lanzar, **se renueva**: se quita el modificador anterior y se vuelve a
+poner con la misma clave, sin acumular. Atributos admitidos: `max_health`,
+`attack_damage`, `attack_speed`, `movement_speed`, `armor`, `armor_toughness`,
+`knockback_resistance`, `attack_knockback`, `max_absorption` y `safe_fall_distance`.
 
 ## Aviso
 

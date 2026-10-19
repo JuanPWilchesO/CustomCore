@@ -8,6 +8,13 @@ Pensado para **Paper**. Se apoya en tres plugins opcionales: **Teams** (bandos d
 jugadores), **LibsDisguises** (apariencias) y **LuckPerms** (grupos y cupos). Sin
 cualquiera de ellos el plugin sigue funcionando: cada uno degrada por su cuenta.
 
+## Novedades 0.6.2
+
+- **Invulnerabilidad** temporal que cancela todo el daño.
+- **Atributos temporales** de combate, renovables.
+- **`teleport_behind`** con protecciones configurables (por defecto no las consulta).
+- **`backstep`**: retroceso mirando al punto de origen.
+
 ## Novedades 0.6.1
 
 - **Objetos protegidos**: claves `modificable`, `encantar-libros`, `encantar-mesa`,

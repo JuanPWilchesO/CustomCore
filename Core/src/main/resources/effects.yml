@@ -71,3 +71,22 @@ quitar_negativos:
   duracion: 1
   mecanica: quitar_negativos
   tipo: neutro
+
+invulnerabilidad:
+  nombre: 'Manto de invulnerabilidad'
+  descripcion: 'No recibes dano mientras dure el efecto.'
+  duracion: 5
+  mecanica: invulnerabilidad
+  tipo: positivo
+
+furia:
+  nombre: 'Furia'
+  descripcion: 'Aumenta atributos de combate mientras dure.'
+  duracion: 10
+  mecanica: atributos
+  tipo: positivo
+  atributos:
+    attack_damage: 4
+    attack_speed: 0.5
+    armor: 2
+    movement_speed: 0.02

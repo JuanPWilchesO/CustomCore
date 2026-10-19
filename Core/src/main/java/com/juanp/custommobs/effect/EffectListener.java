@@ -340,6 +340,15 @@ public final class EffectListener implements Listener {
         }
     }
 
+    /** Invulnerabilidad: cancela todo el dano mientras el efecto este activo. */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onInvulnerable(EntityDamageEvent event) {
+        if (event.getEntity() instanceof LivingEntity living
+                && this.service.hasMechanic(living, "invulnerabilidad")) {
+            event.setCancelled(true);
+        }
+    }
+
     /** Robo de vida: te curas un % del dano que haces. Vale para jugadores y para mobs. */
     @EventHandler(ignoreCancelled = true)
     public void onHit(EntityDamageByEntityEvent event) {

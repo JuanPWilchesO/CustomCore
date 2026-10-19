@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.6.2 — invulnerabilidad, atributos y teleport
+
+- **Invulnerabilidad**: mecanica de efecto que cancela todo el dano mientras dure.
+- **Atributos temporales**: mecanica `atributos` con `AttributeModifier`; lista de
+  atributos de combate permitidos y renovacion al relanzar, sin acumular.
+- **`teleport_behind`**: teletransporta al lanzador detras del objetivo y lo orienta
+  hacia el. `distance` configura los bloques; `teleports.respect-protections`
+  (por defecto `false`) decide si consulta protecciones.
+- **`backstep`**: retrocede al lanzador y lo deja mirando al punto de origen.
+- La jaula (mecanica 5) queda cancelada por ahora.
+
 ## 0.6.1 — proteccion de objetos y mecanicas de terreno
 
 - **Modificaciones de objetos**: claves `modificable`, `encantar-libros`,
