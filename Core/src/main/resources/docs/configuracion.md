@@ -241,8 +241,11 @@ cc:
   diminishing: [1.0, 0.5, 0.25, 0.0]
   immunity-seconds: 1
   stun-message: '&8Estas aturdido.'
+  root-message: '&8Estas atrapado.'
+  silence-message: '&8Estas silenciado.'
+  disarm-message: '&8Estas desarmado.'
   immune-message: '&8Eres inmune a ese control.'
-  end-message: '&8Te liberas del aturdimiento.'
+  end-message: '&8Te liberas del control.'
   cleanse-message: '&8Te liberas y ganas inmunidad.'
 ```
 

@@ -19,22 +19,20 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Control de masas para PvP: aturdimiento, retorno decreciente e inmunidad.
+ * Control de masas para PvP: aturdimiento, raiz, silencio y desarme.
  *
- * <p>No se toca el movimiento por paquetes ni se teletransporta: se ponen a cero
- * {@code MOVEMENT_SPEED} y {@code JUMP_STRENGTH} del jugador. El cliente respeta los
- * atributos, asi que el anticheat no ve teletransportes raros. Para mobs se apaga la IA.
+ * <p>Cada control es independiente: se guardan por tipo y conviven. El movimiento solo se
+ * bloquea si hay un aturdimiento o una raiz activos. No se teletransporta ni se tocan
+ * paquetes: se ponen a cero {@code MOVEMENT_SPEED} y {@code JUMP_STRENGTH}; el cliente
+ * respeta los atributos, asi que el anticheat no ve nada raro. A los mobs se les apaga la IA.
  *
- * <p>La duracion y el cooldown salen del yml de la skill; la ventana de DR y la inmunidad
- * salen de {@code config.yml}.
+ * <p>La duracion y el cooldown salen del yml de la skill; la ventana de DR, la inmunidad y
+ * los mensajes salen de {@code config.yml}.
  */
 public final class CcService {
 
-    private record Active(String type, long endsAt) {
-    }
-
     private final CustomMobsPlugin plugin;
-    private final Map<UUID, Active> active = new ConcurrentHashMap<>();
+    private final Map<UUID, Map<String, Long>> active = new ConcurrentHashMap<>();
     private final Map<UUID, Map<String, Deque<Long>>> history = new ConcurrentHashMap<>();
     private final Map<UUID, Long> immuneUntil = new ConcurrentHashMap<>();
     private final Map<UUID, Double> savedSpeed = new ConcurrentHashMap<>();
@@ -46,20 +44,56 @@ public final class CcService {
         this.plugin = plugin;
     }
 
-    /** {@code true} si el jugador o mob sigue aturdido. */
     public boolean stunned(UUID id) {
-        Active current = this.active.get(id);
-        return current != null && current.endsAt() > System.currentTimeMillis();
+        return this.has(id, "stun");
+    }
+
+    public boolean rooted(UUID id) {
+        return this.has(id, "root");
+    }
+
+    public boolean silenced(UUID id) {
+        return this.has(id, "silence");
+    }
+
+    public boolean disarmed(UUID id) {
+        return this.has(id, "disarm");
+    }
+
+    public boolean has(UUID id, String type) {
+        Map<String, Long> types = this.active.get(id);
+        if (types == null) {
+            return false;
+        }
+        Long ends = types.get(type);
+        return ends != null && ends > System.currentTimeMillis();
+    }
+
+    public boolean stun(LivingEntity target, double seconds, LivingEntity source) {
+        return this.apply(target, "stun", seconds);
+    }
+
+    public boolean root(LivingEntity target, double seconds, LivingEntity source) {
+        return this.apply(target, "root", seconds);
+    }
+
+    public boolean silence(LivingEntity target, double seconds, LivingEntity source) {
+        return this.apply(target, "silence", seconds);
+    }
+
+    public boolean disarm(LivingEntity target, double seconds, LivingEntity source) {
+        return this.apply(target, "disarm", seconds);
     }
 
     /**
-     * Aplica aturdimiento.
+     * Aplica un control.
      *
+     * @param type    {@code stun}, {@code root}, {@code silence} o {@code disarm}
      * @param seconds duracion base; el DR puede recortarla
      * @return {@code false} si la inmunidad o el DR lo bloquearon
      */
-    public boolean stun(LivingEntity target, double seconds, LivingEntity source) {
-        if (target == null || seconds <= 0.0D) {
+    public boolean apply(LivingEntity target, String type, double seconds) {
+        if (target == null || type == null || seconds <= 0.0D) {
             return false;
         }
         long now = System.currentTimeMillis();
@@ -68,37 +102,40 @@ public final class CcService {
             this.notice(target, this.plugin.config().ccImmuneMessage());
             return false;
         }
-        double factor = this.diminishing("stun", id, now);
+        double factor = this.diminishing(type, id, now);
         if (factor <= 0.0D) {
             this.notice(target, this.plugin.config().ccImmuneMessage());
             return false;
         }
         long ends = now + (long) Math.ceil(seconds * factor * 1000.0D);
-        Active previous = this.active.put(id, new Active("stun", ends));
-        if (previous == null) {
+        Map<String, Long> types = this.active.computeIfAbsent(id,
+                key -> new ConcurrentHashMap<>());
+        boolean wasLocked = this.movementLocked(types);
+        types.merge(type, ends, Math::max);
+        if (!wasLocked && this.moves(type)) {
             this.lock(target);
         }
         target.getWorld().playSound(target.getLocation(), Sound.BLOCK_ANVIL_LAND, 0.5F, 1.4F);
         target.getWorld().spawnParticle(Particle.CRIT,
                 target.getLocation().add(0.0D, 1.0D, 0.0D), 20, 0.3D, 0.5D, 0.3D, 0.05D);
-        this.notice(target, this.plugin.config().ccStunMessage());
+        this.notice(target, this.messageFor(type));
         this.ensureTask();
         return true;
     }
 
     /**
-     * Rompe el control y da inmunidad.
+     * Rompe todos los controles y da inmunidad.
      *
      * @param immunitySeconds segundos de inmunidad; 0 para ninguna
-     * @return {@code true} si habia un control activo
+     * @return {@code true} si habia algun control activo
      */
     public boolean cleanse(LivingEntity target, double immunitySeconds) {
         if (target == null) {
             return false;
         }
         UUID id = target.getUniqueId();
-        Active current = this.active.remove(id);
-        if (current != null) {
+        Map<String, Long> types = this.active.remove(id);
+        if (types != null && !types.isEmpty()) {
             this.unlock(target);
         }
         if (immunitySeconds > 0.0D) {
@@ -106,10 +143,10 @@ public final class CcService {
                     + (long) Math.ceil(immunitySeconds * 1000.0D));
         }
         this.notice(target, this.plugin.config().ccCleanseMessage());
-        return current != null;
+        return types != null && !types.isEmpty();
     }
 
-    /** Suelta el control sin dar inmunidad; se usa al salir, morir o desactivar. */
+    /** Suelta todos los controles sin dar inmunidad; al salir, morir o desactivar. */
     public void release(LivingEntity target) {
         if (target == null) {
             return;
@@ -134,23 +171,32 @@ public final class CcService {
 
     private void tick() {
         long now = System.currentTimeMillis();
-        for (Map.Entry<UUID, Active> entry : this.active.entrySet()) {
-            if (entry.getValue().endsAt() > now) {
-                continue;
-            }
-            this.active.remove(entry.getKey());
+        for (Map.Entry<UUID, Map<String, Long>> entry : this.active.entrySet()) {
+            Map<String, Long> types = entry.getValue();
+            boolean wasLocked = this.movementLocked(types);
+            types.entrySet().removeIf(e -> e.getValue() <= now);
+            boolean locked = this.movementLocked(types);
             var entity = Bukkit.getEntity(entry.getKey());
-            if (entity instanceof LivingEntity living) {
+            if (wasLocked && !locked && entity instanceof LivingEntity living) {
                 this.unlock(living);
-                int immunity = this.plugin.config().ccImmunitySeconds();
-                if (immunity > 0) {
-                    this.immuneUntil.put(entry.getKey(), now + immunity * 1000L);
+            }
+            if (types.isEmpty()) {
+                this.active.remove(entry.getKey());
+                if (entity instanceof LivingEntity living) {
+                    int immunity = this.plugin.config().ccImmunitySeconds();
+                    if (immunity > 0) {
+                        this.immuneUntil.put(entry.getKey(), now + immunity * 1000L);
+                    }
+                    this.notice(living, this.plugin.config().ccEndMessage());
                 }
-                this.notice(living, this.plugin.config().ccEndMessage());
             }
         }
+        this.pruneHistory(now);
+    }
+
+    private void pruneHistory(long now) {
+        long window = Math.max(1, this.plugin.config().ccWindowSeconds()) * 1000L;
         this.history.entrySet().removeIf(entry -> {
-            long window = this.plugin.config().ccWindowSeconds() * 1000L;
             entry.getValue().values().forEach(times -> {
                 synchronized (times) {
                     while (!times.isEmpty() && times.peekFirst() < now - window) {
@@ -160,6 +206,15 @@ public final class CcService {
             });
             return entry.getValue().values().stream().allMatch(Deque::isEmpty);
         });
+    }
+
+    private boolean movementLocked(Map<String, Long> types) {
+        long now = System.currentTimeMillis();
+        return types.getOrDefault("stun", 0L) > now || types.getOrDefault("root", 0L) > now;
+    }
+
+    private boolean moves(String type) {
+        return "stun".equals(type) || "root".equals(type);
     }
 
     private double diminishing(String type, UUID id, long now) {
@@ -223,6 +278,15 @@ public final class CcService {
                 mob.setAI(ai);
             }
         }
+    }
+
+    private String messageFor(String type) {
+        return switch (type) {
+            case "root" -> this.plugin.config().ccRootMessage();
+            case "silence" -> this.plugin.config().ccSilenceMessage();
+            case "disarm" -> this.plugin.config().ccDisarmMessage();
+            default -> this.plugin.config().ccStunMessage();
+        };
     }
 
     private void notice(LivingEntity target, String message) {

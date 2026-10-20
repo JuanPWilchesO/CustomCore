@@ -96,6 +96,9 @@ public record PluginConfig(
         List<Double> ccMultipliers,
         int ccImmunitySeconds,
         String ccStunMessage,
+        String ccRootMessage,
+        String ccSilenceMessage,
+        String ccDisarmMessage,
         String ccImmuneMessage,
         String ccEndMessage,
         String ccCleanseMessage
@@ -123,8 +126,11 @@ public record PluginConfig(
         }
         int ccImmunity = Math.max(0, cfg.getInt("cc.immunity-seconds", 1));
         String ccStun = cfg.getString("cc.stun-message", "&8Estas aturdido.");
+        String ccRoot = cfg.getString("cc.root-message", "&8Estas atrapado.");
+        String ccSilence = cfg.getString("cc.silence-message", "&8Estas silenciado.");
+        String ccDisarm = cfg.getString("cc.disarm-message", "&8Estas desarmado.");
         String ccImmune = cfg.getString("cc.immune-message", "&8Eres inmune a ese control.");
-        String ccEnd = cfg.getString("cc.end-message", "&8Te liberas del aturdimiento.");
+        String ccEnd = cfg.getString("cc.end-message", "&8Te liberas del control.");
         String ccCleanse = cfg.getString("cc.cleanse-message",
                 "&8Te liberas y ganas inmunidad.");
 
@@ -177,6 +183,9 @@ public record PluginConfig(
                 List.copyOf(ccMultipliers),
                 ccImmunity,
                 ccStun,
+                ccRoot,
+                ccSilence,
+                ccDisarm,
                 ccImmune,
                 ccEnd,
                 ccCleanse

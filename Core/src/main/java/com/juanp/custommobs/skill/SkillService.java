@@ -240,6 +240,9 @@ public final class SkillService extends BukkitRunnable {
             }
             case POTION -> this.potion(customMob.entity(), target, skill);
             case STUN -> this.cc().stun(target, skill.amount(), customMob.entity());
+            case ROOT -> this.cc().root(target, skill.amount(), customMob.entity());
+            case SILENCE -> this.cc().silence(target, skill.amount(), customMob.entity());
+            case DISARM -> this.cc().disarm(target, skill.amount(), customMob.entity());
             case CLEANSE_CC -> this.cc().cleanse(target, skill.amount());
             case CONSOLE_COMMAND -> this.consoleCommand(customMob, skill,
                     target instanceof Player player ? player : this.onlineOwner(customMob));
@@ -884,6 +887,9 @@ public final class SkillService extends BukkitRunnable {
             }
             case POTION -> this.potion(caster, target, skill);
             case STUN -> this.cc().stun(target, skill.amount(), caster);
+            case ROOT -> this.cc().root(target, skill.amount(), caster);
+            case SILENCE -> this.cc().silence(target, skill.amount(), caster);
+            case DISARM -> this.cc().disarm(target, skill.amount(), caster);
             case CLEANSE_CC -> this.cc().cleanse(target, skill.amount());
             default -> {
             }

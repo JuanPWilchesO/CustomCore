@@ -380,6 +380,9 @@ skills:
 | `chain` | una conversacion por pasos, a base de clics (**solo interaccion**) |
 | `stun` | aturde: no se mueve, no ataca y no usa items; `amount` son segundos |
 | `cleanse_cc` | rompe un control activo y da inmunidad; `amount` son segundos de inmunidad |
+| `root` | raiz: no se mueve, pero ataca y usa items; `amount` son segundos |
+| `silence` | silencio: no usa items ni dispara; se mueve y pelea; `amount` son segundos |
+| `disarm` | desarme: no ataca ni dispara; se mueve y usa items; `amount` son segundos |
 
 ## Control de masas (PvP)
 
@@ -406,6 +409,17 @@ El trinket rompe el control y da inmunidad; `amount` son los segundos de inmunid
   amount: 1
   cooldown-seconds: 120
 ```
+
+Que bloquea cada uno:
+
+| Control | Mover | Atacar | Items | Disparar |
+|---|---|---|---|---|
+| `stun` | no | no | no | no |
+| `root` | no | si | si | si |
+| `silence` | si | si | no | no |
+| `disarm` | si | no | si | no |
+
+Cada control lleva su propio retorno decreciente; la inmunidad es global por jugador.
 
 Retorno decreciente: el primer control dura el 100 %, el segundo el 50 %, el tercero el
 25 % y el cuarto deja inmune, dentro de la ventana configurada. En `config.yml`:

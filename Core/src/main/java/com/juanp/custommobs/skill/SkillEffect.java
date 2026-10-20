@@ -37,6 +37,12 @@ public enum SkillEffect {
     CHAIN,
     /** Aturde: no se mueve, no ataca y no usa items. {@code amount} son segundos. */
     STUN,
+    /** Raiz: no se mueve, pero ataca y usa items. {@code amount} son segundos. */
+    ROOT,
+    /** Silencio: no usa items ni dispara; se mueve y pelea. {@code amount} son segundos. */
+    SILENCE,
+    /** Desarme: no ataca ni dispara; se mueve y usa items. {@code amount} son segundos. */
+    DISARM,
     /** Rompe un control activo y da inmunidad. {@code amount} son segundos de inmunidad. */
     CLEANSE_CC;
 
@@ -61,6 +67,9 @@ public enum SkillEffect {
                  "paralisis", "parálisis", "paralizar" -> STUN;
             case "cleanse-cc", "cleanse_cc", "rompe-cc", "rompe_cc",
                  "limpiar-cc", "limpiar_cc", "trinket" -> CLEANSE_CC;
+            case "root", "raiz", "raíz", "enraizar", "atrapado" -> ROOT;
+            case "silence", "silencio", "silenciar", "mudo" -> SILENCE;
+            case "disarm", "desarmar", "desarme" -> DISARM;
             default -> {
                 try {
                     yield valueOf(raw.toUpperCase(Locale.ROOT).trim());
