@@ -89,25 +89,44 @@ public final class ProjectileListener implements Listener {
             player.sendMessage(Texts.color("&c" + denied));
             return true;
         }
-        if (this.arrows.count(player, name) <= 0) {
+        boolean infinity = event.getBow() != null
+                && event.getBow().getEnchantmentLevel(org.bukkit.enchantments.Enchantment.INFINITY) > 0;
+        // El servidor gasta la municion ANTES de este evento, dentro de 'draw'. Los flags
+        // de consumo llegan tarde: se mira que flecha se gasto y se compensa.
+        ItemStack consumed = infinity ? null : event.getConsumable();
+        var effects = this.plugin.effectListener();
+        String consumedName = consumed == null || effects == null
+                ? null : effects.catalogName(consumed);
+        boolean tookSelected = name.equals(consumedName);
+        int available = this.arrows.count(player, name) + (tookSelected ? 1 : 0);
+        if (available <= 0) {
             event.setCancelled(true);
+            this.refund(player, consumed);
             player.sendMessage(Texts.color("&8No te quedan flechas de &f"
                     + this.arrows.displayName(name) + "&8."));
             return true;
         }
-        // Vanilla gastaria una flecha cualquiera: se corta el consumo y se gasta la
-        // elegida. Los dos flags existen por compatibilidad; hay que apagar los dos o
-        // el juego sigue gastando una flecha normal por su cuenta.
-        boolean infinity = event.getBow() != null
-                && event.getBow().getEnchantmentLevel(org.bukkit.enchantments.Enchantment.INFINITY) > 0;
-        if (!infinity) {
-            event.setConsumeArrow(false);
-            event.setConsumeItem(false);
+        if (!infinity && !tookSelected) {
+            // Se devuelve la que gasto el juego (normal u otro tipo) y se gasta la elegida.
+            this.refund(player, consumed);
             this.arrows.consume(player, name);
         }
         this.service.arm(projectile, player, name,
                 this.impactSkills(catalog.useOf(name).orElse(null)));
         return true;
+    }
+
+    /** Devuelve una unidad de la flecha que el servidor gasto antes del evento. */
+    private void refund(Player player, ItemStack item) {
+        if (item == null || item.getType().isAir()) {
+            return;
+        }
+        ItemStack back = item.clone();
+        back.setAmount(1);
+        var leftovers = player.getInventory().addItem(back);
+        for (ItemStack left : leftovers.values()) {
+            player.getWorld().dropItemNaturally(player.getLocation(), left);
+        }
     }
 
     /** Bola de nieve, huevo y tridente: el objeto puede seguir en la mano o no. */
