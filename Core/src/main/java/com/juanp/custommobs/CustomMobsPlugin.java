@@ -276,7 +276,7 @@ public final class CustomMobsPlugin extends JavaPlugin {
         this.getServer().getScheduler().runTaskTimer(this, this.effectListener::tick, 1L, 1L);
         // Skills al impactar: se arman al disparar y se resuelven al tocar.
         pluginManager.registerEvents(new ProjectileListener(this, this.projectileService), this);
-        pluginManager.registerEvents(new CcListener(this.cc), this);
+        pluginManager.registerEvents(new CcListener(this.cc, this.dropService.catalog()), this);
         this.getServer().getScheduler().runTaskTimer(this, this.projectileService::tick, 20L, 20L);
 
         PluginCommand command = this.getCommand("customcore");

@@ -202,6 +202,26 @@ se gasta otro tipo por accidente. Con `Infinity` no se consume ninguna.
 La flecha cargada manda sobre las skills del arco. Las del arco solo aplican cuando no hay
 ninguna cargada.
 
+### Objetos usables bajo control
+
+Un objeto con `stun-free: true` se puede usar aunque estes aturdido o silenciado. Es lo
+que hace posible un trinket que rompa el control:
+
+```yaml
+# items/trinket_pvp.yml
+material: NETHER_STAR
+clase: cazador
+stun-free: true
+usar:
+  skills: [rompe_control]
+  cooldown: 120
+```
+
+La marca viaja en el NBT del objeto. Si el objeto ya estaba repartido antes de anadir la
+clave, hay que volver a crearlo con `/customcore item give`: el NBT viejo no la lleva.
+
+No permite atacar ni disparar; solo usar ese objeto.
+
 ### Modificaciones del objeto
 
 Un objeto puede impedir que lo modifiquen. En su yml:

@@ -399,6 +399,9 @@ segundos, recortados por el retorno decreciente.
   cooldown-seconds: 20
 ```
 
+El trinket necesita `stun-free: true` en su yml; si no, el aturdimiento bloquea el
+clic derecho y no se puede usar. Ver `drops-y-objetos.md`.
+
 El trinket rompe el control y da inmunidad; `amount` son los segundos de inmunidad:
 
 ```yaml

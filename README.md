@@ -8,6 +8,11 @@ Pensado para **Paper**. Se apoya en tres plugins opcionales: **Teams** (bandos d
 jugadores), **LibsDisguises** (apariencias) y **LuckPerms** (grupos y cupos). Sin
 cualquiera de ellos el plugin sigue funcionando: cada uno degrada por su cuenta.
 
+## Novedades 0.9.2
+
+- **`stun-free: true`** en el yml de un objeto: se puede usar durante un aturdimiento o
+  silencio. Es lo que permite que el trinket rompa el control.
+
 ## Novedades 0.9.1
 
 - **Raiz, silencio y desarme** junto al aturdimiento, con el mismo retorno decreciente e

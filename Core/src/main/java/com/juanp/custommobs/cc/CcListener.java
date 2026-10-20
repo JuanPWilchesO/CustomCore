@@ -1,5 +1,6 @@
 package com.juanp.custommobs.cc;
 
+import com.juanp.custommobs.drop.ItemCatalog;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -11,6 +12,7 @@ import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemConsumeEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.inventory.ItemStack;
 
 /**
  * Lo que cada control bloquea:
@@ -25,9 +27,16 @@ import org.bukkit.event.player.PlayerQuitEvent;
 public final class CcListener implements Listener {
 
     private final CcService cc;
+    private final ItemCatalog catalog;
 
-    public CcListener(CcService cc) {
+    public CcListener(CcService cc, ItemCatalog catalog) {
         this.cc = cc;
+        this.catalog = catalog;
+    }
+
+    /** Objetos marcados con 'stun-free: true' se pueden usar bajo control. */
+    private boolean free(ItemStack item) {
+        return this.catalog != null && this.catalog.stunFree(item);
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -44,7 +53,7 @@ public final class CcListener implements Listener {
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = false)
     public void onInteract(PlayerInteractEvent event) {
         var id = event.getPlayer().getUniqueId();
-        if (this.cc.stunned(id) || this.cc.silenced(id)) {
+        if ((this.cc.stunned(id) || this.cc.silenced(id)) && !this.free(event.getItem())) {
             event.setCancelled(true);
         }
     }
@@ -52,7 +61,8 @@ public final class CcListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onInteractEntity(PlayerInteractEntityEvent event) {
         var id = event.getPlayer().getUniqueId();
-        if (this.cc.stunned(id) || this.cc.silenced(id)) {
+        ItemStack item = event.getPlayer().getInventory().getItem(event.getHand());
+        if ((this.cc.stunned(id) || this.cc.silenced(id)) && !this.free(item)) {
             event.setCancelled(true);
         }
     }
@@ -60,7 +70,7 @@ public final class CcListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onConsume(PlayerItemConsumeEvent event) {
         var id = event.getPlayer().getUniqueId();
-        if (this.cc.stunned(id) || this.cc.silenced(id)) {
+        if ((this.cc.stunned(id) || this.cc.silenced(id)) && !this.free(event.getItem())) {
             event.setCancelled(true);
         }
     }

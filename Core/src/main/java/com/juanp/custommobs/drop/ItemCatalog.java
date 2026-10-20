@@ -36,6 +36,7 @@ public final class ItemCatalog {
     private final NamespacedKey classKey;
     private final NamespacedKey nameKey;
     private final NamespacedKey modificationKey;
+    private final NamespacedKey stunFreeKey;
 
     /** Claves de modificacion. Falta = permitido; false = prohibido. */
     public static final List<String> MOD_KEYS = List.of(
@@ -49,6 +50,7 @@ public final class ItemCatalog {
         this.classKey = new NamespacedKey(plugin, "item_clase");
         this.nameKey = new NamespacedKey(plugin, "item_catalogo");
         this.modificationKey = new NamespacedKey(plugin, "item_mod");
+        this.stunFreeKey = new NamespacedKey(plugin, "item_stun_free");
     }
 
     /**
@@ -143,6 +145,13 @@ public final class ItemCatalog {
                 } else {
                     meta.getPersistentDataContainer().set(this.modificationKey,
                             PersistentDataType.STRING, String.join(",", denied));
+                }
+                // Marca que viaja con el objeto: se puede usar durante un control.
+                if (yaml.getBoolean("stun-free", yaml.getBoolean("stun_free", false))) {
+                    meta.getPersistentDataContainer().set(this.stunFreeKey,
+                            PersistentDataType.BYTE, (byte) 1);
+                } else {
+                    meta.getPersistentDataContainer().remove(this.stunFreeKey);
                 }
                 item.setItemMeta(meta);
             }
@@ -372,6 +381,16 @@ public final class ItemCatalog {
         }
         java.util.Set<String> denied = deniedModifications(item);
         return denied.contains("modificable") || denied.contains(normalized);
+    }
+
+    /** {@code true} si el objeto se puede usar durante un aturdimiento o silencio. */
+    public boolean stunFree(ItemStack item) {
+        if (item == null || !item.hasItemMeta()) {
+            return false;
+        }
+        Byte flag = item.getItemMeta().getPersistentDataContainer()
+                .get(this.stunFreeKey, PersistentDataType.BYTE);
+        return flag != null && flag == (byte) 1;
     }
 
     /**
