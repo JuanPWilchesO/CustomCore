@@ -47,7 +47,7 @@ public final class ProjectileListener implements Listener {
     }
 
     /** Arco y ballesta: la municion manda; si no lleva skills, las pone el arma. */
-    @EventHandler(ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onShootBow(EntityShootBowEvent event) {
         if (!(event.getEntity() instanceof Player player)
                 || !(event.getProjectile() instanceof Projectile projectile)) {
@@ -79,16 +79,29 @@ public final class ProjectileListener implements Listener {
             player.sendMessage(Texts.color("&8La flecha cargada ya no existe; se descargo."));
             return false;
         }
+        // La restriccion de clase o faccion se comprueba tambien al disparar: el jugador
+        // pudo cambiar de clase despues de cargar.
+        var lock = this.plugin.itemLock();
+        String denied = lock == null ? null : lock.requirement(player, template);
+        if (denied != null) {
+            event.setCancelled(true);
+            this.arrows.clear(player);
+            player.sendMessage(Texts.color("&c" + denied));
+            return true;
+        }
         if (this.arrows.count(player, name) <= 0) {
             event.setCancelled(true);
             player.sendMessage(Texts.color("&8No te quedan flechas de &f"
                     + this.arrows.displayName(name) + "&8."));
             return true;
         }
-        // Vanilla gastaria una flecha cualquiera: se cancela y se gasta la elegida.
+        // Vanilla gastaria una flecha cualquiera: se corta el consumo y se gasta la
+        // elegida. Los dos flags existen por compatibilidad; hay que apagar los dos o
+        // el juego sigue gastando una flecha normal por su cuenta.
         boolean infinity = event.getBow() != null
                 && event.getBow().getEnchantmentLevel(org.bukkit.enchantments.Enchantment.INFINITY) > 0;
         if (!infinity) {
+            event.setConsumeArrow(false);
             event.setConsumeItem(false);
             this.arrows.consume(player, name);
         }
@@ -135,6 +148,12 @@ public final class ProjectileListener implements Listener {
         }
         if (isArrow(item)) {
             // Clic derecho con una flecha del plugin: se carga en el arco.
+            var lock = this.plugin.itemLock();
+            String denied = lock == null ? null : lock.requirement(player, item);
+            if (denied != null) {
+                player.sendMessage(Texts.color("&c" + denied));
+                return;
+            }
             this.arrows.load(player, name);
             player.sendMessage(Texts.color("&8Flecha cargada: &f"
                     + this.arrows.displayName(name) + " &8(&f"
