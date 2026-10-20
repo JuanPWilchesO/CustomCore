@@ -237,8 +237,6 @@ color que elija su dueno o su team (`/cm color`, `/cm glow`), y los de **servido
 
 ```yaml
 cc:
-  diminishing-window-seconds: 15
-  diminishing: [1.0, 0.5, 0.25, 0.0]
   immunity-seconds: 1
   stun-message: '&8Estas aturdido.'
   root-message: '&8Estas atrapado.'
@@ -249,9 +247,7 @@ cc:
   cleanse-message: '&8Te liberas y ganas inmunidad.'
 ```
 
-- `diminishing-window-seconds`: ventana para contar controles seguidos.
-- `diminishing`: multiplicadores por orden; `0.0` deja inmune.
-- `immunity-seconds`: inmunidad al salir de un control.
+- `immunity-seconds`: inmunidad al salir de un control. `0` la desactiva.
 
 La duracion de cada aturdimiento y su cooldown van en el yml de la skill (`amount` y
 `cooldown-seconds`), no aqui.

@@ -92,13 +92,9 @@ permissions:
   bypass: customcore.bypass
 
 # Control de masas (PvP). La duracion y el cooldown de cada skill salen de su yml;
-# aqui solo viven el retorno decreciente y la inmunidad.
+# aqui solo vive la inmunidad.
 cc:
-  # Ventana, en segundos, para contar los controles seguidos de la misma categoria.
-  diminishing-window-seconds: 15
-  # Multiplicadores por orden: 1er control, 2do, 3ro, 4to... El 0.0 deja inmune.
-  diminishing: [1.0, 0.5, 0.25, 0.0]
-  # Inmunidad al salir de un control, en segundos.
+  # Inmunidad al salir de un control, en segundos. 0 la desactiva.
   immunity-seconds: 1
   stun-message: '&8Estas aturdido.'
   root-message: '&8Estas atrapado.'

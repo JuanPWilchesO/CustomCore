@@ -12,8 +12,6 @@ import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 
-import java.util.ArrayDeque;
-import java.util.Deque;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -33,7 +31,6 @@ public final class CcService {
 
     private final CustomMobsPlugin plugin;
     private final Map<UUID, Map<String, Long>> active = new ConcurrentHashMap<>();
-    private final Map<UUID, Map<String, Deque<Long>>> history = new ConcurrentHashMap<>();
     private final Map<UUID, Long> immuneUntil = new ConcurrentHashMap<>();
     private final Map<UUID, Double> savedSpeed = new ConcurrentHashMap<>();
     private final Map<UUID, Double> savedJump = new ConcurrentHashMap<>();
@@ -102,12 +99,8 @@ public final class CcService {
             this.notice(target, this.plugin.config().ccImmuneMessage());
             return false;
         }
-        double factor = this.diminishing(type, id, now);
-        if (factor <= 0.0D) {
-            this.notice(target, this.plugin.config().ccImmuneMessage());
-            return false;
-        }
-        long ends = now + (long) Math.ceil(seconds * factor * 1000.0D);
+        // Sin retorno decreciente: cada control dura exactamente lo que diga el yml.
+        long ends = now + (long) Math.ceil(seconds * 1000.0D);
         Map<String, Long> types = this.active.computeIfAbsent(id,
                 key -> new ConcurrentHashMap<>());
         // El estado real es si los atributos estan guardados, no si el tiempo aun corre:
@@ -198,21 +191,6 @@ public final class CcService {
                 }
             }
         }
-        this.pruneHistory(now);
-    }
-
-    private void pruneHistory(long now) {
-        long window = Math.max(1, this.plugin.config().ccWindowSeconds()) * 1000L;
-        this.history.entrySet().removeIf(entry -> {
-            entry.getValue().values().forEach(times -> {
-                synchronized (times) {
-                    while (!times.isEmpty() && times.peekFirst() < now - window) {
-                        times.pollFirst();
-                    }
-                }
-            });
-            return entry.getValue().values().stream().allMatch(Deque::isEmpty);
-        });
     }
 
     private boolean movementLocked(Map<String, Long> types) {
@@ -222,25 +200,6 @@ public final class CcService {
 
     private boolean moves(String type) {
         return "stun".equals(type) || "root".equals(type);
-    }
-
-    private double diminishing(String type, UUID id, long now) {
-        long window = Math.max(1, this.plugin.config().ccWindowSeconds()) * 1000L;
-        Map<String, Deque<Long>> byType = this.history.computeIfAbsent(id,
-                key -> new ConcurrentHashMap<>());
-        Deque<Long> times = byType.computeIfAbsent(type, key -> new ArrayDeque<>());
-        synchronized (times) {
-            while (!times.isEmpty() && times.peekFirst() < now - window) {
-                times.pollFirst();
-            }
-            var multipliers = this.plugin.config().ccMultipliers();
-            int index = Math.min(times.size(), Math.max(0, multipliers.size() - 1));
-            double factor = multipliers.isEmpty() ? 1.0D : multipliers.get(index);
-            if (factor > 0.0D) {
-                times.addLast(now);
-            }
-            return factor;
-        }
     }
 
     private boolean locked(UUID id) {

@@ -92,8 +92,6 @@ public record PluginConfig(
         boolean itemIgnoreCancelledUse,
         boolean teleportRespectProtections,
         String arrowClass,
-        int ccWindowSeconds,
-        List<Double> ccMultipliers,
         int ccImmunitySeconds,
         String ccStunMessage,
         String ccRootMessage,
@@ -119,11 +117,6 @@ public record PluginConfig(
         }
         arrowClass = arrowClass.trim().toLowerCase(java.util.Locale.ROOT);
 
-        int ccWindow = Math.max(1, cfg.getInt("cc.diminishing-window-seconds", 15));
-        List<Double> ccMultipliers = new ArrayList<>(cfg.getDoubleList("cc.diminishing"));
-        if (ccMultipliers.isEmpty()) {
-            ccMultipliers = List.of(1.0D, 0.5D, 0.25D, 0.0D);
-        }
         int ccImmunity = Math.max(0, cfg.getInt("cc.immunity-seconds", 1));
         String ccStun = cfg.getString("cc.stun-message", "&8Estas aturdido.");
         String ccRoot = cfg.getString("cc.root-message", "&8Estas atrapado.");
@@ -179,8 +172,6 @@ public record PluginConfig(
                 // Por defecto el plugin no consulta protecciones al teletransportar.
                 cfg.getBoolean("teleports.respect-protections", false),
                 arrowClass,
-                ccWindow,
-                List.copyOf(ccMultipliers),
                 ccImmunity,
                 ccStun,
                 ccRoot,

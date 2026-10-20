@@ -8,6 +8,13 @@ Pensado para **Paper**. Se apoya en tres plugins opcionales: **Teams** (bandos d
 jugadores), **LibsDisguises** (apariencias) y **LuckPerms** (grupos y cupos). Sin
 cualquiera de ellos el plugin sigue funcionando: cada uno degrada por su cuenta.
 
+## Novedades 0.9.5
+
+- **Sin retorno decreciente**: cada control dura exactamente `amount`. El equilibrio se
+  ajusta por skill con `amount` y `cooldown-seconds`; la inmunidad sigue en `config.yml`.
+- Correcciones: 0.9.3 arregla el bloqueo que quedaba tras expirar un control; 0.9.4
+  bloquea tambien los objetos custom durante aturdimiento o silencio.
+
 ## Novedades 0.9.2
 
 - **`stun-free: true`** en el yml de un objeto: se puede usar durante un aturdimiento o

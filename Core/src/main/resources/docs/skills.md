@@ -387,7 +387,7 @@ skills:
 ## Control de masas (PvP)
 
 `stun` es un aturdimiento completo: no se mueve, no ataca y no usa items. `amount` son
-segundos, recortados por el retorno decreciente.
+segundos.
 
 ```yaml
 - id: golpe_paralizante
@@ -422,15 +422,12 @@ Que bloquea cada uno:
 | `silence` | si | si | no | no |
 | `disarm` | si | no | si | no |
 
-Cada control lleva su propio retorno decreciente; la inmunidad es global por jugador.
-
-Retorno decreciente: el primer control dura el 100 %, el segundo el 50 %, el tercero el
-25 % y el cuarto deja inmune, dentro de la ventana configurada. En `config.yml`:
+Cada control dura exactamente lo que diga `amount`; el equilibrio se ajusta por skill con
+`amount` y `cooldown-seconds`. La inmunidad al salir es global por jugador y se configura
+en `config.yml`:
 
 ```yaml
 cc:
-  diminishing-window-seconds: 15
-  diminishing: [1.0, 0.5, 0.25, 0.0]
   immunity-seconds: 1
 ```
 
