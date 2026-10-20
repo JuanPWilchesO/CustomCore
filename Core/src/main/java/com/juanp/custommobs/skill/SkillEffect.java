@@ -43,6 +43,8 @@ public enum SkillEffect {
     SILENCE,
     /** Desarme: no ataca ni dispara; se mueve y usa items. {@code amount} son segundos. */
     DISARM,
+    /** Escudo: inmune a controles. {@code amount} son segundos; 0 usa el valor del config. */
+    CC_IMMUNE,
     /** Rompe un control activo y da inmunidad. {@code amount} son segundos de inmunidad. */
     CLEANSE_CC;
 
@@ -70,6 +72,8 @@ public enum SkillEffect {
             case "root", "raiz", "raíz", "enraizar", "atrapado" -> ROOT;
             case "silence", "silencio", "silenciar", "mudo" -> SILENCE;
             case "disarm", "desarmar", "desarme" -> DISARM;
+            case "cc-immune", "cc_immune", "inmunidad-cc", "inmunidad_cc",
+                 "escudo-cc", "escudo_cc", "shield", "escudo" -> CC_IMMUNE;
             default -> {
                 try {
                     yield valueOf(raw.toUpperCase(Locale.ROOT).trim());

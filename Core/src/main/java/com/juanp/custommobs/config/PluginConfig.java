@@ -93,6 +93,8 @@ public record PluginConfig(
         boolean teleportRespectProtections,
         String arrowClass,
         int ccImmunitySeconds,
+        int ccShieldSeconds,
+        String ccShieldMessage,
         String ccStunMessage,
         String ccRootMessage,
         String ccSilenceMessage,
@@ -118,6 +120,9 @@ public record PluginConfig(
         arrowClass = arrowClass.trim().toLowerCase(java.util.Locale.ROOT);
 
         int ccImmunity = Math.max(0, cfg.getInt("cc.immunity-seconds", 1));
+        int ccShield = Math.max(0, cfg.getInt("cc.shield-seconds", 8));
+        String ccShieldMessage = cfg.getString("cc.shield-message",
+                "&8Estas protegido contra controles.");
         String ccStun = cfg.getString("cc.stun-message", "&8Estas aturdido.");
         String ccRoot = cfg.getString("cc.root-message", "&8Estas atrapado.");
         String ccSilence = cfg.getString("cc.silence-message", "&8Estas silenciado.");
@@ -173,6 +178,8 @@ public record PluginConfig(
                 cfg.getBoolean("teleports.respect-protections", false),
                 arrowClass,
                 ccImmunity,
+                ccShield,
+                ccShieldMessage,
                 ccStun,
                 ccRoot,
                 ccSilence,

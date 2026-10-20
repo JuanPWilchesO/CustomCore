@@ -238,6 +238,8 @@ color que elija su dueno o su team (`/cm color`, `/cm glow`), y los de **servido
 ```yaml
 cc:
   immunity-seconds: 1
+  shield-seconds: 8
+  shield-message: '&8Estas protegido contra controles.'
   stun-message: '&8Estas aturdido.'
   root-message: '&8Estas atrapado.'
   silence-message: '&8Estas silenciado.'
@@ -248,6 +250,8 @@ cc:
 ```
 
 - `immunity-seconds`: inmunidad al salir de un control. `0` la desactiva.
+- `shield-seconds`: duracion por defecto del escudo `cc_immune`; la skill puede pisarla
+  con `amount`.
 
 La duracion de cada aturdimiento y su cooldown van en el yml de la skill (`amount` y
 `cooldown-seconds`), no aqui.

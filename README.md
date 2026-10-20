@@ -8,6 +8,11 @@ Pensado para **Paper**. Se apoya en tres plugins opcionales: **Teams** (bandos d
 jugadores), **LibsDisguises** (apariencias) y **LuckPerms** (grupos y cupos). Sin
 cualquiera de ellos el plugin sigue funcionando: cada uno degrada por su cuenta.
 
+## Novedades 0.9.6
+
+- **Escudo de inmunidad a CC** (`effect: cc_immune`): no limpia el control activo, solo
+  impide que te apliquen uno nuevo mientras dure. Duracion por skill o `cc.shield-seconds`.
+
 ## Novedades 0.9.5
 
 - **Sin retorno decreciente**: cada control dura exactamente `amount`. El equilibrio se

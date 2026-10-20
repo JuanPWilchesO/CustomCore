@@ -119,6 +119,30 @@ public final class CcService {
     }
 
     /**
+     * Escudo de inmunidad a controles. No limpia lo que ya tengas encima: solo impide
+     * que te apliquen controles nuevos mientras dure.
+     *
+     * @param seconds duracion; si es 0 se usa {@code cc.shield-seconds} del config
+     * @return {@code false} si no se pudo aplicar
+     */
+    public boolean shield(LivingEntity target, double seconds) {
+        if (target == null) {
+            return false;
+        }
+        double duration = seconds > 0.0D ? seconds : this.plugin.config().ccShieldSeconds();
+        if (duration <= 0.0D) {
+            return false;
+        }
+        long until = System.currentTimeMillis() + (long) Math.ceil(duration * 1000.0D);
+        this.immuneUntil.merge(target.getUniqueId(), until, Math::max);
+        target.getWorld().playSound(target.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 0.5F, 1.6F);
+        target.getWorld().spawnParticle(Particle.END_ROD,
+                target.getLocation().add(0.0D, 1.0D, 0.0D), 24, 0.4D, 0.6D, 0.4D, 0.02D);
+        this.notice(target, this.plugin.config().ccShieldMessage());
+        return true;
+    }
+
+    /**
      * Rompe todos los controles y da inmunidad.
      *
      * @param immunitySeconds segundos de inmunidad; 0 para ninguna

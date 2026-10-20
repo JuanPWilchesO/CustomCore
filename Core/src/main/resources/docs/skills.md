@@ -383,6 +383,7 @@ skills:
 | `root` | raiz: no se mueve, pero ataca y usa items; `amount` son segundos |
 | `silence` | silencio: no usa items ni dispara; se mueve y pelea; `amount` son segundos |
 | `disarm` | desarme: no ataca ni dispara; se mueve y usa items; `amount` son segundos |
+| `cc_immune` | escudo: inmune a controles; `amount` son segundos (0 = config) |
 
 ## Control de masas (PvP)
 
@@ -430,6 +431,10 @@ en `config.yml`:
 cc:
   immunity-seconds: 1
 ```
+
+`cc_immune` es un **escudo**: no limpia el control que ya tengas encima, solo impide que te
+apliquen uno nuevo mientras dure. `amount` son segundos; si lo dejas en `0`, usa
+`cc.shield-seconds` del config. Para limpiar y quedar inmune, usa `cleanse_cc`.
 
 No se teletransporta ni se cancelan paquetes: se ponen a cero los atributos de velocidad y
 salto del jugador, y se cancelan ataques, items y disparos. Es compatible con GrimAC.
