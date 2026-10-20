@@ -95,6 +95,7 @@ public record PluginConfig(
         int ccImmunitySeconds,
         int ccShieldSeconds,
         String ccShieldMessage,
+        String ccBreakMessage,
         String ccStunMessage,
         String ccRootMessage,
         String ccSilenceMessage,
@@ -123,6 +124,8 @@ public record PluginConfig(
         int ccShield = Math.max(0, cfg.getInt("cc.shield-seconds", 8));
         String ccShieldMessage = cfg.getString("cc.shield-message",
                 "&8Estas protegido contra controles.");
+        String ccBreakMessage = cfg.getString("cc.break-message",
+                "&8El golpe rompe el control.");
         String ccStun = cfg.getString("cc.stun-message", "&8Estas aturdido.");
         String ccRoot = cfg.getString("cc.root-message", "&8Estas atrapado.");
         String ccSilence = cfg.getString("cc.silence-message", "&8Estas silenciado.");
@@ -180,6 +183,7 @@ public record PluginConfig(
                 ccImmunity,
                 ccShield,
                 ccShieldMessage,
+                ccBreakMessage,
                 ccStun,
                 ccRoot,
                 ccSilence,

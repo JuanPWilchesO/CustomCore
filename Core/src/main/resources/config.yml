@@ -99,6 +99,7 @@ cc:
   # Duracion por defecto del escudo de inmunidad a CC; la skill puede pisarla con 'amount'.
   shield-seconds: 8
   shield-message: '&8Estas protegido contra controles.'
+  break-message: '&8El golpe rompe el control.'
   stun-message: '&8Estas aturdido.'
   root-message: '&8Estas atrapado.'
   silence-message: '&8Estas silenciado.'

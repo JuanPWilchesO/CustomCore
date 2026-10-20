@@ -239,10 +239,10 @@ public final class SkillService extends BukkitRunnable {
                 }
             }
             case POTION -> this.potion(customMob.entity(), target, skill);
-            case STUN -> this.cc().stun(target, skill.amount(), customMob.entity());
-            case ROOT -> this.cc().root(target, skill.amount(), customMob.entity());
-            case SILENCE -> this.cc().silence(target, skill.amount(), customMob.entity());
-            case DISARM -> this.cc().disarm(target, skill.amount(), customMob.entity());
+            case STUN -> this.cc().stun(target, skill.amount(), customMob.entity(), skill.cancelOnHit());
+            case ROOT -> this.cc().root(target, skill.amount(), customMob.entity(), skill.cancelOnHit());
+            case SILENCE -> this.cc().silence(target, skill.amount(), customMob.entity(), skill.cancelOnHit());
+            case DISARM -> this.cc().disarm(target, skill.amount(), customMob.entity(), skill.cancelOnHit());
             case CC_IMMUNE -> this.cc().shield(target, skill.amount());
             case CLEANSE_CC -> this.cc().cleanse(target, skill.amount());
             case CONSOLE_COMMAND -> this.consoleCommand(customMob, skill,
@@ -887,10 +887,10 @@ public final class SkillService extends BukkitRunnable {
                 }
             }
             case POTION -> this.potion(caster, target, skill);
-            case STUN -> this.cc().stun(target, skill.amount(), caster);
-            case ROOT -> this.cc().root(target, skill.amount(), caster);
-            case SILENCE -> this.cc().silence(target, skill.amount(), caster);
-            case DISARM -> this.cc().disarm(target, skill.amount(), caster);
+            case STUN -> this.cc().stun(target, skill.amount(), caster, skill.cancelOnHit());
+            case ROOT -> this.cc().root(target, skill.amount(), caster, skill.cancelOnHit());
+            case SILENCE -> this.cc().silence(target, skill.amount(), caster, skill.cancelOnHit());
+            case DISARM -> this.cc().disarm(target, skill.amount(), caster, skill.cancelOnHit());
             case CC_IMMUNE -> this.cc().shield(target, skill.amount());
             case CLEANSE_CC -> this.cc().cleanse(target, skill.amount());
             default -> {

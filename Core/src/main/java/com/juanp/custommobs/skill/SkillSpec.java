@@ -59,7 +59,8 @@ public record SkillSpec(
         double distance,
         String startMessage,
         String endMessage,
-        String cooldownMessage
+        String cooldownMessage,
+        boolean cancelOnHit
 ) {
 
     public boolean hasMessage() {

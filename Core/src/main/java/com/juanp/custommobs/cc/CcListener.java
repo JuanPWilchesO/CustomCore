@@ -1,11 +1,13 @@
 package com.juanp.custommobs.cc;
 
 import com.juanp.custommobs.drop.ItemCatalog;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
@@ -48,6 +50,14 @@ public final class CcListener implements Listener {
         var id = player.getUniqueId();
         if (this.cc.stunned(id) || this.cc.disarmed(id)) {
             event.setCancelled(true);
+        }
+    }
+
+    /** El dano recibido puede romper un control marcado con 'cancel-on-hit'. */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onDamageTaken(EntityDamageEvent event) {
+        if (event.getEntity() instanceof LivingEntity living) {
+            this.cc.onDamage(living);
         }
     }
 

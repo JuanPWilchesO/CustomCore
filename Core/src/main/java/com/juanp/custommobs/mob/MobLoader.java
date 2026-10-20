@@ -531,6 +531,8 @@ public final class MobLoader {
                 || asBoolean(entry.get("romper-bloques"));
         double distance = Math.min(5.0D, Math.max(0.5D,
                 asNumber(entry.get("distance"), 1.0D)));
+        boolean cancelOnHit = asBoolean(entry.get("cancel-on-hit"))
+                || asBoolean(entry.get("cancel_on_hit"));
         return new SkillSpec(
                 id,
                 effect,
@@ -556,7 +558,8 @@ public final class MobLoader {
                 distance,
                 startMessage,
                 endMessage,
-                cooldownMessage
+                cooldownMessage,
+                cancelOnHit
         );
     }
 

@@ -8,6 +8,11 @@ Pensado para **Paper**. Se apoya en tres plugins opcionales: **Teams** (bandos d
 jugadores), **LibsDisguises** (apariencias) y **LuckPerms** (grupos y cupos). Sin
 cualquiera de ellos el plugin sigue funcionando: cada uno degrada por su cuenta.
 
+## Novedades 0.9.7
+
+- **`cancel-on-hit`** en el yml de la skill: el control se rompe cuando el objetivo recibe
+  dano. Por defecto `false`.
+
 ## Novedades 0.9.6
 
 - **Escudo de inmunidad a CC** (`effect: cc_immune`): no limpia el control activo, solo

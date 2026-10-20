@@ -31,6 +31,8 @@ public final class CcService {
 
     private final CustomMobsPlugin plugin;
     private final Map<UUID, Map<String, Long>> active = new ConcurrentHashMap<>();
+    /** Tipo -> si el dano recibido lo rompe. */
+    private final Map<UUID, Map<String, Boolean>> breakOnHit = new ConcurrentHashMap<>();
     private final Map<UUID, Long> immuneUntil = new ConcurrentHashMap<>();
     private final Map<UUID, Double> savedSpeed = new ConcurrentHashMap<>();
     private final Map<UUID, Double> savedJump = new ConcurrentHashMap<>();
@@ -66,20 +68,20 @@ public final class CcService {
         return ends != null && ends > System.currentTimeMillis();
     }
 
-    public boolean stun(LivingEntity target, double seconds, LivingEntity source) {
-        return this.apply(target, "stun", seconds);
+    public boolean stun(LivingEntity target, double seconds, LivingEntity source, boolean cancelOnHit) {
+        return this.apply(target, "stun", seconds, cancelOnHit);
     }
 
-    public boolean root(LivingEntity target, double seconds, LivingEntity source) {
-        return this.apply(target, "root", seconds);
+    public boolean root(LivingEntity target, double seconds, LivingEntity source, boolean cancelOnHit) {
+        return this.apply(target, "root", seconds, cancelOnHit);
     }
 
-    public boolean silence(LivingEntity target, double seconds, LivingEntity source) {
-        return this.apply(target, "silence", seconds);
+    public boolean silence(LivingEntity target, double seconds, LivingEntity source, boolean cancelOnHit) {
+        return this.apply(target, "silence", seconds, cancelOnHit);
     }
 
-    public boolean disarm(LivingEntity target, double seconds, LivingEntity source) {
-        return this.apply(target, "disarm", seconds);
+    public boolean disarm(LivingEntity target, double seconds, LivingEntity source, boolean cancelOnHit) {
+        return this.apply(target, "disarm", seconds, cancelOnHit);
     }
 
     /**
@@ -89,7 +91,7 @@ public final class CcService {
      * @param seconds duracion base; el DR puede recortarla
      * @return {@code false} si la inmunidad o el DR lo bloquearon
      */
-    public boolean apply(LivingEntity target, String type, double seconds) {
+    public boolean apply(LivingEntity target, String type, double seconds, boolean cancelOnHit) {
         if (target == null || type == null || seconds <= 0.0D) {
             return false;
         }
@@ -107,6 +109,15 @@ public final class CcService {
         // si se mira el reloj, un control que expira entre ticks nunca se desbloquea.
         boolean wasLocked = this.locked(id);
         types.merge(type, ends, Math::max);
+        if (cancelOnHit) {
+            this.breakOnHit.computeIfAbsent(id, key -> new ConcurrentHashMap<>())
+                    .put(type, Boolean.TRUE);
+        } else {
+            Map<String, Boolean> flags = this.breakOnHit.get(id);
+            if (flags != null) {
+                flags.remove(type);
+            }
+        }
         if (!wasLocked && this.moves(type)) {
             this.lock(target);
         }
@@ -143,6 +154,40 @@ public final class CcService {
     }
 
     /**
+     * El dano recibido rompe los controles marcados con {@code cancel-on-hit}.
+     * Se llama al recibir dano, no al hacerlo.
+     */
+    public void onDamage(LivingEntity target) {
+        if (target == null) {
+            return;
+        }
+        UUID id = target.getUniqueId();
+        Map<String, Boolean> flags = this.breakOnHit.get(id);
+        Map<String, Long> types = this.active.get(id);
+        if (flags == null || types == null) {
+            return;
+        }
+        boolean broken = false;
+        for (Map.Entry<String, Boolean> entry : flags.entrySet()) {
+            if (Boolean.TRUE.equals(entry.getValue()) && types.remove(entry.getKey()) != null) {
+                broken = true;
+            }
+        }
+        if (!broken) {
+            return;
+        }
+        flags.clear();
+        if (!this.movementLocked(types)) {
+            this.unlock(target);
+        }
+        if (types.isEmpty()) {
+            this.active.remove(id);
+            this.breakOnHit.remove(id);
+        }
+        this.notice(target, this.plugin.config().ccBreakMessage());
+    }
+
+    /**
      * Rompe todos los controles y da inmunidad.
      *
      * @param immunitySeconds segundos de inmunidad; 0 para ninguna
@@ -154,6 +199,7 @@ public final class CcService {
         }
         UUID id = target.getUniqueId();
         Map<String, Long> types = this.active.remove(id);
+        this.breakOnHit.remove(id);
         // Siempre se intenta soltar: puede quedar un bloqueo huerfano aunque el
         // registro ya se hubiera limpiado.
         this.unlock(target);
@@ -172,6 +218,7 @@ public final class CcService {
         }
         UUID id = target.getUniqueId();
         this.active.remove(id);
+        this.breakOnHit.remove(id);
         this.unlock(target);
         this.immuneUntil.remove(id);
     }
@@ -182,6 +229,7 @@ public final class CcService {
             this.release(player);
         }
         this.active.clear();
+        this.breakOnHit.clear();
         this.savedSpeed.clear();
         this.savedJump.clear();
         this.savedAi.clear();
@@ -193,6 +241,10 @@ public final class CcService {
             Map<String, Long> types = entry.getValue();
             boolean wasLocked = this.locked(entry.getKey());
             types.entrySet().removeIf(e -> e.getValue() <= now);
+            Map<String, Boolean> flags = this.breakOnHit.get(entry.getKey());
+            if (flags != null) {
+                flags.keySet().removeIf(type -> !types.containsKey(type));
+            }
             boolean locked = this.movementLocked(types);
             var entity = Bukkit.getEntity(entry.getKey());
             if (wasLocked && !locked && entity instanceof LivingEntity living) {
@@ -206,6 +258,7 @@ public final class CcService {
             }
             if (types.isEmpty()) {
                 this.active.remove(entry.getKey());
+                this.breakOnHit.remove(entry.getKey());
                 if (entity instanceof LivingEntity living) {
                     int immunity = this.plugin.config().ccImmunitySeconds();
                     if (immunity > 0) {

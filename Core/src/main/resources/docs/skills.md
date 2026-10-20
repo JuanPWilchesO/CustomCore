@@ -85,6 +85,7 @@ siendo objetivos especiales de mob.
 | `message` | texto con `&` | — |
 | `inicio` | aviso al lanzar la skill (solo si castea un jugador) | — |
 | `fin` | aviso cuando caduca el efecto del plugin que aplica la skill (solo si castea un jugador) | — |
+| `cancel-on-hit` | si el control se rompe cuando el objetivo recibe dano (solo stun/root/silence/disarm) | `false` |
 | `cooldown-aviso` | aviso del objeto que la lanza al intentar usarlo en espera; admite `{segundos}` | — |
 | `potion` | `poison`, `speed`, `weakness`… | — |
 | `summon` | la definicion que invoca (SUMMON), tal como su `id` | — |
@@ -422,6 +423,10 @@ Que bloquea cada uno:
 | `root` | no | si | si | si |
 | `silence` | si | si | no | no |
 | `disarm` | si | no | si | no |
+
+`cancel-on-hit: true` hace que el control se rompa en cuanto el objetivo recibe dano. Sirve
+para un control de apertura que no debe encadenarse: el primer golpe lo corta. Por defecto
+es `false`.
 
 Cada control dura exactamente lo que diga `amount`; el equilibrio se ajusta por skill con
 `amount` y `cooldown-seconds`. La inmunidad al salir es global por jugador y se configura
