@@ -98,21 +98,29 @@ public final class ProjectileListener implements Listener {
         String consumedName = consumed == null || effects == null
                 ? null : effects.catalogName(consumed);
         boolean tookSelected = name.equals(consumedName);
-        int available = this.arrows.count(player, name) + (tookSelected ? 1 : 0);
-        if (available <= 0) {
-            event.setCancelled(true);
-            this.refund(player, consumed);
-            player.sendMessage(Texts.color("&8No te quedan flechas de &f"
-                    + this.arrows.displayName(name) + "&8."));
-            return true;
-        }
-        if (!infinity && !tookSelected) {
-            // Se devuelve la que gasto el juego (normal u otro tipo) y se gasta la elegida.
-            this.refund(player, consumed);
-            this.arrows.consume(player, name);
+        if (!infinity) {
+            int available = this.arrows.count(player, name) + (tookSelected ? 1 : 0);
+            if (available <= 0) {
+                // Sin flechas de ese tipo: se descarga y el disparo sigue con las normales.
+                this.arrows.clear(player);
+                player.sendMessage(Texts.color("&8Se acabaron las flechas de &f"
+                        + this.arrows.displayName(name) + "&8; sigues con normales."));
+                return true;
+            }
+            if (!tookSelected) {
+                // Se devuelve la que gasto el juego (normal u otro tipo) y se gasta la elegida.
+                this.refund(player, consumed);
+                this.arrows.consume(player, name);
+            }
         }
         this.service.arm(projectile, player, name,
                 this.impactSkills(catalog.useOf(name).orElse(null)));
+        if (!infinity && this.arrows.count(player, name) == 0) {
+            // Se gasto la ultima: la proxima ya sale con normales.
+            this.arrows.clear(player);
+            player.sendMessage(Texts.color("&8Se acabaron las flechas de &f"
+                    + this.arrows.displayName(name) + "&8; sigues con normales."));
+        }
         return true;
     }
 
@@ -156,13 +164,22 @@ public final class ProjectileListener implements Listener {
             return;
         }
         ItemStack item = event.getItem();
-        if (item == null || item.getType().isAir() || this.impactSkills(item).isEmpty()) {
+        if (item == null || item.getType().isAir()) {
             return;
         }
         Player player = event.getPlayer();
         var effects = this.plugin.effectListener();
-        String name = effects == null ? null : effects.catalogName(item);
-        if (name == null) {
+        if (effects == null) {
+            return;
+        }
+        String name = effects.catalogName(item);
+        if (isArrow(item) && name == null) {
+            // Flecha normal: descarga la custom y vuelve a disparar normales.
+            this.arrows.clear(player);
+            player.sendMessage(Texts.color("&8Flecha cargada: &fnormales&8."));
+            return;
+        }
+        if (name == null || this.impactSkills(item).isEmpty()) {
             return;
         }
         if (isArrow(item)) {
