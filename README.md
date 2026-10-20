@@ -8,6 +8,15 @@ Pensado para **Paper**. Se apoya en tres plugins opcionales: **Teams** (bandos d
 jugadores), **LibsDisguises** (apariencias) y **LuckPerms** (grupos y cupos). Sin
 cualquiera de ellos el plugin sigue funcionando: cada uno degrada por su cuenta.
 
+## Novedades 0.9.0
+
+- **Aturdimiento para PvP** (`effect: stun`): no se mueve, no ataca y no usa items.
+  Duracion y cooldown en el yml de la skill.
+- **Retorno decreciente e inmunidad** configurables en `config.yml`, y **trinket**
+  (`effect: cleanse_cc`) que rompe el control y da inmunidad.
+- Sin teletransportes ni paquetes: atributos de velocidad y salto a cero, compatible con
+  GrimAC.
+
 ## Novedades 0.8.0
 
 - **Flechas cargadas**: con una flecha del plugin en la mano, clic derecho la carga en el

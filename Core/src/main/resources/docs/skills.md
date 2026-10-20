@@ -378,6 +378,47 @@ skills:
 | `console_command` | ejecuta un comando desde la consola (**solo interaccion o item**) |
 | `player_command` | el jugador ejecuta un comando (**solo interaccion o item**) |
 | `chain` | una conversacion por pasos, a base de clics (**solo interaccion**) |
+| `stun` | aturde: no se mueve, no ataca y no usa items; `amount` son segundos |
+| `cleanse_cc` | rompe un control activo y da inmunidad; `amount` son segundos de inmunidad |
+
+## Control de masas (PvP)
+
+`stun` es un aturdimiento completo: no se mueve, no ataca y no usa items. `amount` son
+segundos, recortados por el retorno decreciente.
+
+```yaml
+- id: golpe_paralizante
+  mode: activa
+  effect: stun
+  target-type: look
+  target: enemies
+  amount: 1.5
+  cooldown-seconds: 20
+```
+
+El trinket rompe el control y da inmunidad; `amount` son los segundos de inmunidad:
+
+```yaml
+- id: rompe_control
+  mode: item
+  effect: cleanse_cc
+  target: self
+  amount: 1
+  cooldown-seconds: 120
+```
+
+Retorno decreciente: el primer control dura el 100 %, el segundo el 50 %, el tercero el
+25 % y el cuarto deja inmune, dentro de la ventana configurada. En `config.yml`:
+
+```yaml
+cc:
+  diminishing-window-seconds: 15
+  diminishing: [1.0, 0.5, 0.25, 0.0]
+  immunity-seconds: 1
+```
+
+No se teletransporta ni se cancelan paquetes: se ponen a cero los atributos de velocidad y
+salto del jugador, y se cancelan ataques, items y disparos. Es compatible con GrimAC.
 
 ## Objetivos
 

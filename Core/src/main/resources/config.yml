@@ -91,6 +91,20 @@ permissions:
   # Va aparte de 'admin' para poder probar las restricciones sin perder los comandos.
   bypass: customcore.bypass
 
+# Control de masas (PvP). La duracion y el cooldown de cada skill salen de su yml;
+# aqui solo viven el retorno decreciente y la inmunidad.
+cc:
+  # Ventana, en segundos, para contar los controles seguidos de la misma categoria.
+  diminishing-window-seconds: 15
+  # Multiplicadores por orden: 1er control, 2do, 3ro, 4to... El 0.0 deja inmune.
+  diminishing: [1.0, 0.5, 0.25, 0.0]
+  # Inmunidad al salir de un control, en segundos.
+  immunity-seconds: 1
+  stun-message: '&8Estas aturdido.'
+  immune-message: '&8Eres inmune a ese control.'
+  end-message: '&8Te liberas del aturdimiento.'
+  cleanse-message: '&8Te liberas y ganas inmunidad.'
+
 limits:
   # Cupo de mobs anclados al DUENO (anchor: owner) para quien no tenga grupo mapeado.
   # Al alcanzarlo, sus huevos dejan de invocar. 0 = sin limite.

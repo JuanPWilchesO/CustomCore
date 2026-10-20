@@ -34,7 +34,11 @@ public enum SkillEffect {
     /** Hace que el jugador ejecute un comando, como si lo escribiera el. */
     PLAYER_COMMAND,
     /** Cadena de interaccion: una conversacion por pasos, a base de clics. */
-    CHAIN;
+    CHAIN,
+    /** Aturde: no se mueve, no ataca y no usa items. {@code amount} son segundos. */
+    STUN,
+    /** Rompe un control activo y da inmunidad. {@code amount} son segundos de inmunidad. */
+    CLEANSE_CC;
 
     public static SkillEffect parse(String raw) {
         if (raw == null || raw.isBlank()) {
@@ -53,6 +57,10 @@ public enum SkillEffect {
                  "emboscada", "behind" -> TELEPORT_BEHIND;
             case "backstep", "back-step", "back_step", "retroceso",
                  "escapar", "escape" -> BACKSTEP;
+            case "stun", "aturdir", "aturdimiento", "aturde",
+                 "paralisis", "parálisis", "paralizar" -> STUN;
+            case "cleanse-cc", "cleanse_cc", "rompe-cc", "rompe_cc",
+                 "limpiar-cc", "limpiar_cc", "trinket" -> CLEANSE_CC;
             default -> {
                 try {
                     yield valueOf(raw.toUpperCase(Locale.ROOT).trim());

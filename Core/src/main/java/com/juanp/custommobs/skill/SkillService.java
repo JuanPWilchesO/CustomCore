@@ -239,6 +239,8 @@ public final class SkillService extends BukkitRunnable {
                 }
             }
             case POTION -> this.potion(customMob.entity(), target, skill);
+            case STUN -> this.cc().stun(target, skill.amount(), customMob.entity());
+            case CLEANSE_CC -> this.cc().cleanse(target, skill.amount());
             case CONSOLE_COMMAND -> this.consoleCommand(customMob, skill,
                     target instanceof Player player ? player : this.onlineOwner(customMob));
             case PLAYER_COMMAND -> {
@@ -646,6 +648,10 @@ public final class SkillService extends BukkitRunnable {
         return player == null ? text : text.replace("{jugador}", player.getName());
     }
 
+    private com.juanp.custommobs.cc.CcService cc() {
+        return this.service.plugin().cc();
+    }
+
     /** El dueno del mob, si esta conectado; si no, {@code null}. */
     private Player onlineOwner(CustomMob customMob) {
         if (customMob.ownerId() == null) {
@@ -877,6 +883,8 @@ public final class SkillService extends BukkitRunnable {
                 }
             }
             case POTION -> this.potion(caster, target, skill);
+            case STUN -> this.cc().stun(target, skill.amount(), caster);
+            case CLEANSE_CC -> this.cc().cleanse(target, skill.amount());
             default -> {
             }
         }

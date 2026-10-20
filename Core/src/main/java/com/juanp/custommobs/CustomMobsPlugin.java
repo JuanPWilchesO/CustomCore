@@ -48,6 +48,8 @@ import com.juanp.custommobs.recall.RecallService;
 import com.juanp.custommobs.region.RegionGate;
 import com.juanp.custommobs.skill.SkillInteractListener;
 import com.juanp.custommobs.skill.ProjectileListener;
+import com.juanp.custommobs.cc.CcListener;
+import com.juanp.custommobs.cc.CcService;
 import com.juanp.custommobs.skill.ProjectileService;
 import com.juanp.custommobs.skill.SkillCatalog;
 import com.juanp.custommobs.skill.SkillService;
@@ -112,6 +114,7 @@ public final class CustomMobsPlugin extends JavaPlugin {
     private AmbientTask ambientTask;
     private SkillService skillService;
     private ProjectileService projectileService;
+    private CcService cc;
     private com.juanp.custommobs.effect.EffectListener effectListener;
     private TargetingTask targetingTask;
     private RecallService recallService;
@@ -231,6 +234,7 @@ public final class CustomMobsPlugin extends JavaPlugin {
         // Se crea aqui, y no mas abajo, porque el listener del clic derecho lo necesita.
         this.skillService = new SkillService(this.mobService);
         this.projectileService = new ProjectileService(this);
+        this.cc = new CcService(this);
         // La economia, por reflexion: sin EssentialsX los pagos no funcionan y se avisa.
         this.economy = EconomyLink.create(this);
         this.chains = new ChainService(this, this.mobService, this.economy);
@@ -272,6 +276,7 @@ public final class CustomMobsPlugin extends JavaPlugin {
         this.getServer().getScheduler().runTaskTimer(this, this.effectListener::tick, 1L, 1L);
         // Skills al impactar: se arman al disparar y se resuelven al tocar.
         pluginManager.registerEvents(new ProjectileListener(this, this.projectileService), this);
+        pluginManager.registerEvents(new CcListener(this.cc), this);
         this.getServer().getScheduler().runTaskTimer(this, this.projectileService::tick, 20L, 20L);
 
         PluginCommand command = this.getCommand("customcore");
@@ -403,6 +408,9 @@ public final class CustomMobsPlugin extends JavaPlugin {
         if (this.ambientTask != null) {
             this.ambientTask.cancel();
         }
+        if (this.cc != null) {
+            this.cc.releaseAll();
+        }
         if (this.craftService != null) {
             this.craftService.unregisterAll();
         }
@@ -467,6 +475,11 @@ public final class CustomMobsPlugin extends JavaPlugin {
     /** Skills de impacto de los proyectiles. */
     public ProjectileService projectiles() {
         return this.projectileService;
+    }
+
+    /** Control de masas: aturdimiento, retorno decreciente e inmunidad. */
+    public CcService cc() {
+        return this.cc;
     }
 
     /** Uso de items: cooldowns, restricciones y catalogo. */

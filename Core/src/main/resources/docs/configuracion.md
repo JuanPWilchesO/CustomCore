@@ -233,6 +233,26 @@ color que elija su dueno o su team (`/cm color`, `/cm glow`), y los de **servido
 
 **Necesita PacketEvents.** Sin el, el brillo de facciones no funciona.
 
+## Control de masas (`cc`)
+
+```yaml
+cc:
+  diminishing-window-seconds: 15
+  diminishing: [1.0, 0.5, 0.25, 0.0]
+  immunity-seconds: 1
+  stun-message: '&8Estas aturdido.'
+  immune-message: '&8Eres inmune a ese control.'
+  end-message: '&8Te liberas del aturdimiento.'
+  cleanse-message: '&8Te liberas y ganas inmunidad.'
+```
+
+- `diminishing-window-seconds`: ventana para contar controles seguidos.
+- `diminishing`: multiplicadores por orden; `0.0` deja inmune.
+- `immunity-seconds`: inmunidad al salir de un control.
+
+La duracion de cada aturdimiento y su cooldown van en el yml de la skill (`amount` y
+`cooldown-seconds`), no aqui.
+
 ## Coherencia con Teams (`teams`)
 
 ```yaml
