@@ -477,7 +477,7 @@ public final class CustomMobsPlugin extends JavaPlugin {
         return this.projectileService;
     }
 
-    /** Control de masas: aturdimiento, retorno decreciente e inmunidad. */
+    /** Control de masas: aturdimiento, raiz, silencio, desarme, escudo e inmunidad. */
     public CcService cc() {
         return this.cc;
     }

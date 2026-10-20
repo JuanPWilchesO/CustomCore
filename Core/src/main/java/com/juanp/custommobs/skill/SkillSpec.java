@@ -33,6 +33,7 @@ package com.juanp.custommobs.skill;
  * @param startMessage          aviso al lanzar la skill; {@code null} si no hay
  * @param endMessage            aviso cuando caduca el efecto que aplica; {@code null} si no hay
  * @param cooldownMessage       aviso al intentar usarla en espera; admite {@code {segundos}}
+ * @param cancelOnHit           si el control se rompe cuando el objetivo recibe dano
  */
 public record SkillSpec(
         String id,

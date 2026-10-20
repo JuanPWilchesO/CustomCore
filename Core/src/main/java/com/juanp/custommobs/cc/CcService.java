@@ -24,8 +24,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * paquetes: se ponen a cero {@code MOVEMENT_SPEED} y {@code JUMP_STRENGTH}; el cliente
  * respeta los atributos, asi que el anticheat no ve nada raro. A los mobs se les apaga la IA.
  *
- * <p>La duracion y el cooldown salen del yml de la skill; la ventana de DR, la inmunidad y
- * los mensajes salen de {@code config.yml}.
+ * <p>La duracion y el cooldown salen del yml de la skill; la inmunidad, el escudo y los
+ * mensajes salen de {@code config.yml}.
  */
 public final class CcService {
 
