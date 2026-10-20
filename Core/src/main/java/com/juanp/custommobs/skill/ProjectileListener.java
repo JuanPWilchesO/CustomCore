@@ -36,12 +36,14 @@ public final class ProjectileListener implements Listener {
 
     private final CustomMobsPlugin plugin;
     private final ProjectileService service;
+    private final ArrowSelection arrows;
     /** Ultimo objeto con skills de impacto en la mano, por si el lanzamiento ya lo consumio. */
     private final Map<UUID, Hand> recent = new ConcurrentHashMap<>();
 
     public ProjectileListener(CustomMobsPlugin plugin, ProjectileService service) {
         this.plugin = plugin;
         this.service = service;
+        this.arrows = new ArrowSelection(plugin);
     }
 
     /** Arco y ballesta: la municion manda; si no lleva skills, las pone el arma. */
@@ -51,10 +53,48 @@ public final class ProjectileListener implements Listener {
                 || !(event.getProjectile() instanceof Projectile projectile)) {
             return;
         }
+        if (this.shootLoaded(player, event, projectile)) {
+            return;
+        }
         if (this.arm(player, event.getConsumable(), projectile)) {
             return;
         }
         this.arm(player, event.getBow(), projectile);
+    }
+
+    /**
+     * Dispara la flecha que el jugador tiene cargada.
+     *
+     * @return {@code true} si habia una cargada y se gestiono aqui (aunque se cancelara)
+     */
+    private boolean shootLoaded(Player player, EntityShootBowEvent event, Projectile projectile) {
+        String name = this.arrows.selected(player).orElse(null);
+        if (name == null) {
+            return false;
+        }
+        var catalog = this.plugin.drops().catalog();
+        ItemStack template = catalog.get(name).orElse(null);
+        if (template == null) {
+            this.arrows.clear(player);
+            player.sendMessage(Texts.color("&8La flecha cargada ya no existe; se descargo."));
+            return false;
+        }
+        if (this.arrows.count(player, name) <= 0) {
+            event.setCancelled(true);
+            player.sendMessage(Texts.color("&8No te quedan flechas de &f"
+                    + this.arrows.displayName(name) + "&8."));
+            return true;
+        }
+        // Vanilla gastaria una flecha cualquiera: se cancela y se gasta la elegida.
+        boolean infinity = event.getBow() != null
+                && event.getBow().getEnchantmentLevel(org.bukkit.enchantments.Enchantment.INFINITY) > 0;
+        if (!infinity) {
+            event.setConsumeItem(false);
+            this.arrows.consume(player, name);
+        }
+        this.service.arm(projectile, player, name,
+                this.impactSkills(catalog.useOf(name).orElse(null)));
+        return true;
     }
 
     /** Bola de nieve, huevo y tridente: el objeto puede seguir en la mano o no. */
@@ -79,22 +119,38 @@ public final class ProjectileListener implements Listener {
     /** Lo que el jugador tiene en la mano justo antes de lanzar. */
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = false)
     public void onUse(PlayerInteractEvent event) {
-        if (event.getHand() != EquipmentSlot.HAND) {
-            return;
-        }
         if (event.getAction() != org.bukkit.event.block.Action.RIGHT_CLICK_AIR
                 && event.getAction() != org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK) {
             return;
         }
         ItemStack item = event.getItem();
-        if (item == null || item.getType().isAir()) {
+        if (item == null || item.getType().isAir() || this.impactSkills(item).isEmpty()) {
             return;
         }
-        if (this.impactSkills(item).isEmpty()) {
+        Player player = event.getPlayer();
+        var effects = this.plugin.effectListener();
+        String name = effects == null ? null : effects.catalogName(item);
+        if (name == null) {
             return;
         }
-        this.recent.put(event.getPlayer().getUniqueId(),
-                new Hand(item.clone(), System.currentTimeMillis()));
+        if (isArrow(item)) {
+            // Clic derecho con una flecha del plugin: se carga en el arco.
+            this.arrows.load(player, name);
+            player.sendMessage(Texts.color("&8Flecha cargada: &f"
+                    + this.arrows.displayName(name) + " &8(&f"
+                    + this.arrows.count(player, name) + "&8)"));
+            return;
+        }
+        if (event.getHand() != EquipmentSlot.HAND) {
+            return;
+        }
+        this.recent.put(player.getUniqueId(), new Hand(item.clone(), System.currentTimeMillis()));
+    }
+
+    private static boolean isArrow(ItemStack item) {
+        return item.getType() == org.bukkit.Material.ARROW
+                || item.getType() == org.bukkit.Material.SPECTRAL_ARROW
+                || item.getType() == org.bukkit.Material.TIPPED_ARROW;
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -146,14 +202,18 @@ public final class ProjectileListener implements Listener {
 
     /** Skills de impacto que declara el objeto; vacia si no es del catalogo o no tiene. */
     private List<SkillSpec> impactSkills(ItemStack item) {
-        List<SkillSpec> found = new ArrayList<>();
         var effects = this.plugin.effectListener();
-        var catalog = this.plugin.skillCatalog();
-        if (item == null || item.getType().isAir() || effects == null || catalog == null) {
-            return found;
+        if (item == null || item.getType().isAir() || effects == null) {
+            return new ArrayList<>();
         }
-        UseSpec use = effects.useOf(item);
-        if (use == null || !use.hasSkills()) {
+        return this.impactSkills(effects.useOf(item));
+    }
+
+    /** Skills de impacto de un bloque {@code usar:} ya resuelto. */
+    private List<SkillSpec> impactSkills(UseSpec use) {
+        List<SkillSpec> found = new ArrayList<>();
+        var catalog = this.plugin.skillCatalog();
+        if (use == null || !use.hasSkills() || catalog == null) {
             return found;
         }
         for (String id : use.skillIds()) {

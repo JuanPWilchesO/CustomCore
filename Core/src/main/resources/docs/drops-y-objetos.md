@@ -182,6 +182,24 @@ de nieve o el tridente.
 
 Cubiertos: flecha, ballesta, municion, tridente, bola de nieve y huevo.
 
+### Flechas cargadas
+
+Cuando el ranger tiene varias flechas custom no hace falta tenerlas en la mano: el arco
+dispara la que este **cargada**.
+
+1. Con la flecha en la mano, **clic derecho**: queda cargada. El chat confirma
+   `Flecha cargada: Hielo (12)`.
+2. Cambia al arco, con el totem en la otra mano, y dispara. Cada disparo gasta una flecha de
+   ese tipo.
+3. Para cambiar, clic derecho con otra flecha.
+
+La carga es **por jugador**: sirve con cualquier arco y sobrevive a reconexiones y
+reinicios. Si no quedan flechas de ese tipo, el disparo se bloquea y el chat lo avisa; nunca
+se gasta otro tipo por accidente. Con `Infinity` no se consume ninguna.
+
+La flecha cargada manda sobre las skills del arco. Las del arco solo aplican cuando no hay
+ninguna cargada.
+
 ### Modificaciones del objeto
 
 Un objeto puede impedir que lo modifiquen. En su yml:

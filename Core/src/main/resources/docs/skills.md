@@ -205,6 +205,8 @@ Reglas:
 - Proyectiles cubiertos: flecha y ballesta, municion custom, tridente, bola de nieve y huevo.
   Cohete de ballesta, carga de viento, perla de ender y cana de pescar quedan fuera.
 - Multishot: solo la **primera** flecha que impacta ejecuta la skill.
+- Si el jugador tiene una **flecha cargada**, manda esa: sus skills y su consumo. Las
+  skills del arco solo aplican cuando no hay ninguna cargada.
 
 ## Comandos (`console_command`, `player_command`)
 

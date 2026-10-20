@@ -8,6 +8,12 @@ Pensado para **Paper**. Se apoya en tres plugins opcionales: **Teams** (bandos d
 jugadores), **LibsDisguises** (apariencias) y **LuckPerms** (grupos y cupos). Sin
 cualquiera de ellos el plugin sigue funcionando: cada uno degrada por su cuenta.
 
+## Novedades 0.8.0
+
+- **Flechas cargadas**: con una flecha del plugin en la mano, clic derecho la carga en el
+  arco. La carga es por jugador, sirve con cualquier arco y sobrevive a reconexiones. El
+  disparo gasta una unidad de ese tipo y avisa en el chat si se acaban.
+
 ## Novedades 0.7.2
 
 - **Recetas de pociones**: se leian buscando `receta.receta`, asi que quedaban nulas en
