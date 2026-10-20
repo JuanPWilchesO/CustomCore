@@ -164,23 +164,23 @@ proyectil y se resuelve cuando toca. El lanzador sigue siendo el jugador; el ori
 ser el punto de impacto.
 
 ```yaml
-# skills/flecha_cura.yml
-- id: flecha_cura
-  mode: impacto
-  effect: heal
-  target-type: look
-  target: impacto
-  amount: 6
-  cooldown-seconds: 8
+# skills/flecha_cura.yml  -> el id es el nombre del archivo
+mode: impacto
+effect: heal
+target-type: look
+target: impacto
+amount: 6
+cooldown-seconds: 8
+```
 
+```yaml
 # skills/bomba_cura.yml
-- id: bomba_cura
-  mode: impacto
-  effect: heal
-  target-type: radius
-  target: allies
-  range: 4
-  amount: 5
+mode: impacto
+effect: heal
+target-type: radius
+target: allies
+range: 4
+amount: 5
 ```
 
 | `target` | Con `target-type: look` | Con `target-type: radius` |

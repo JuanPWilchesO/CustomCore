@@ -87,14 +87,13 @@ por su id. Para probar sin depender del clic: `/customcore testcast <skill>`.
 Una skill `mode: impacto` no se lanza al usar el objeto: se dispara cuando el proyectil toca.
 
 ```yaml
-# skills/flecha_cura.yml
-- id: flecha_cura
-  mode: impacto
-  effect: heal
-  target-type: look
-  target: impacto
-  amount: 6
-  cooldown-seconds: 8
+# skills/flecha_cura.yml   (el id es el nombre del archivo)
+mode: impacto
+effect: heal
+target-type: look
+target: impacto
+amount: 6
+cooldown-seconds: 8
 ```
 
 ```yaml

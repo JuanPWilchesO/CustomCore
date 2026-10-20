@@ -213,6 +213,11 @@ public final class CustomMobsPlugin extends JavaPlugin {
         this.styleService = new StyleService(this.mobService, styleRegistry);
         this.mobService.attachStyles(this.styleService);
 
+        // Efectos y pociones antes de las recetas: el bloque 'receta:' de potions.yml se
+        // lee del catalogo de pociones. Sin esto se registraba en silencio como inexistente.
+        this.effectService = new com.juanp.custommobs.effect.EffectService(this);
+        this.effectService.reload();
+
         this.craftService = new CraftService(this, this.registry, this.mobService.keys());
         this.craftService.registerAll();
 
@@ -258,9 +263,8 @@ public final class CustomMobsPlugin extends JavaPlugin {
         pluginManager.registerEvents(new SkillInteractListener(this.craftService, this.mobService, this.skillService), this);
         pluginManager.registerEvents(new MobItemListener(this, this.mobService, this.upgradeService, this.book), this);
 
-        // Efectos y pociones: definiciones, mecanicas y la tarea que las mantiene.
-        this.effectService = new com.juanp.custommobs.effect.EffectService(this);
-        this.effectService.reload();
+        // Efectos y pociones: mecanicas y la tarea que las mantiene. El catalogo ya se
+        // cargo antes de registrar las recetas.
         this.effectListener = new com.juanp.custommobs.effect.EffectListener(this, this.effectService);
         pluginManager.registerEvents(this.effectListener, this);
         // Cada tick: la congelacion y el paso helado necesitan ir al dia.
@@ -419,6 +423,10 @@ public final class CustomMobsPlugin extends JavaPlugin {
         }
         this.registry.reload();
         this.factions.reload(this);
+        // Primero efectos y pociones: las recetas de potions.yml salen de ese catalogo.
+        if (this.effectService != null) {
+            this.effectService.reload();
+        }
         this.craftService.registerAll();
         if (this.upgrades != null) {
             this.upgrades.reload();
@@ -426,9 +434,6 @@ public final class CustomMobsPlugin extends JavaPlugin {
         }
         if (this.mobService != null) {
             this.mobService.playerMobs().load();
-        }
-        if (this.effectService != null) {
-            this.effectService.reload();
         }
     }
 
