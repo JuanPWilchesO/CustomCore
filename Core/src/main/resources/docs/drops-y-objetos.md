@@ -228,6 +228,8 @@ drops:
 
 ## Recetas de un objeto del catalogo
 
+Las pociones de `potions.yml` usan **el mismo esquema** de `receta:` que se explica aqui.
+
 Un objeto guardado puede traer su **propia receta**, en el mismo `items/<nombre>.yml`. Un
 ingrediente puede ser **otro objeto guardado** (por su nombre) o un **material** vanilla.
 

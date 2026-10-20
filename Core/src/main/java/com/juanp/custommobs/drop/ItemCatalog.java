@@ -450,7 +450,12 @@ public final class ItemCatalog {
         return parseRecipe(YamlConfiguration.loadConfiguration(file));
     }
 
-    /** Lee un bloque de receta (con {@code forma} o {@code ingredientes}). */
+    /**
+     * Lee un bloque de receta (con {@code forma} o {@code ingredientes}).
+     *
+     * <p>Acepta el archivo entero, que lleva {@code receta:} dentro, o el propio bloque
+     * {@code receta:} ya seleccionado. Las pociones usan la segunda forma.
+     */
     public static Optional<com.juanp.custommobs.item.ItemRecipe> parseRecipe(
             org.bukkit.configuration.ConfigurationSection yaml) {
         // Dos formas de llamada: el archivo entero (con 'receta:' dentro) o el propio

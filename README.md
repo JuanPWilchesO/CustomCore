@@ -8,6 +8,14 @@ Pensado para **Paper**. Se apoya en tres plugins opcionales: **Teams** (bandos d
 jugadores), **LibsDisguises** (apariencias) y **LuckPerms** (grupos y cupos). Sin
 cualquiera de ellos el plugin sigue funcionando: cada uno degrada por su cuenta.
 
+## Novedades 0.7.2
+
+- **Recetas de pociones**: se leian buscando `receta.receta`, asi que quedaban nulas en
+  silencio. Ahora se leen bien, se registran al arrancar y se avisa si una receta no se
+  puede interpretar.
+- Las recetas registradas en caliente se sincronizan con los jugadores conectados, y al
+  entrar se les mandan todas las del plugin.
+
 ## Novedades 0.7.0
 
 - **Skills al impactar** (`mode: impacto`): flechas, ballesta, municion custom, tridente,

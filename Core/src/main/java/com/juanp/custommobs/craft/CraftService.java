@@ -82,6 +82,9 @@ public final class CraftService {
      * <p>Un ingrediente puede ser <b>otro objeto guardado</b> (se compara con su NBT, no
      * solo por material) o un <b>material</b> vanilla. Las recetas con {@code forma} fijan
      * el orden.
+     *
+     * <p>Tambien registra las recetas de {@code potions.yml}, con ese mismo esquema, y las
+     * sincroniza con los jugadores conectados: {@code addRecipe} no avisa a los clientes.
      */
     public void registerItemRecipes() {
         ItemCatalog catalog = this.plugin.drops().catalog();

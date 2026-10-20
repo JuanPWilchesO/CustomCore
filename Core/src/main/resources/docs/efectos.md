@@ -89,7 +89,31 @@ declararlo en las purgas: `quitar_negativos` con `bando: aliados` limpia al grup
 `quitar_positivos` con `bando: enemigos` es un dispel ofensivo.
 
 El efecto se aplica **una vez** al impactar, no en cada tick de la nube: la nube queda como
-entrega visual. Las recetas funcionan igual que en las bebibles.
+entrega visual.
+
+### Receta de una arrojadiza
+
+La receta usa el mismo esquema que los objetos del catálogo, con `forma` o `ingredientes`:
+
+```yaml
+bomba_purga:
+  material: SPLASH_POTION
+  efecto: quitar_negativos
+  bando: aliados
+  receta:
+    forma:
+      - " A "
+      - "ABA"
+      - " A "
+    ingredientes:
+      A: GUNPOWDER
+      B: GLASS_BOTTLE
+    cantidad: 1
+```
+
+Son **4 pólvoras en cruz** y una **botella vacía** al centro. Con una botella de agua no
+coincide. Si la receta no se puede leer, el arranque lo avisa en consola con el id de la
+poción: antes fallaba en silencio.
 
 ## 2. Como skill de un mob
 

@@ -39,6 +39,12 @@ solo la gestion. Veras el aviso `El plugin no funciona en este mundo`.
 **Los ids duplicados de mob se ignoran.**
 Dos mobs con el mismo `id` (o el mismo archivo renombrado) colisionan. El log lo avisa.
 
+**La receta de una poción no aparece.**
+Comprueba la forma: la botella va al centro y los ingredientes alrededor, tal como dice
+`potions.yml`. Si la receta no se pudo leer, el arranque lo avisa con el id de la poción.
+Tras `/customcore reload`, reconecta: las recetas registradas en caliente se sincronizan
+con los jugadores conectados.
+
 **El crafteo no aparece o avisa de colision.**
 Dos mobs con los mismos ingredientes: el cliente no puede distinguirlos. Cambia
 `recipe.extras` en uno de ellos.
