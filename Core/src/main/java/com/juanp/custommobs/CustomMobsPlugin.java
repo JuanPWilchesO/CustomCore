@@ -47,6 +47,8 @@ import com.juanp.custommobs.mob.NaturalSpawnTask;
 import com.juanp.custommobs.recall.RecallService;
 import com.juanp.custommobs.region.RegionGate;
 import com.juanp.custommobs.skill.SkillInteractListener;
+import com.juanp.custommobs.skill.ProjectileListener;
+import com.juanp.custommobs.skill.ProjectileService;
 import com.juanp.custommobs.skill.SkillCatalog;
 import com.juanp.custommobs.skill.SkillService;
 import com.juanp.custommobs.spawner.SpawnerListener;
@@ -109,6 +111,8 @@ public final class CustomMobsPlugin extends JavaPlugin {
     private SoundService soundService;
     private AmbientTask ambientTask;
     private SkillService skillService;
+    private ProjectileService projectileService;
+    private com.juanp.custommobs.effect.EffectListener effectListener;
     private TargetingTask targetingTask;
     private RecallService recallService;
     private AnchorChunkService anchorChunks;
@@ -221,6 +225,7 @@ public final class CustomMobsPlugin extends JavaPlugin {
 
         // Se crea aqui, y no mas abajo, porque el listener del clic derecho lo necesita.
         this.skillService = new SkillService(this.mobService);
+        this.projectileService = new ProjectileService(this);
         // La economia, por reflexion: sin EssentialsX los pagos no funcionan y se avisa.
         this.economy = EconomyLink.create(this);
         this.chains = new ChainService(this, this.mobService, this.economy);
@@ -256,11 +261,13 @@ public final class CustomMobsPlugin extends JavaPlugin {
         // Efectos y pociones: definiciones, mecanicas y la tarea que las mantiene.
         this.effectService = new com.juanp.custommobs.effect.EffectService(this);
         this.effectService.reload();
-        com.juanp.custommobs.effect.EffectListener effectListener =
-                new com.juanp.custommobs.effect.EffectListener(this, this.effectService);
-        pluginManager.registerEvents(effectListener, this);
+        this.effectListener = new com.juanp.custommobs.effect.EffectListener(this, this.effectService);
+        pluginManager.registerEvents(this.effectListener, this);
         // Cada tick: la congelacion y el paso helado necesitan ir al dia.
-        this.getServer().getScheduler().runTaskTimer(this, effectListener::tick, 1L, 1L);
+        this.getServer().getScheduler().runTaskTimer(this, this.effectListener::tick, 1L, 1L);
+        // Skills al impactar: se arman al disparar y se resuelven al tocar.
+        pluginManager.registerEvents(new ProjectileListener(this, this.projectileService), this);
+        this.getServer().getScheduler().runTaskTimer(this, this.projectileService::tick, 20L, 20L);
 
         PluginCommand command = this.getCommand("customcore");
         if (command != null) {
@@ -449,6 +456,16 @@ public final class CustomMobsPlugin extends JavaPlugin {
     /** Servicio que ejecuta las skills, tambien las que dispara un item. */
     public SkillService skillService() {
         return this.skillService;
+    }
+
+    /** Skills de impacto de los proyectiles. */
+    public ProjectileService projectiles() {
+        return this.projectileService;
+    }
+
+    /** Uso de items: cooldowns, restricciones y catalogo. */
+    public com.juanp.custommobs.effect.EffectListener effectListener() {
+        return this.effectListener;
     }
 
     public MobService mobs() {

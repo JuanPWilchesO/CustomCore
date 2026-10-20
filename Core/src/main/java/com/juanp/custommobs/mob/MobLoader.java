@@ -440,10 +440,18 @@ public final class MobLoader {
             target = SkillTarget.SELF;
         }
         if (targetType != null) {
-            if (!target.isRelation()) {
+            // 'impacto' solo admite LOOK: es una entidad, no un area.
+            boolean allowed = target.isRelation() || target == SkillTarget.IMPACT;
+            if (!allowed) {
                 Bukkit.getLogger().warning("[CustomMobs] La skill '" + id + "' usa"
                         + " 'target-type' pero su 'target' es " + target
-                        + "; debe ser ENEMIES, ALLIES o SELF. Se descarta.");
+                        + "; debe ser ENEMIES, ALLIES, SELF o IMPACT. Se descarta.");
+                return null;
+            }
+            if (target == SkillTarget.IMPACT && targetType == SkillTargetType.RADIUS) {
+                Bukkit.getLogger().warning("[CustomMobs] La skill '" + id + "' apunta a"
+                        + " 'impacto' con 'target-type: radius'; impacto es una sola"
+                        + " entidad. Se descarta.");
                 return null;
             }
         } else if (target == SkillTarget.LOOK) {
@@ -478,6 +486,22 @@ public final class MobLoader {
                     + " con 'mode: interaccion' o 'mode: item'; las cadenas, solo con"
                     + " 'mode: interaccion'.");
             return null;
+        }
+        if (trigger == SkillTrigger.IMPACT) {
+            // El impacto solo resuelve una entidad golpeada o un area alrededor del golpe.
+            if (target == SkillTarget.OWNER || target == SkillTarget.TARGET
+                    || target == SkillTarget.LOOK) {
+                Bukkit.getLogger().warning("[CustomMobs] La skill '" + id + "' es de"
+                        + " impacto y su 'target' es " + target + "; usa 'impacto', 'self',"
+                        + " 'enemies' o 'allies'. Se descarta.");
+                return null;
+            }
+            if (effect == SkillEffect.SUMMON) {
+                Bukkit.getLogger().warning("[CustomMobs] La skill '" + id + "' es de"
+                        + " impacto y usa 'summon'; ese efecto no se admite al impactar."
+                        + " Se descarta.");
+                return null;
+            }
         }
         if (effect == SkillEffect.CHAIN && trigger != SkillTrigger.INTERACT) {
             Bukkit.getLogger().warning("[CustomMobs] La skill '" + id + "' es una cadena y"

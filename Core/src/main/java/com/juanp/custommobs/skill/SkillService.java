@@ -83,7 +83,8 @@ public final class SkillService extends BukkitRunnable {
                 // Las de item solo las dispara el uso explicito de un objeto. Un mob que
                 // las referencie con 'ref:' no debe ejecutarlas por su cuenta.
                 if (skill.trigger() == SkillTrigger.INTERACT
-                        || skill.trigger() == SkillTrigger.ITEM) {
+                        || skill.trigger() == SkillTrigger.ITEM
+                        || skill.trigger() == SkillTrigger.IMPACT) {
                     continue;
                 }
                 if (skill.trigger() == SkillTrigger.ACTIVE && !inCombat) {
@@ -804,6 +805,10 @@ public final class SkillService extends BukkitRunnable {
                         "El item apunta a una skill que no existe en skills/: " + id);
                 continue;
             }
+            if (skill.trigger() == SkillTrigger.IMPACT) {
+                // Se arma al disparar y se resuelve al impactar: no se castea al usar.
+                continue;
+            }
             this.castOne(caster, skill);
             cast++;
         }
@@ -851,29 +856,121 @@ public final class SkillService extends BukkitRunnable {
         }
 
         for (LivingEntity target : this.playerTargets(caster, skill)) {
-            switch (skill.effect()) {
-                case HEAL -> this.heal(target, skill.amount(), skill.percent());
-                case DAMAGE -> target.damage(skill.amount(), caster);
-                case IGNITE -> this.ignite(target, skill.amount());
-                case FREEZE -> this.freeze(target, skill.amount());
-                case BLOCK_BELOW -> this.blockBelow(target, skill);
-                case EXPLOSION -> this.explosion(target, skill, caster);
-                case REPAIR_ALL -> this.repairAll(target);
-                case TELEPORT_BEHIND -> this.teleportBehind(caster, target, skill);
-                case BACKSTEP -> {
-                    if (target.getUniqueId().equals(caster.getUniqueId())) {
-                        this.backstep(caster, skill);
-                    }
-                }
-                case POTION -> this.potion(caster, target, skill);
-                default -> {
+            this.applyFromPlayer(caster, skill, target);
+        }
+    }
+
+    /** Aplica el efecto de una skill de jugador a un objetivo ya resuelto. */
+    private void applyFromPlayer(Player caster, SkillSpec skill, LivingEntity target) {
+        switch (skill.effect()) {
+            case HEAL -> this.heal(target, skill.amount(), skill.percent());
+            case DAMAGE -> target.damage(skill.amount(), caster);
+            case IGNITE -> this.ignite(target, skill.amount());
+            case FREEZE -> this.freeze(target, skill.amount());
+            case BLOCK_BELOW -> this.blockBelow(target, skill);
+            case EXPLOSION -> this.explosion(target, skill, caster);
+            case REPAIR_ALL -> this.repairAll(target);
+            case TELEPORT_BEHIND -> this.teleportBehind(caster, target, skill);
+            case BACKSTEP -> {
+                if (target.getUniqueId().equals(caster.getUniqueId())) {
+                    this.backstep(caster, skill);
                 }
             }
-            if (skill.hasMessage() && target instanceof Player player) {
-                player.sendMessage(com.juanp.custommobs.mob.Texts.color(
-                        this.spokenForPlayer(caster, skill)));
+            case POTION -> this.potion(caster, target, skill);
+            default -> {
             }
         }
+        if (skill.hasMessage() && target instanceof Player player) {
+            player.sendMessage(com.juanp.custommobs.mob.Texts.color(
+                    this.spokenForPlayer(caster, skill)));
+        }
+    }
+
+    // ------------------------------------------------------------------ impacto
+
+    /**
+     * Castea una skill de impacto: el origen es el punto donde cayo el proyectil y
+     * {@code hit} la entidad golpeada, si la hubo.
+     *
+     * <p>El lanzador sigue siendo el jugador, para atribuir el dano y resolver los
+     * avisos. El cooldown y el aviso de inicio los pone el disparo, no el impacto.
+     */
+    public void castImpact(Player shooter, SkillSpec skill, Location origin, LivingEntity hit) {
+        if (skill.effect() == SkillEffect.CHAIN || skill.effect() == SkillEffect.SUMMON
+                || skill.effect() == SkillEffect.CONSOLE_COMMAND
+                || skill.effect() == SkillEffect.PLAYER_COMMAND) {
+            return;
+        }
+        if (skill.chance() < 1.0D && this.random.nextDouble() > skill.chance()) {
+            return;
+        }
+        for (LivingEntity target : this.impactTargets(shooter, skill, origin, hit)) {
+            this.applyFromPlayer(shooter, skill, target);
+        }
+    }
+
+    /**
+     * Objetivos de una skill de impacto. Sin {@code target-type} es una sola entidad:
+     * la golpeada. Con {@code radius}, el area se mide desde el punto de impacto.
+     */
+    private List<LivingEntity> impactTargets(Player shooter, SkillSpec skill,
+                                             Location origin, LivingEntity hit) {
+        List<LivingEntity> found = new ArrayList<>();
+        boolean area = skill.targetType() == SkillTargetType.RADIUS;
+        double range = skill.range() > 0 ? skill.range() : DEFAULT_SPEAK_RANGE;
+        switch (skill.target()) {
+            case IMPACT -> {
+                if (hit != null) {
+                    found.add(hit);
+                }
+            }
+            case SELF -> found.add(shooter);
+            case ENEMIES -> {
+                if (area) {
+                    for (LivingEntity candidate : this.nearby(origin, range)) {
+                        if (this.isEnemyOfPlayer(shooter, candidate)) {
+                            found.add(candidate);
+                        }
+                    }
+                } else if (hit != null && this.isEnemyOfPlayer(shooter, hit)) {
+                    found.add(hit);
+                }
+            }
+            case ALLIES -> {
+                if (area) {
+                    // El lanzador tambien es aliado de si mismo, pero solo si esta dentro
+                    // del radio: curar a distancia no debe curar a quien disparo.
+                    if (origin != null && shooter.getWorld().equals(origin.getWorld())
+                            && shooter.getLocation().distanceSquared(origin) <= range * range) {
+                        found.add(shooter);
+                    }
+                    for (LivingEntity candidate : this.nearby(origin, range)) {
+                        if (this.isAllyOfPlayer(shooter, candidate)) {
+                            found.add(candidate);
+                        }
+                    }
+                } else if (hit != null && this.isAllyOfPlayer(shooter, hit)) {
+                    found.add(hit);
+                }
+            }
+            default -> {
+            }
+        }
+        return found;
+    }
+
+    /** Entidades vivas alrededor de un punto (el centro no se incluye). */
+    private List<LivingEntity> nearby(Location center, double range) {
+        List<LivingEntity> found = new ArrayList<>();
+        if (center == null || center.getWorld() == null) {
+            return found;
+        }
+        for (Entity candidate : center.getWorld().getNearbyEntities(center, range, range, range)) {
+            if (candidate instanceof LivingEntity living && !living.isDead() && living.isValid()) {
+                found.add(living);
+            }
+        }
+        return found;
     }
 
     private List<LivingEntity> playerTargets(Player caster, SkillSpec skill) {

@@ -124,6 +124,7 @@ Las skills que castea un jugador pueden avisar por chat:
 | `activa` | solo **en combate**, es decir, cuando el mob tiene a alguien a quien atacar |
 | `interaccion` | cuando un jugador hace **clic derecho** sobre el mob |
 | `item` | solo lo lanza un objeto con `usar.skill`/`usar.skills`; el planificador de mobs lo ignora. Obligatorio para comandos y cadenas desde objetos |
+| `impacto` | cuando un **proyectil** lanzado por el jugador toca algo. Solo desde objetos; el planificador de mobs lo ignora |
 
 ```yaml
 skills:
@@ -155,6 +156,55 @@ skills:
 En las skills de **interaccion**, `effect: message` va **solo a quien hizo clic** (no a todo
 el que este cerca), y el texto admite `{jugador}` ademas de `{mob}`. Si el jugador trae un
 huevo custom en la mano, ese clic es del huevo: la interaccion no se dispara.
+
+## Skills al impactar (`mode: impacto`)
+
+Una skill con `mode: impacto` no se castea al usar el objeto: se **arma** cuando sale el
+proyectil y se resuelve cuando toca. El lanzador sigue siendo el jugador; el origen pasa a
+ser el punto de impacto.
+
+```yaml
+# skills/flecha_cura.yml
+- id: flecha_cura
+  mode: impacto
+  effect: heal
+  target-type: look
+  target: impacto
+  amount: 6
+  cooldown-seconds: 8
+
+# skills/bomba_cura.yml
+- id: bomba_cura
+  mode: impacto
+  effect: heal
+  target-type: radius
+  target: allies
+  range: 4
+  amount: 5
+```
+
+| `target` | Con `target-type: look` | Con `target-type: radius` |
+|---|---|---|
+| `impacto` | la entidad golpeada | no vale: impacto es una sola entidad |
+| `self` | el jugador que disparo | el jugador que disparo |
+| `enemies` | la golpeada, si es enemiga | enemigos en `range` desde el impacto |
+| `allies` | la golpeada, si es aliada | aliados en `range` desde el impacto, **incluido el lanzador si esta dentro** |
+
+Reglas:
+
+- Sin `target-type`, es **una sola entidad**: la golpeada. No hay area por accidente.
+- `range` se mide desde el punto de impacto, no desde el jugador.
+- Impacto en bloque: `target: impacto` no hace nada; `radius` si funciona, con el bloque
+  como centro.
+- El cooldown arranca **al disparar**, y el aviso de inicio tambien. Si el proyectil falla,
+  el cooldown se gasto igual.
+- `chance` se tira **al impactar**.
+- Solo valen `impacto`, `self`, `enemies` y `allies`. `owner`, `target` y `look` se
+  rechazan al cargar. `chain`, `summon`, `console_command` y `player_command` tampoco
+  se admiten al impactar.
+- Proyectiles cubiertos: flecha y ballesta, municion custom, tridente, bola de nieve y huevo.
+  Cohete de ballesta, carga de viento, perla de ender y cana de pescar quedan fuera.
+- Multishot: solo la **primera** flecha que impacta ejecuta la skill.
 
 ## Comandos (`console_command`, `player_command`)
 

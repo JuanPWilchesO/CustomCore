@@ -20,6 +20,7 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
+import org.bukkit.event.entity.PotionSplashEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemConsumeEvent;
@@ -194,7 +195,7 @@ public final class EffectListener implements Listener {
     }
 
     /** {@code true} si el objeto no tiene restriccion o el jugador la cumple. */
-    private boolean canUse(Player player, ItemStack item) {
+    public boolean canUse(Player player, ItemStack item) {
         ItemFactionLock lock = this.plugin.itemLock();
         // Si el lock no esta listo, se falla cerrado: mejor no usar que saltarse la regla.
         return lock != null && lock.requirement(player, item) == null;
@@ -203,11 +204,17 @@ public final class EffectListener implements Listener {
     /** @return {@code false} si la faccion de la pocion no deja usarla */
     private boolean apply(Player player, PotionSpec spec) {
         EffectSpec effect = this.service.effect(spec.effectId()).orElse(null);
-        if (effect == null) {
+        if (effect == null || !this.canApply(player, spec)) {
             return false;
         }
-        // Mismo criterio que los objetos: el admin pasa siempre, y la faccion puede
-        // admitir aliados si el servidor lo configura asi.
+        return this.applyEffect(player, effect, spec.duration());
+    }
+
+    /**
+     * Restricciones de faccion y clase de una pocion. El admin pasa siempre, y la faccion
+     * puede admitir aliados si el servidor lo configura asi.
+     */
+    public boolean canApply(Player player, PotionSpec spec) {
         boolean admin = player.hasPermission(this.plugin.config().bypassPermission());
         if (!admin && spec.faction() != null) {
             String own = this.plugin.mobs().factionOf(player);
@@ -231,7 +238,80 @@ public final class EffectListener implements Listener {
                 return false;
             }
         }
-        return this.applyEffect(player, effect, spec.duration());
+        return true;
+    }
+
+    /**
+     * Poción arrojadiza o persistente: aplica el efecto del plugin al area del impacto.
+     *
+     * <p>El efecto se aplica una vez, no por tick: los efectos del plugin son estados con
+     * duracion, y reaplicarlos cada tick reiniciaria el contador sin parar.
+     */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onSplash(PotionSplashEvent event) {
+        if (!(event.getPotion().getShooter() instanceof Player thrower)) {
+            return;
+        }
+        PotionSpec spec = this.service.potionOf(event.getPotion().getItem())
+                .flatMap(this.service::potion).orElse(null);
+        if (spec == null || !spec.throwable()) {
+            return;
+        }
+        EffectSpec effect = this.service.effect(spec.effectId()).orElse(null);
+        if (effect == null) {
+            return;
+        }
+        // La restriccion de faccion o clase se comprueba al lanzar, no por victima.
+        if (!this.canApply(thrower, spec)) {
+            event.setCancelled(true);
+            return;
+        }
+        int seconds = spec.duration() > 0 ? spec.duration() : effect.duration();
+        Location center = event.getEntity().getLocation();
+        double radius = spec.impactRadius();
+        for (var candidate : center.getWorld()
+                .getNearbyEntities(center, radius, radius, radius)) {
+            if (!(candidate instanceof Player target)) {
+                continue;
+            }
+            if (!this.bandAllows(thrower, target, effect, spec)) {
+                continue;
+            }
+            this.applyEffect(target, effect, seconds, null, null);
+        }
+    }
+
+    /** Bando por defecto segun el tipo del efecto. */
+    private static String defaultBand(EffectSpec effect) {
+        String type = effect.type() == null ? "" : effect.type().toLowerCase(java.util.Locale.ROOT);
+        return switch (type) {
+            case "negativo", "negative", "malo" -> "enemigos";
+            case "neutro", "neutral" -> "todos";
+            default -> "aliados";
+        };
+    }
+
+    /** {@code true} si el bando de la pocion deja alcanzar a ese jugador. */
+    private boolean bandAllows(Player thrower, Player target, EffectSpec effect, PotionSpec spec) {
+        String band = spec.band() == null ? defaultBand(effect) : spec.band();
+        boolean self = thrower.getUniqueId().equals(target.getUniqueId());
+        return switch (band) {
+            case "enemigos", "enemies" -> !self && !this.isAlly(thrower, target);
+            case "todos", "all" -> true;
+            default -> self || this.isAlly(thrower, target);
+        };
+    }
+
+    /** Aliado: mismo team, misma faccion o faccion aliada. */
+    private boolean isAlly(Player first, Player second) {
+        if (first.getUniqueId().equals(second.getUniqueId())) {
+            return true;
+        }
+        if (this.plugin.mobs().teamLink().isAlly(first.getUniqueId(), second.getUniqueId())) {
+            return true;
+        }
+        return this.plugin.mobs().sameSide(
+                this.plugin.mobs().factionOf(first), this.plugin.mobs().factionOf(second));
     }
 
     /**
@@ -267,26 +347,13 @@ public final class EffectListener implements Listener {
                 return false;
             }
         }
-        // Cooldown efectivo: el mayor entre el del item y el de las skills que lanza.
-        // Asi no hay dos esperas que se sumen ni una que pise a la otra.
-        int cooldown = use.cooldownSeconds();
-        if (use.hasSkills() && this.plugin.skillCatalog() != null) {
-            for (String id : use.skillIds()) {
-                var skill = this.plugin.skillCatalog().get(id).orElse(null);
-                if (skill != null) {
-                    cooldown = Math.max(cooldown, skill.cooldownSeconds());
-                }
-            }
+        // Si todas las skills del objeto son de impacto, el objeto no se "usa": se dispara.
+        // El cooldown y el aviso de inicio los pone el proyectil al salir.
+        if (use.hasSkills() && this.allImpact(use)) {
+            return false;
         }
-        String key = player.getUniqueId() + ":" + name;
-        long now = System.currentTimeMillis();
-        Long until = this.cooldowns.get(key);
-        if (until != null && until > now) {
-            this.warnCooldown(player, use, until - now);
-            return true;
-        }
-        if (cooldown > 0) {
-            this.cooldowns.put(key, now + cooldown * 1000L);
+        if (!this.tryCooldown(player, name, use)) {
+            return true;   // en espera: el clic se consume igual
         }
         if (use.hasStartMessage()) {
             player.sendMessage(Texts.color(use.startMessage()
@@ -304,6 +371,65 @@ public final class EffectListener implements Listener {
         }
         if (spend && use.consume()) {
             item.setAmount(item.getAmount() - 1);
+        }
+        return true;
+    }
+
+    /** Nombre de catalogo del objeto, o {@code null} si no lo es. */
+    public String catalogName(ItemStack item) {
+        if (item == null || item.getType().isAir() || !item.hasItemMeta()) {
+            return null;
+        }
+        return item.getItemMeta().getPersistentDataContainer()
+                .get(this.plugin.drops().catalog().nameKey(), PersistentDataType.STRING);
+    }
+
+    /** Lo que el objeto hace al usarse, segun su yml. {@code null} si no es del catalogo. */
+    public UseSpec useOf(ItemStack item) {
+        String name = this.catalogName(item);
+        return name == null ? null : this.plugin.drops().catalog().useOf(name).orElse(null);
+    }
+
+    /** {@code true} si todas las skills del objeto son de impacto. */
+    private boolean allImpact(UseSpec use) {
+        if (!use.hasSkills() || this.plugin.skillCatalog() == null) {
+            return false;
+        }
+        boolean any = false;
+        for (String id : use.skillIds()) {
+            var skill = this.plugin.skillCatalog().get(id).orElse(null);
+            if (skill == null || skill.trigger() != com.juanp.custommobs.skill.SkillTrigger.IMPACT) {
+                return false;
+            }
+            any = true;
+        }
+        return any;
+    }
+
+    /**
+     * Aplica el cooldown del objeto: el mayor entre el suyo y el de sus skills.
+     *
+     * @return {@code false} si todavia esta en espera; ya dejo el aviso
+     */
+    public boolean tryCooldown(Player player, String name, UseSpec use) {
+        int cooldown = use.cooldownSeconds();
+        if (use.hasSkills() && this.plugin.skillCatalog() != null) {
+            for (String id : use.skillIds()) {
+                var skill = this.plugin.skillCatalog().get(id).orElse(null);
+                if (skill != null) {
+                    cooldown = Math.max(cooldown, skill.cooldownSeconds());
+                }
+            }
+        }
+        String key = player.getUniqueId() + ":" + name;
+        long now = System.currentTimeMillis();
+        Long until = this.cooldowns.get(key);
+        if (until != null && until > now) {
+            this.warnCooldown(player, use, until - now);
+            return false;
+        }
+        if (cooldown > 0) {
+            this.cooldowns.put(key, now + cooldown * 1000L);
         }
         return true;
     }

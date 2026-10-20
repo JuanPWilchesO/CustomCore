@@ -159,6 +159,29 @@ usar:
   cooldown-aviso: '&cEspera {segundos}s.'
 ```
 
+### Skills al impactar
+
+Un objeto puede llevar skills `mode: impacto`. En vez de ejecutarse al usarlo, se arman
+cuando sale el proyectil y se resuelven cuando toca:
+
+```yaml
+# items/flecha_curandera.yml
+material: ARROW
+usar:
+  skills: [flecha_cura]
+  cooldown: 8
+  inicio: '&aLa flecha brilla.'
+```
+
+Vale en el **arma** (arco o ballesta) o en la **municion**. Si la municion trae skills, mandan
+las de la municion; si no, las del arma. Una flecha custom sirve con cualquier arco.
+
+Si todas las skills del objeto son de impacto, el clic derecho no dispara nada: el objeto no
+se "usa", se dispara. `consume` tampoco aplica, porque el juego ya gasta la flecha, la bola
+de nieve o el tridente.
+
+Cubiertos: flecha, ballesta, municion, tridente, bola de nieve y huevo.
+
 ### Modificaciones del objeto
 
 Un objeto puede impedir que lo modifiquen. En su yml:

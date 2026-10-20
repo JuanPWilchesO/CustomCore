@@ -59,6 +59,38 @@ sangre_fria:
 Se reparte con `/customcore potion give <id> [jugador]`. Al beberse aplica el efecto. La receta,
 si la pones, entra en el sistema de recetas normal (materiales o **objetos del catálogo**).
 
+### Arrojadizas y persistentes
+
+`material` decide el comportamiento: `POTION` se bebe, `SPLASH_POTION` se lanza y
+`LINGERING_POTION` deja una nube. Las dos ultimas aplican el efecto del plugin **al
+impactar**, a los jugadores dentro de `radio`:
+
+```yaml
+bomba_purga:
+  nombre: '&cBomba de purga'
+  material: SPLASH_POTION
+  color: RED
+  efecto: quitar_negativos
+  radio: 4
+  bando: aliados
+  receta:
+    forma: [" A ", "ABA", " A "]
+    ingredientes: { A: GUNPOWDER, B: GLASS_BOTTLE }
+    cantidad: 1
+```
+
+| Campo | Que hace |
+|---|---|
+| `radio` | alcance del area; por defecto 4 en arrojadiza y 3 en persistente |
+| `bando` | `aliados`, `enemigos` o `todos`; por defecto segun el `tipo` del efecto |
+
+El bando por defecto: positivo → aliados, negativo → enemigos, neutro → todos. Conviene
+declararlo en las purgas: `quitar_negativos` con `bando: aliados` limpia al grupo, y
+`quitar_positivos` con `bando: enemigos` es un dispel ofensivo.
+
+El efecto se aplica **una vez** al impactar, no en cada tick de la nube: la nube queda como
+entrega visual. Las recetas funcionan igual que en las bebibles.
+
 ## 2. Como skill de un mob
 
 ```yaml

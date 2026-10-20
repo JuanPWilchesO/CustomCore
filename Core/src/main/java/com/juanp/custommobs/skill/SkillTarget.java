@@ -17,7 +17,9 @@ public enum SkillTarget {
     /** Enemigos vivos dentro del radio, segun la politica de objetivos del mob. */
     ENEMIES,
     /** Aliados vivos dentro del radio: dueno, companeros de team o de faccion aliada. */
-    ALLIES;
+    ALLIES,
+    /** La entidad que golpeo el proyectil. Solo tiene sentido con {@code mode: impacto}. */
+    IMPACT;
 
     /** {@code true} si es una relacion valida para {@code target-type}. */
     public boolean isRelation() {
@@ -35,6 +37,7 @@ public enum SkillTarget {
             case "look", "mirada", "vista", "cursor", "crosshair", "observado", "apuntado" -> LOOK;
             case "enemies", "enemigos", "enemy" -> ENEMIES;
             case "allies", "aliados", "ally" -> ALLIES;
+            case "impacto", "impact", "hit", "golpeado", "golpe", "proyectil" -> IMPACT;
             default -> null;
         };
     }

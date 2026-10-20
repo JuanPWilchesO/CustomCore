@@ -105,6 +105,12 @@ public final class EffectService {
                 continue;
             }
             Material material = Material.matchMaterial(section.getString("material", "POTION"));
+            if (material != Material.POTION && material != Material.SPLASH_POTION
+                    && material != Material.LINGERING_POTION) {
+                this.plugin.getLogger().warning("La pocion '" + key + "' tiene un material"
+                        + " que no es una pocion (" + material + "); se usa POTION.");
+                material = Material.POTION;
+            }
             String id = key.toLowerCase(Locale.ROOT);
             var recipeSection = section.getConfigurationSection("receta");
             var recipe = recipeSection == null ? null
@@ -115,6 +121,8 @@ public final class EffectService {
                     section.getString("color"),
                     effectId.toLowerCase(Locale.ROOT),
                     section.getInt("duracion", 0),
+                    Math.max(0, section.getInt("radio", 0)),
+                    blankToNull(section.getString("bando")),
                     // Un valor vacio no es una restriccion: se normaliza a null.
                     blankToNull(section.getString("faccion")),
                     blankToNull(section.getString("clase")),

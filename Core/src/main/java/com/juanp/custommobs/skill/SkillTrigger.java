@@ -14,6 +14,8 @@ import java.util.Locale;
  *       dialogos de interaccion.</li>
  *   <li>{@link #ITEM}: cuando un jugador usa un objeto del catalogo. Nunca la ejecuta el
  *       planificador de mobs: solo el uso explicito del item.</li>
+ *   <li>{@link #IMPACT}: cuando un proyectil lanzado por el jugador impacta. El planificador
+ *       de mobs tampoco la ejecuta: la dispara el proyectil.</li>
  * </ul>
  */
 public enum SkillTrigger {
@@ -21,7 +23,9 @@ public enum SkillTrigger {
     PASSIVE,
     ACTIVE,
     INTERACT,
-    ITEM;
+    ITEM,
+    /** Al impactar un proyectil lanzado por el jugador (flecha, tridente, bola de nieve...). */
+    IMPACT;
 
     /** Valor por defecto cuando el yml no dice nada. */
     public static final SkillTrigger DEFAULT = PASSIVE;
@@ -36,6 +40,8 @@ public enum SkillTrigger {
             case "activa", "activo", "active", "combate", "combat" -> ACTIVE;
             case "interaccion", "interaction", "clic", "click", "interactuar" -> INTERACT;
             case "item", "objeto", "usar", "use", "uso" -> ITEM;
+            case "impacto", "impact", "proyectil", "projectile", "al-impactar",
+                    "on-hit", "onhit", "hit" -> IMPACT;
             default -> null;
         };
     }

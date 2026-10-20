@@ -81,3 +81,31 @@ usar:
 
 Las skills compartidas viven en `plugins/CustomCore/skills/<id>.yml` y se referencian
 por su id. Para probar sin depender del clic: `/customcore testcast <skill>`.
+
+## 6. Un arco que cura al impactar
+
+Una skill `mode: impacto` no se lanza al usar el objeto: se dispara cuando el proyectil toca.
+
+```yaml
+# skills/flecha_cura.yml
+- id: flecha_cura
+  mode: impacto
+  effect: heal
+  target-type: look
+  target: impacto
+  amount: 6
+  cooldown-seconds: 8
+```
+
+```yaml
+# items/arco_sanador.yml
+material: BOW
+usar:
+  skills: [flecha_cura]
+  cooldown: 8
+  inicio: '&aFlecha cargada.'
+```
+
+Con `target: impacto` cura a quien golpee, si es aliado. Para un area, `target-type: radius`
+con `target: allies` y `range`. La municion tambien puede llevar las skills: una flecha
+custom funciona con cualquier arco.
