@@ -194,7 +194,9 @@ dispara la que este **cargada**.
 3. Para cambiar, clic derecho con otra flecha.
 
 La carga es **por jugador**: sirve con cualquier arco y sobrevive a reconexiones y
-reinicios. Si no quedan flechas de ese tipo, el disparo se bloquea y el chat lo avisa; nunca
+reinicios. Es exclusiva de la clase configurada en `items.arrows-class` (por defecto
+`cazador`): otra clase no puede cargar flechas, y si cambia de clase con una cargada, el
+disparo se bloquea y se descarga. Si no quedan flechas de ese tipo, el disparo se bloquea y el chat lo avisa; nunca
 se gasta otro tipo por accidente. Con `Infinity` no se consume ninguna.
 
 La flecha cargada manda sobre las skills del arco. Las del arco solo aplican cuando no hay

@@ -50,6 +50,7 @@ import java.util.Map;
  * @param itemFactionAllies   si un objeto de faccion vale tambien para sus aliados
  * @param itemIgnoreCancelledUse procesar el 'usar:' aunque otro plugin cancele el clic
  * @param teleportRespectProtections si las skills de teletransporte respetan protecciones
+ * @param arrowClass          clase que puede cargar flechas en el arco (por defecto, cazador)
  */
 public record PluginConfig(
         boolean debug,
@@ -89,7 +90,8 @@ public record PluginConfig(
         boolean factionGlowAnyWorld,
         boolean itemFactionAllies,
         boolean itemIgnoreCancelledUse,
-        boolean teleportRespectProtections
+        boolean teleportRespectProtections,
+        String arrowClass
 ) {
 
     public static PluginConfig load(FileConfiguration cfg) {
@@ -101,6 +103,12 @@ public record PluginConfig(
         // nadie podria tocarlo. Por eso el suelo de chunk-seconds es mob-seconds.
         long mobSeconds = Math.max(1L, cfg.getLong("recall.mob-seconds", 60L));
         long chunkSeconds = Math.max(mobSeconds, cfg.getLong("recall.chunk-seconds", 120L));
+        String arrowClass = cfg.getString("items.arrows-class", "cazador");
+        if (arrowClass == null || arrowClass.isBlank()) {
+            arrowClass = "cazador";
+        }
+        arrowClass = arrowClass.trim().toLowerCase(java.util.Locale.ROOT);
+
         return new PluginConfig(
                 cfg.getBoolean("debug", false),
                 Math.max(1.0D, cfg.getDouble("targeting.radius", 16.0D)),
@@ -144,7 +152,8 @@ public record PluginConfig(
                 // Por defecto se procesa el uso aunque otro plugin cancele el clic.
                 cfg.getBoolean("items.ignore-cancelled-use", true),
                 // Por defecto el plugin no consulta protecciones al teletransportar.
-                cfg.getBoolean("teleports.respect-protections", false)
+                cfg.getBoolean("teleports.respect-protections", false),
+                arrowClass
         );
     }
 

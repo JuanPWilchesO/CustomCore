@@ -72,6 +72,13 @@ public final class ProjectileListener implements Listener {
         if (name == null) {
             return false;
         }
+        if (!this.isRanger(player)) {
+            event.setCancelled(true);
+            this.arrows.clear(player);
+            player.sendMessage(Texts.color("&8Solo la clase &f"
+                    + this.plugin.config().arrowClass() + "&8 puede usar flechas cargadas."));
+            return true;
+        }
         var catalog = this.plugin.drops().catalog();
         ItemStack template = catalog.get(name).orElse(null);
         if (template == null) {
@@ -173,16 +180,21 @@ public final class ProjectileListener implements Listener {
             return;
         }
         String name = effects.catalogName(item);
-        if (isArrow(item) && name == null) {
-            // Flecha normal: descarga la custom y vuelve a disparar normales.
-            this.arrows.clear(player);
-            player.sendMessage(Texts.color("&8Flecha cargada: &fnormales&8."));
-            return;
-        }
-        if (name == null || this.impactSkills(item).isEmpty()) {
-            return;
-        }
         if (isArrow(item)) {
+            if (!this.isRanger(player)) {
+                player.sendMessage(Texts.color("&8Solo la clase &f"
+                        + this.plugin.config().arrowClass() + "&8 puede cargar flechas."));
+                return;
+            }
+            if (name == null) {
+                // Flecha normal: descarga la custom y vuelve a disparar normales.
+                this.arrows.clear(player);
+                player.sendMessage(Texts.color("&8Flecha cargada: &fnormales&8."));
+                return;
+            }
+            if (this.impactSkills(item).isEmpty()) {
+                return;
+            }
             // Clic derecho con una flecha del plugin: se carga en el arco.
             var lock = this.plugin.itemLock();
             String denied = lock == null ? null : lock.requirement(player, item);
@@ -196,10 +208,24 @@ public final class ProjectileListener implements Listener {
                     + this.arrows.count(player, name) + "&8)"));
             return;
         }
+        if (name == null || this.impactSkills(item).isEmpty()) {
+            return;
+        }
         if (event.getHand() != EquipmentSlot.HAND) {
             return;
         }
         this.recent.put(player.getUniqueId(), new Hand(item.clone(), System.currentTimeMillis()));
+    }
+
+    /** La carga de flechas es de una clase: por defecto, el cazador. */
+    private boolean isRanger(Player player) {
+        if (player.hasPermission(this.plugin.config().bypassPermission())) {
+            return true;
+        }
+        String expected = this.plugin.config().arrowClass();
+        return this.plugin.playerClasses().of(player.getUniqueId())
+                .map(id -> id.equalsIgnoreCase(expected))
+                .orElse(false);
     }
 
     private static boolean isArrow(ItemStack item) {

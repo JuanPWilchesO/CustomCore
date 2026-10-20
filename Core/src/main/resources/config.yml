@@ -77,6 +77,9 @@ items:
   # Si otro plugin cancela el clic derecho al aire, procesar igual el 'usar:' de los
   # objetos del catalogo. Por defecto SI; ponlo en false para respetar la cancelacion.
   ignore-cancelled-use: true
+  # Clase que puede cargar flechas custom en el arco (y volver a las normales con
+  # clic derecho sobre una flecha normal). Debe coincidir con un id de classes.yml.
+  arrows-class: cazador
 
 permissions:
   # Permiso para usar los huevos custom. Se comprueba con el sistema de permisos de
