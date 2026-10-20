@@ -71,6 +71,10 @@ public final class EffectListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onDrink(PlayerItemConsumeEvent event) {
         ItemStack item = event.getItem();
+        if (this.blockedByCc(event.getPlayer(), item)) {
+            event.setCancelled(true);
+            return;
+        }
         PotionSpec potion = this.service.potionOf(item).flatMap(this.service::potion).orElse(null);
         if (potion != null) {
             this.apply(event.getPlayer(), potion);
@@ -192,6 +196,22 @@ public final class EffectListener implements Listener {
         }
         return item.getItemMeta().getPersistentDataContainer().has(
                 this.plugin.drops().catalog().nameKey(), PersistentDataType.STRING);
+    }
+
+    /**
+     * Un aturdimiento o silencio impide usar objetos, salvo los marcados con
+     * {@code stun-free: true}. Se comprueba dentro del uso, no solo en el evento.
+     */
+    private boolean blockedByCc(Player player, ItemStack item) {
+        var cc = this.plugin.cc();
+        if (cc == null || item == null) {
+            return false;
+        }
+        var id = player.getUniqueId();
+        if (!cc.stunned(id) && !cc.silenced(id)) {
+            return false;
+        }
+        return !this.plugin.drops().catalog().stunFree(item);
     }
 
     /** {@code true} si el objeto no tiene restriccion o el jugador la cumple. */
@@ -322,6 +342,12 @@ public final class EffectListener implements Listener {
      */
     private boolean useCatalog(Player player, ItemStack item, boolean spend) {
         if (item.getType().isAir() || !item.hasItemMeta()) {
+            return false;
+        }
+        // El uso de objetos del catalogo se resuelve aqui, no solo cancelando el evento:
+        // 'onUseEarly' corre aunque otro plugin cancele el clic. Sin esta puerta, un
+        // aturdido podia seguir usando sus objetos custom.
+        if (this.blockedByCc(player, item)) {
             return false;
         }
         // Vale para todas las vias (clic, entidad, comer): una sola puerta de entrada.
