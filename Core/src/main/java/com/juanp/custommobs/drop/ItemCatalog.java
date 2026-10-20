@@ -453,7 +453,12 @@ public final class ItemCatalog {
     /** Lee un bloque de receta (con {@code forma} o {@code ingredientes}). */
     public static Optional<com.juanp.custommobs.item.ItemRecipe> parseRecipe(
             org.bukkit.configuration.ConfigurationSection yaml) {
-        var section = yaml.getConfigurationSection("receta");
+        // Dos formas de llamada: el archivo entero (con 'receta:' dentro) o el propio
+        // bloque 'receta:'. Antes solo valia la primera, y las pociones le pasaban la
+        // segunda: buscaba 'receta.receta' y la receta quedaba nula en silencio.
+        var section = yaml.isSet("forma") || yaml.isSet("ingredientes")
+                ? yaml
+                : yaml.getConfigurationSection("receta");
         if (section == null) {
             return Optional.empty();
         }

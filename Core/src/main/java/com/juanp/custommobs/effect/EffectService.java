@@ -115,6 +115,10 @@ public final class EffectService {
             var recipeSection = section.getConfigurationSection("receta");
             var recipe = recipeSection == null ? null
                     : com.juanp.custommobs.drop.ItemCatalog.parseRecipe(recipeSection).orElse(null);
+            if (recipeSection != null && recipe == null) {
+                this.plugin.getLogger().warning("La receta de la pocion '" + key
+                        + "' no se pudo leer; revisa 'forma' e 'ingredientes'.");
+            }
             this.potions.put(id, new PotionSpec(id,
                     section.getString("nombre", id),
                     material == null ? Material.POTION : material,
