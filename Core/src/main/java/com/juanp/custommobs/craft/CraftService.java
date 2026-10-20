@@ -54,6 +54,26 @@ public final class CraftService {
             this.register(definition);
         }
         this.registerItemRecipes();
+        // addRecipe no avisa a los clientes ya conectados: sin esto, una receta
+        // registrada en caliente no aparece hasta reconectar.
+        for (var player : org.bukkit.Bukkit.getOnlinePlayers()) {
+            this.syncRecipes(player);
+        }
+    }
+
+    /** Manda al cliente las recetas registradas; sirve al entrar y tras un reload. */
+    public void syncRecipes(org.bukkit.entity.Player player) {
+        for (String key : this.recipeKeys) {
+            NamespacedKey namespacedKey = NamespacedKey.fromString(key);
+            if (namespacedKey == null) {
+                continue;
+            }
+            try {
+                player.discoverRecipe(namespacedKey);
+            } catch (Throwable ignored) {
+                // Una receta que el cliente no acepta no debe tumbar el resto.
+            }
+        }
     }
 
     /**

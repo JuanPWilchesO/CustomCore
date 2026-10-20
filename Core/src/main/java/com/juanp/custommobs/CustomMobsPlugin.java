@@ -241,6 +241,7 @@ public final class CustomMobsPlugin extends JavaPlugin {
         PluginManager pluginManager = this.getServer().getPluginManager();
         pluginManager.registerEvents(this.mobService, this);
         pluginManager.registerEvents(new EggListener(this, this.craftService, this.mobService), this);
+        pluginManager.registerEvents(new com.juanp.custommobs.craft.RecipeSyncListener(this.craftService), this);
         pluginManager.registerEvents(new TargetListener(this.mobService), this);
         pluginManager.registerEvents(new AggroListener(this.mobService), this);
         pluginManager.registerEvents(new FriendlyFireListener(this.mobService), this);
