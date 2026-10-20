@@ -110,7 +110,9 @@ public final class CcService {
         long ends = now + (long) Math.ceil(seconds * factor * 1000.0D);
         Map<String, Long> types = this.active.computeIfAbsent(id,
                 key -> new ConcurrentHashMap<>());
-        boolean wasLocked = this.movementLocked(types);
+        // El estado real es si los atributos estan guardados, no si el tiempo aun corre:
+        // si se mira el reloj, un control que expira entre ticks nunca se desbloquea.
+        boolean wasLocked = this.locked(id);
         types.merge(type, ends, Math::max);
         if (!wasLocked && this.moves(type)) {
             this.lock(target);
@@ -135,9 +137,9 @@ public final class CcService {
         }
         UUID id = target.getUniqueId();
         Map<String, Long> types = this.active.remove(id);
-        if (types != null && !types.isEmpty()) {
-            this.unlock(target);
-        }
+        // Siempre se intenta soltar: puede quedar un bloqueo huerfano aunque el
+        // registro ya se hubiera limpiado.
+        this.unlock(target);
         if (immunitySeconds > 0.0D) {
             this.immuneUntil.put(id, System.currentTimeMillis()
                     + (long) Math.ceil(immunitySeconds * 1000.0D));
@@ -152,9 +154,8 @@ public final class CcService {
             return;
         }
         UUID id = target.getUniqueId();
-        if (this.active.remove(id) != null) {
-            this.unlock(target);
-        }
+        this.active.remove(id);
+        this.unlock(target);
         this.immuneUntil.remove(id);
     }
 
@@ -173,12 +174,18 @@ public final class CcService {
         long now = System.currentTimeMillis();
         for (Map.Entry<UUID, Map<String, Long>> entry : this.active.entrySet()) {
             Map<String, Long> types = entry.getValue();
-            boolean wasLocked = this.movementLocked(types);
+            boolean wasLocked = this.locked(entry.getKey());
             types.entrySet().removeIf(e -> e.getValue() <= now);
             boolean locked = this.movementLocked(types);
             var entity = Bukkit.getEntity(entry.getKey());
             if (wasLocked && !locked && entity instanceof LivingEntity living) {
                 this.unlock(living);
+            }
+            if (entity == null) {
+                // El jugador o mob ya no esta cargado: no dejar restos.
+                this.savedSpeed.remove(entry.getKey());
+                this.savedJump.remove(entry.getKey());
+                this.savedAi.remove(entry.getKey());
             }
             if (types.isEmpty()) {
                 this.active.remove(entry.getKey());
@@ -236,23 +243,34 @@ public final class CcService {
         }
     }
 
+    private boolean locked(UUID id) {
+        return this.savedSpeed.containsKey(id) || this.savedAi.containsKey(id);
+    }
+
     private void lock(LivingEntity target) {
         UUID id = target.getUniqueId();
         if (target instanceof Player player) {
             AttributeInstance speed = player.getAttribute(Attribute.MOVEMENT_SPEED);
             if (speed != null) {
-                this.savedSpeed.put(id, speed.getBaseValue());
+                // putIfAbsent: si ya habia un valor guardado, NO se pisa con el 0 actual.
+                Double previous = this.savedSpeed.putIfAbsent(id, speed.getBaseValue());
+                if (previous != null && previous <= 0.0D) {
+                    this.savedSpeed.put(id, 0.1D);
+                }
                 speed.setBaseValue(0.0D);
             }
             AttributeInstance jump = player.getAttribute(Attribute.JUMP_STRENGTH);
             if (jump != null) {
-                this.savedJump.put(id, jump.getBaseValue());
+                Double previous = this.savedJump.putIfAbsent(id, jump.getBaseValue());
+                if (previous != null && previous <= 0.0D) {
+                    this.savedJump.put(id, 0.42D);
+                }
                 jump.setBaseValue(0.0D);
             }
             return;
         }
         if (target instanceof Mob mob) {
-            this.savedAi.put(id, mob.hasAI());
+            this.savedAi.putIfAbsent(id, mob.hasAI());
             mob.setAI(false);
         }
     }
@@ -263,12 +281,13 @@ public final class CcService {
             Double speed = this.savedSpeed.remove(id);
             AttributeInstance speedAttr = player.getAttribute(Attribute.MOVEMENT_SPEED);
             if (speed != null && speedAttr != null) {
-                speedAttr.setBaseValue(speed);
+                // Nunca restaurar 0: es el valor que puso el propio bloqueo.
+                speedAttr.setBaseValue(speed > 0.0D ? speed : 0.1D);
             }
             Double jump = this.savedJump.remove(id);
             AttributeInstance jumpAttr = player.getAttribute(Attribute.JUMP_STRENGTH);
             if (jump != null && jumpAttr != null) {
-                jumpAttr.setBaseValue(jump);
+                jumpAttr.setBaseValue(jump > 0.0D ? jump : 0.42D);
             }
             return;
         }
@@ -277,6 +296,28 @@ public final class CcService {
             if (ai != null) {
                 mob.setAI(ai);
             }
+        }
+    }
+
+    /**
+     * Repara una base de velocidad o salto corrupta en un jugador que ya no tiene control.
+     * Se llama al entrar: si el servidor se cerro con un bloqueo a medias, no queda cojo.
+     */
+    public void repair(Player player) {
+        UUID id = player.getUniqueId();
+        Map<String, Long> types = this.active.get(id);
+        if (types != null && this.movementLocked(types)) {
+            return;
+        }
+        this.savedSpeed.remove(id);
+        this.savedJump.remove(id);
+        AttributeInstance speed = player.getAttribute(Attribute.MOVEMENT_SPEED);
+        if (speed != null && speed.getBaseValue() <= 0.0001D) {
+            speed.setBaseValue(0.1D);
+        }
+        AttributeInstance jump = player.getAttribute(Attribute.JUMP_STRENGTH);
+        if (jump != null && jump.getBaseValue() <= 0.0001D) {
+            jump.setBaseValue(0.42D);
         }
     }
 

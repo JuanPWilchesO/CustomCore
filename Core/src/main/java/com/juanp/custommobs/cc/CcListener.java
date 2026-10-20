@@ -11,6 +11,7 @@ import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemConsumeEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
 
@@ -84,6 +85,12 @@ public final class CcListener implements Listener {
         if (this.cc.stunned(id) || this.cc.silenced(id) || this.cc.disarmed(id)) {
             event.setCancelled(true);
         }
+    }
+
+    /** Si el servidor se cerro con un bloqueo a medias, se repara al entrar. */
+    @EventHandler
+    public void onJoin(PlayerJoinEvent event) {
+        this.cc.repair(event.getPlayer());
     }
 
     @EventHandler
