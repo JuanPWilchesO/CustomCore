@@ -3,6 +3,7 @@ package com.juanp.custommobs.drop;
 import com.juanp.custommobs.CustomMobsPlugin;
 import com.juanp.custommobs.mob.Texts;
 import org.bukkit.Material;
+import com.juanp.custommobs.mob.Texts;
 import org.bukkit.NamespacedKey;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.inventory.ItemStack;
@@ -145,6 +146,13 @@ public final class ItemCatalog {
                 } else {
                     meta.getPersistentDataContainer().set(this.modificationKey,
                             PersistentDataType.STRING, String.join(",", denied));
+                }
+                // La etiqueta del catalogo es el nombre visible si el NBT no trae uno.
+                // Dos flechas con nombre distinto no se apilan con una normal.
+                String label = yaml.getString("etiqueta");
+                if (label != null && !label.isBlank()
+                        && (meta.getDisplayName() == null || meta.getDisplayName().isBlank())) {
+                    meta.setDisplayName(Texts.color(label));
                 }
                 // Marca que viaja con el objeto: se puede usar durante un control.
                 if (yaml.getBoolean("stun-free", yaml.getBoolean("stun_free", false))) {

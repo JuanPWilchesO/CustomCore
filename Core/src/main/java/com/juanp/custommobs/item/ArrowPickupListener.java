@@ -10,6 +10,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.player.PlayerPickupArrowEvent;
+import org.bukkit.event.player.PlayerPickupItemEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.persistence.PersistentDataType;
@@ -27,6 +28,7 @@ public final class ArrowPickupListener implements Listener {
 
     public ArrowPickupListener(CustomMobsPlugin plugin) {
         this.plugin = plugin;
+        plugin.getLogger().info("[ArrowPickup] listener registrado");
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -35,16 +37,19 @@ public final class ArrowPickupListener implements Listener {
             return;
         }
         Item entity = event.getItem();
+        if (!entity.isValid()) {
+            return;
+        }
         ItemStack picked = entity.getItemStack();
         if (!isArrow(picked) || this.catalogName(picked) != null) {
             return;   // una custom se recoge como siempre
         }
+        this.plugin.getLogger().info("[ArrowPickup] entity player=" + player.getName()
+                + " item=" + picked.getType() + " catalog=" + this.catalogName(picked)
+                + " customs=" + this.hasCustomArrow(player));
         if (!this.hasCustomArrow(player)) {
             return;   // sin customs, el comportamiento vanilla es correcto
         }
-        this.plugin.getLogger().info("[ArrowPickup] item=" + picked.getType()
-                + " player=" + player.getName() + " catalog=" + this.catalogName(picked)
-                + " customs=true");
         event.setCancelled(true);
         ItemStack rest = this.place(player, picked);
         if (rest.getAmount() <= 0) {
@@ -63,18 +68,48 @@ public final class ArrowPickupListener implements Listener {
         if (!isArrow(picked) || this.catalogName(picked) != null) {
             return;
         }
+        this.plugin.getLogger().info("[ArrowPickup] arrow player=" + player.getName()
+                + " item=" + picked.getType() + " catalog=" + this.catalogName(picked)
+                + " customs=" + this.hasCustomArrow(player));
         if (!this.hasCustomArrow(player)) {
             return;
         }
-        this.plugin.getLogger().info("[ArrowPickup] arrow item=" + picked.getType()
-                + " player=" + player.getName() + " catalog=" + this.catalogName(picked)
-                + " customs=true");
         event.setCancelled(true);
         ItemStack rest = this.place(player, picked);
         if (rest.getAmount() <= 0) {
             arrow.remove();
         } else {
             arrow.setItemStack(rest);
+        }
+    }
+
+    /** Compatibilidad: algunas versiones disparan el evento de jugador, no el de entidad. */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
+    public void onPickupLegacy(PlayerPickupItemEvent event) {
+        if (event instanceof PlayerPickupArrowEvent) {
+            return;   // ya lo maneja el handler especifico
+        }
+        Player player = event.getPlayer();
+        Item entity = event.getItem();
+        if (!entity.isValid()) {
+            return;
+        }
+        ItemStack picked = entity.getItemStack();
+        if (!isArrow(picked) || this.catalogName(picked) != null) {
+            return;
+        }
+        this.plugin.getLogger().info("[ArrowPickup] legacy player=" + player.getName()
+                + " item=" + picked.getType() + " catalog=" + this.catalogName(picked)
+                + " customs=" + this.hasCustomArrow(player));
+        if (!this.hasCustomArrow(player)) {
+            return;
+        }
+        event.setCancelled(true);
+        ItemStack rest = this.place(player, picked);
+        if (rest.getAmount() <= 0) {
+            entity.remove();
+        } else {
+            entity.setItemStack(rest);
         }
     }
 
