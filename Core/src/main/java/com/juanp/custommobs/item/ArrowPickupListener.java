@@ -1,6 +1,7 @@
 package com.juanp.custommobs.item;
 
 import com.juanp.custommobs.CustomMobsPlugin;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.entity.AbstractArrow;
@@ -37,6 +38,9 @@ public final class ArrowPickupListener implements Listener {
         if (!(event.getEntity() instanceof Player player)) {
             return;
         }
+        this.plugin.getLogger().info("[ArrowPickup] ENTITY player=" + player.getName()
+                + " ranger=" + this.isRanger(player));
+        this.dump(player, "entity-start", null);
         if (!this.isRanger(player)) {
             return;
         }
@@ -45,14 +49,12 @@ public final class ArrowPickupListener implements Listener {
             return;
         }
         ItemStack picked = entity.getItemStack();
+        this.dump(player, "entity-picked", picked);
         if (!isArrow(picked) || this.catalogName(picked) != null) {
-            return;   // una custom se recoge como siempre
+            return;
         }
-        this.plugin.getLogger().info("[ArrowPickup] entity player=" + player.getName()
-                + " item=" + picked.getType() + " catalog=" + this.catalogName(picked)
-                + " customs=" + this.hasCustomArrow(player));
         if (!this.hasCustomArrow(player)) {
-            return;   // sin customs, el comportamiento vanilla es correcto
+            return;
         }
         event.setCancelled(true);
         ItemStack rest = this.place(player, picked);
@@ -61,23 +63,25 @@ public final class ArrowPickupListener implements Listener {
         } else {
             entity.setItemStack(rest);
         }
+        this.after(player);
     }
 
     /** Las flechas clavadas o en el suelo usan este evento, no el de items. */
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onPickupArrow(PlayerPickupArrowEvent event) {
         Player player = event.getPlayer();
+        this.plugin.getLogger().info("[ArrowPickup] ARROW player=" + player.getName()
+                + " ranger=" + this.isRanger(player));
+        this.dump(player, "arrow-start", null);
         if (!this.isRanger(player)) {
             return;
         }
         AbstractArrow arrow = event.getArrow();
         ItemStack picked = arrow.getItemStack();
+        this.dump(player, "arrow-picked", picked);
         if (!isArrow(picked) || this.catalogName(picked) != null) {
             return;
         }
-        this.plugin.getLogger().info("[ArrowPickup] arrow player=" + player.getName()
-                + " item=" + picked.getType() + " catalog=" + this.catalogName(picked)
-                + " customs=" + this.hasCustomArrow(player));
         if (!this.hasCustomArrow(player)) {
             return;
         }
@@ -88,15 +92,19 @@ public final class ArrowPickupListener implements Listener {
         } else {
             arrow.setItemStack(rest);
         }
+        this.after(player);
     }
 
     /** Compatibilidad: algunas versiones disparan el evento de jugador, no el de entidad. */
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = false)
     public void onPickupLegacy(PlayerPickupItemEvent event) {
         if (event instanceof PlayerPickupArrowEvent) {
-            return;   // ya lo maneja el handler especifico
+            return;
         }
         Player player = event.getPlayer();
+        this.plugin.getLogger().info("[ArrowPickup] LEGACY player=" + player.getName()
+                + " ranger=" + this.isRanger(player));
+        this.dump(player, "legacy-start", null);
         if (!this.isRanger(player)) {
             return;
         }
@@ -105,12 +113,10 @@ public final class ArrowPickupListener implements Listener {
             return;
         }
         ItemStack picked = entity.getItemStack();
+        this.dump(player, "legacy-picked", picked);
         if (!isArrow(picked) || this.catalogName(picked) != null) {
             return;
         }
-        this.plugin.getLogger().info("[ArrowPickup] legacy player=" + player.getName()
-                + " item=" + picked.getType() + " catalog=" + this.catalogName(picked)
-                + " customs=" + this.hasCustomArrow(player));
         if (!this.hasCustomArrow(player)) {
             return;
         }
@@ -121,9 +127,11 @@ public final class ArrowPickupListener implements Listener {
         } else {
             entity.setItemStack(rest);
         }
+        this.after(player);
     }
 
     private ItemStack place(Player player, ItemStack picked) {
+        this.dump(player, "place-before", picked);
         PlayerInventory inventory = player.getInventory();
         ItemStack rest = picked.clone();
         // 1) stacks normales del mismo tipo; los custom se saltan.
@@ -135,8 +143,6 @@ public final class ArrowPickupListener implements Listener {
             if (this.catalogName(current) != null || !current.isSimilar(rest)) {
                 continue;
             }
-            // Un stack con nombre visible es custom (o al menos no es una flecha
-            // normal anonima): no se usa como destino de fusion.
             if (current.hasItemMeta() && current.getItemMeta().hasDisplayName()) {
                 continue;
             }
@@ -145,6 +151,11 @@ public final class ArrowPickupListener implements Listener {
                 continue;
             }
             int move = Math.min(space, rest.getAmount());
+            this.plugin.getLogger().info("[ArrowPickup] MERGE slot=" + slot
+                    + " before=" + current.getAmount() + " move=" + move
+                    + " pdc=" + this.catalogName(current)
+                    + " name=" + (current.hasItemMeta()
+                        && current.getItemMeta().hasDisplayName()));
             current.setAmount(current.getAmount() + move);
             rest.setAmount(rest.getAmount() - move);
         }
@@ -158,14 +169,37 @@ public final class ArrowPickupListener implements Listener {
             ItemStack placed = rest.clone();
             placed.setAmount(move);
             inventory.setItem(slot, placed);
+            this.plugin.getLogger().info("[ArrowPickup] FREE slot=" + slot + " move=" + move);
             rest.setAmount(rest.getAmount() - move);
         }
         if (picked.getAmount() > rest.getAmount()) {
-            // El pickup vanilla se cancela, asi que el sonido hay que devolverlo a mano.
             player.playSound(player.getLocation(), Sound.ENTITY_ITEM_PICKUP, 0.2F, 1.4F);
         }
-        // Si queda algo, el llamador lo deja en el suelo o en la flecha, sin mensaje.
+        this.dump(player, "place-after", picked);
         return rest;
+    }
+
+    private void after(Player player) {
+        Bukkit.getScheduler().runTask(this.plugin,
+                () -> this.dump(player, "next-tick", null));
+    }
+
+    private void dump(Player player, String tag, ItemStack picked) {
+        this.plugin.getLogger().info("[ArrowPickup] DUMP " + tag + " player=" + player.getName());
+        ItemStack[] contents = player.getInventory().getContents();
+        for (int slot = 0; slot < contents.length; slot++) {
+            ItemStack stack = contents[slot];
+            if (stack == null || !isArrow(stack)) {
+                continue;
+            }
+            this.plugin.getLogger().info("[ArrowPickup]   slot=" + slot
+                    + " amt=" + stack.getAmount()
+                    + " mat=" + stack.getType()
+                    + " pdc=" + this.catalogName(stack)
+                    + " name=" + (stack.hasItemMeta() && stack.getItemMeta().hasDisplayName()
+                        ? stack.getItemMeta().getDisplayName() : "-")
+                    + (picked == null ? "" : " similar=" + stack.isSimilar(picked)));
+        }
     }
 
     /** El sistema de flechas es exclusivo de la clase configurada. */
@@ -185,8 +219,6 @@ public final class ArrowPickupListener implements Listener {
                 return true;
             }
         }
-        // Si hay una flecha cargada, el jugador esta usando customs aunque la marca
-        // del stack se haya perdido.
         return new com.juanp.custommobs.skill.ArrowSelection(this.plugin)
                 .selected(player).isPresent();
     }
