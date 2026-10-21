@@ -6,6 +6,7 @@ import com.juanp.custommobs.mob.Texts;
 import org.bukkit.entity.AbstractArrow;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.boss.BarColor;
 import org.bukkit.entity.Projectile;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -83,7 +84,8 @@ public final class ProjectileListener implements Listener {
         ItemStack template = catalog.get(name).orElse(null);
         if (template == null) {
             this.arrows.clear(player);
-            player.sendMessage(Texts.color("&8La flecha cargada ya no existe; se descargo."));
+            this.plugin.status().notice(player,
+                    "&8La flecha cargada ya no existe; se descargo.", BarColor.WHITE);
             return false;
         }
         // La restriccion de clase o faccion se comprueba tambien al disparar: el jugador
@@ -110,8 +112,9 @@ public final class ProjectileListener implements Listener {
             if (available <= 0) {
                 // Sin flechas de ese tipo: se descarga y el disparo sigue con las normales.
                 this.arrows.clear(player);
-                player.sendMessage(Texts.color("&8Se acabaron las flechas de &f"
-                        + this.arrows.displayName(name) + "&8; sigues con normales."));
+                this.plugin.status().notice(player, "&8Se acabaron las flechas de &f"
+                        + this.arrows.displayName(name) + "&8; sigues con normales.",
+                        BarColor.WHITE);
                 return true;
             }
             if (!tookSelected) {
@@ -125,8 +128,9 @@ public final class ProjectileListener implements Listener {
         if (!infinity && this.arrows.count(player, name) == 0) {
             // Se gasto la ultima: la proxima ya sale con normales.
             this.arrows.clear(player);
-            player.sendMessage(Texts.color("&8Se acabaron las flechas de &f"
-                    + this.arrows.displayName(name) + "&8; sigues con normales."));
+            this.plugin.status().notice(player, "&8Se acabaron las flechas de &f"
+                    + this.arrows.displayName(name) + "&8; sigues con normales.",
+                    BarColor.WHITE);
         }
         return true;
     }
@@ -189,7 +193,8 @@ public final class ProjectileListener implements Listener {
             if (name == null) {
                 // Flecha normal: descarga la custom y vuelve a disparar normales.
                 this.arrows.clear(player);
-                player.sendMessage(Texts.color("&8Flecha cargada: &fnormales&8."));
+                this.plugin.status().notice(player,
+                        "&8Flecha cargada: &fnormales&8.", BarColor.WHITE);
                 return;
             }
             if (this.impactSkills(item).isEmpty()) {
@@ -203,9 +208,9 @@ public final class ProjectileListener implements Listener {
                 return;
             }
             this.arrows.load(player, name);
-            player.sendMessage(Texts.color("&8Flecha cargada: &f"
+            this.plugin.status().notice(player, "&8Flecha cargada: &f"
                     + this.arrows.displayName(name) + " &8(&f"
-                    + this.arrows.count(player, name) + "&8)"));
+                    + this.arrows.count(player, name) + "&8)", BarColor.WHITE);
             return;
         }
         if (name == null || this.impactSkills(item).isEmpty()) {
@@ -270,12 +275,12 @@ public final class ProjectileListener implements Listener {
             return false;
         }
         // El cooldown arranca al disparar, no al impactar.
-        if (!effects.tryCooldown(player, name, use)) {
+        if (!effects.tryCooldown(player, name, use, item)) {
             return false;
         }
         if (use.hasStartMessage()) {
-            player.sendMessage(Texts.color(use.startMessage()
-                    .replace("{jugador}", player.getName())));
+            this.plugin.status().notice(player, use.startMessage()
+                    .replace("{jugador}", player.getName()), BarColor.WHITE);
         }
         this.service.arm(projectile, player, name, skills);
         return true;

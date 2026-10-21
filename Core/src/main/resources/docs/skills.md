@@ -86,7 +86,8 @@ siendo objetivos especiales de mob.
 | `inicio` | aviso al lanzar la skill (solo si castea un jugador) | — |
 | `fin` | aviso cuando caduca el efecto del plugin que aplica la skill (solo si castea un jugador) | — |
 | `cancel-on-hit` | si el control se rompe cuando el objetivo recibe dano (solo stun/root/silence/disarm) | `false` |
-| `cooldown-aviso` | aviso del objeto que la lanza al intentar usarlo en espera; admite `{segundos}` | — |
+| `message-display` | donde se muestra el mensaje: `auto`, `chat` o `screen` | `auto` |
+| `cooldown-aviso` | ya no se usa: el cooldown se muestra en la toolbar o en la boss bar | — |
 | `potion` | `poison`, `speed`, `weakness`… | — |
 | `summon` | la definicion que invoca (SUMMON), tal como su `id` | — |
 | `potion-duration-seconds` | entero | `5` |
@@ -94,7 +95,7 @@ siendo objetivos especiales de mob.
 
 ## Avisos al jugador
 
-Las skills que castea un jugador pueden avisar por chat:
+Los avisos ya no van al chat. Se muestran en la boss bar (arriba) o en un título, segun el caso:
 
 ```yaml
 - id: manto
@@ -104,18 +105,15 @@ Las skills que castea un jugador pueden avisar por chat:
   potion-duration-seconds: 10
   inicio: '&bManto activado: 10 s.'
   fin: '&7El manto se apagó.'
-  cooldown-aviso: '&cFaltan {segundos}s.'
 ```
 
-- `inicio`: se manda al lanzar la skill. Solo si el lanzador es un jugador.
-- `fin`: se manda cuando caduca el efecto del plugin que aplica la skill. No vale para
-  efectos instantáneos como `damage` o `heal`.
-- `cooldown-aviso`: lo usa el objeto que lanza la skill cuando está en espera. Admite
-  `{segundos}`, `{tiempo}` o `{cooldown}`; también `{jugador}`.
-- Los avisos van a quien castea, no al objetivo.
-- Si el objeto define `usar.inicio` o `usar.cooldown-aviso`, esos mandan sobre los de la
-  skill. El `usar.fin` del objeto solo aplica a `usar.efecto`; con `usar.skills`, el
-  fin lo pone cada skill.
+- `inicio`: barra con la duración del efecto que aplica la skill.
+- `fin`: aviso puntual al caducar; no vale para efectos instantáneos.
+- Los mensajes de combate (`damage`, `heal`, `stun`, etc.) van a la pantalla.
+- Los diálogos (`effect: message` y `chain`) siguen en el chat.
+- `message-display` fuerza el destino: `auto`, `chat` o `screen`.
+- El cooldown es visual: toolbar del item o boss bar si el material se comparte.
+- Errores, comandos, crafteo, despliegue y guardado siguen en el chat.
 
 ## Cuando se dispara (`mode`)
 

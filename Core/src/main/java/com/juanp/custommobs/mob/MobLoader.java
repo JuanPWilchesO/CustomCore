@@ -12,6 +12,7 @@ import com.juanp.custommobs.skill.SkillEffect;
 import com.juanp.custommobs.skill.SkillSpec;
 import com.juanp.custommobs.skill.SkillTarget;
 import com.juanp.custommobs.skill.SkillTargetType;
+import com.juanp.custommobs.skill.MessageDisplay;
 import com.juanp.custommobs.skill.SkillTrigger;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -533,6 +534,14 @@ public final class MobLoader {
                 asNumber(entry.get("distance"), 1.0D)));
         boolean cancelOnHit = asBoolean(entry.get("cancel-on-hit"))
                 || asBoolean(entry.get("cancel_on_hit"));
+        String displayRaw = asString(entry.get("message-display"));
+        if (displayRaw == null) {
+            displayRaw = asString(entry.get("message_display"));
+        }
+        MessageDisplay messageDisplay = MessageDisplay.parse(displayRaw);
+        if (messageDisplay == null) {
+            messageDisplay = MessageDisplay.AUTO;
+        }
         return new SkillSpec(
                 id,
                 effect,
@@ -559,7 +568,8 @@ public final class MobLoader {
                 startMessage,
                 endMessage,
                 cooldownMessage,
-                cancelOnHit
+                cancelOnHit,
+                messageDisplay
         );
     }
 

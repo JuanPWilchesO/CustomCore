@@ -14,6 +14,7 @@ Guias paso a paso. Se leen en orden; cada una anade una funcionalidad sobre la a
 | `08-monturas.md` | una montura: aspecto, efectos, paso helado y cupo |
 | `09-pociones-crafteables.md` | pociones bebibles, arrojadizas y persistentes con receta |
 | `10-control-de-masas-pvp.md` | stun, root, silence, disarm, escudo y trinket |
+| `11-interfaz-y-avisos.md` | boss bars, cooldowns, titulos y reglas de chat |
 
 Los ejemplos numerados que se copian solos en `plugins/CustomCore/mobs/` son el punto de
 partida: abrelos en orden, tienen comentarios que explican cada clave.

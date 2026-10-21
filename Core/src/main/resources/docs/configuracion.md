@@ -233,6 +233,26 @@ color que elija su dueno o su team (`/cm color`, `/cm glow`), y los de **servido
 
 **Necesita PacketEvents.** Sin el, el brillo de facciones no funciona.
 
+## Interfaz (`ui`)
+
+```yaml
+ui:
+  max-bars: 3
+  notice-seconds: 2
+  cooldown-notice-seconds: 3
+  title-fade-in: 10
+  title-stay: 40
+  title-fade-out: 10
+```
+
+- `max-bars`: barras de estado visibles a la vez; el resto espera.
+- `notice-seconds`: duracion de los avisos puntuales (flechas, inmunidad).
+- `cooldown-notice-seconds`: duracion del aviso de cooldown cuando el material se comparte
+  entre varios items.
+- `title-*`: tiempos del titulo grande de recall, en ticks (20 = 1 segundo).
+
+La action bar sigue reservada para amigo/enemigo. Los errores y comandos siguen en el chat.
+
 ## Control de masas (`cc`)
 
 ```yaml

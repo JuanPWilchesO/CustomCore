@@ -49,6 +49,8 @@ import com.juanp.custommobs.region.RegionGate;
 import com.juanp.custommobs.skill.SkillInteractListener;
 import com.juanp.custommobs.skill.ProjectileListener;
 import com.juanp.custommobs.cc.CcListener;
+import com.juanp.custommobs.ui.StatusListener;
+import com.juanp.custommobs.ui.StatusService;
 import com.juanp.custommobs.cc.CcService;
 import com.juanp.custommobs.skill.ProjectileService;
 import com.juanp.custommobs.skill.SkillCatalog;
@@ -115,6 +117,7 @@ public final class CustomMobsPlugin extends JavaPlugin {
     private SkillService skillService;
     private ProjectileService projectileService;
     private CcService cc;
+    private StatusService status;
     private com.juanp.custommobs.effect.EffectListener effectListener;
     private TargetingTask targetingTask;
     private RecallService recallService;
@@ -234,6 +237,7 @@ public final class CustomMobsPlugin extends JavaPlugin {
         // Se crea aqui, y no mas abajo, porque el listener del clic derecho lo necesita.
         this.skillService = new SkillService(this.mobService);
         this.projectileService = new ProjectileService(this);
+        this.status = new StatusService(this);
         this.cc = new CcService(this);
         // La economia, por reflexion: sin EssentialsX los pagos no funcionan y se avisa.
         this.economy = EconomyLink.create(this);
@@ -277,6 +281,7 @@ public final class CustomMobsPlugin extends JavaPlugin {
         // Skills al impactar: se arman al disparar y se resuelven al tocar.
         pluginManager.registerEvents(new ProjectileListener(this, this.projectileService), this);
         pluginManager.registerEvents(new CcListener(this.cc, this.dropService.catalog()), this);
+        pluginManager.registerEvents(new StatusListener(this.status), this);
         this.getServer().getScheduler().runTaskTimer(this, this.projectileService::tick, 20L, 20L);
 
         PluginCommand command = this.getCommand("customcore");
@@ -408,6 +413,9 @@ public final class CustomMobsPlugin extends JavaPlugin {
         if (this.ambientTask != null) {
             this.ambientTask.cancel();
         }
+        if (this.status != null) {
+            this.status.shutdown();
+        }
         if (this.cc != null) {
             this.cc.releaseAll();
         }
@@ -480,6 +488,11 @@ public final class CustomMobsPlugin extends JavaPlugin {
     /** Control de masas: aturdimiento, raiz, silencio, desarme, escudo e inmunidad. */
     public CcService cc() {
         return this.cc;
+    }
+
+    /** Avisos de estado en pantalla (boss bars y titulos). */
+    public StatusService status() {
+        return this.status;
     }
 
     /** Uso de items: cooldowns, restricciones y catalogo. */

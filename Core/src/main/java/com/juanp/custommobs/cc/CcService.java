@@ -7,11 +7,15 @@ import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
+import org.bukkit.boss.BarColor;
+import org.bukkit.boss.BarStyle;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitTask;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -124,7 +128,10 @@ public final class CcService {
         target.getWorld().playSound(target.getLocation(), Sound.BLOCK_ANVIL_LAND, 0.5F, 1.4F);
         target.getWorld().spawnParticle(Particle.CRIT,
                 target.getLocation().add(0.0D, 1.0D, 0.0D), 20, 0.3D, 0.5D, 0.3D, 0.05D);
-        this.notice(target, this.messageFor(type));
+        if (target instanceof Player player) {
+            this.plugin.status().show(player, "cc:" + type, this.messageFor(type),
+                    seconds, this.colorFor(type), BarStyle.SOLID, 90, true);
+        }
         this.ensureTask();
         return true;
     }
@@ -149,7 +156,11 @@ public final class CcService {
         target.getWorld().playSound(target.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 0.5F, 1.6F);
         target.getWorld().spawnParticle(Particle.END_ROD,
                 target.getLocation().add(0.0D, 1.0D, 0.0D), 24, 0.4D, 0.6D, 0.4D, 0.02D);
-        this.notice(target, this.plugin.config().ccShieldMessage());
+        if (target instanceof Player player) {
+            this.plugin.status().show(player, "cc:shield",
+                    this.plugin.config().ccShieldMessage(), duration,
+                    BarColor.BLUE, BarStyle.SOLID, 90, true);
+        }
         return true;
     }
 
@@ -167,14 +178,19 @@ public final class CcService {
         if (flags == null || types == null) {
             return;
         }
-        boolean broken = false;
+        List<String> brokenTypes = new ArrayList<>();
         for (Map.Entry<String, Boolean> entry : flags.entrySet()) {
             if (Boolean.TRUE.equals(entry.getValue()) && types.remove(entry.getKey()) != null) {
-                broken = true;
+                brokenTypes.add(entry.getKey());
             }
         }
-        if (!broken) {
+        if (brokenTypes.isEmpty()) {
             return;
+        }
+        if (target instanceof Player player) {
+            for (String type : brokenTypes) {
+                this.plugin.status().clear(player, "cc:" + type);
+            }
         }
         flags.clear();
         if (!this.movementLocked(types)) {
@@ -203,6 +219,9 @@ public final class CcService {
         // Siempre se intenta soltar: puede quedar un bloqueo huerfano aunque el
         // registro ya se hubiera limpiado.
         this.unlock(target);
+        if (target instanceof Player player) {
+            this.clearBars(player);
+        }
         if (immunitySeconds > 0.0D) {
             this.immuneUntil.put(id, System.currentTimeMillis()
                     + (long) Math.ceil(immunitySeconds * 1000.0D));
@@ -220,6 +239,9 @@ public final class CcService {
         this.active.remove(id);
         this.breakOnHit.remove(id);
         this.unlock(target);
+        if (target instanceof Player player) {
+            this.clearBars(player);
+        }
         this.immuneUntil.remove(id);
     }
 
@@ -366,9 +388,24 @@ public final class CcService {
         };
     }
 
+    private BarColor colorFor(String type) {
+        return switch (type) {
+            case "root" -> BarColor.GREEN;
+            case "silence" -> BarColor.YELLOW;
+            case "disarm" -> BarColor.PURPLE;
+            default -> BarColor.RED;
+        };
+    }
+
+    private void clearBars(Player player) {
+        for (String type : List.of("stun", "root", "silence", "disarm", "shield")) {
+            this.plugin.status().clear(player, "cc:" + type);
+        }
+    }
+
     private void notice(LivingEntity target, String message) {
         if (target instanceof Player player && message != null && !message.isBlank()) {
-            player.sendMessage(Texts.color(message));
+            this.plugin.status().notice(player, message, BarColor.WHITE);
         }
     }
 

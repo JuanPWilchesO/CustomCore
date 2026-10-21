@@ -8,6 +8,16 @@ Pensado para **Paper**. Se apoya en tres plugins opcionales: **Teams** (bandos d
 jugadores), **LibsDisguises** (apariencias) y **LuckPerms** (grupos y cupos). Sin
 cualquiera de ellos el plugin sigue funcionando: cada uno degrada por su cuenta.
 
+## Novedades 1.0.0
+
+- **Interfaz sin chat**: los estados, controles, efectos, escudos y cooldowns se muestran en
+  boss bars; el recall sale como titulo grande. Errores, comandos, crafteo, despliegue y
+  dialogos siguen en el chat.
+- **Cooldown visual**: barrido en la toolbar; si varios items comparten material, boss bar
+  con prioridad maxima.
+- **`message-display`** en skills: `auto`, `chat` o `screen`.
+- **`ui` configurable**: maximo de barras, duracion de avisos y tiempos del titulo.
+
 ## Novedades 0.9.7
 
 - **`cancel-on-hit`** en el yml de la skill: el control se rompe cuando el objetivo recibe

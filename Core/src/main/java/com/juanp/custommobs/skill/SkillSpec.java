@@ -34,6 +34,7 @@ package com.juanp.custommobs.skill;
  * @param endMessage            aviso cuando caduca el efecto que aplica; {@code null} si no hay
  * @param cooldownMessage       aviso al intentar usarla en espera; admite {@code {segundos}}
  * @param cancelOnHit           si el control se rompe cuando el objetivo recibe dano
+ * @param messageDisplay        donde se muestra el mensaje: auto, chat o pantalla
  */
 public record SkillSpec(
         String id,
@@ -61,7 +62,8 @@ public record SkillSpec(
         String startMessage,
         String endMessage,
         String cooldownMessage,
-        boolean cancelOnHit
+        boolean cancelOnHit,
+        MessageDisplay messageDisplay
 ) {
 
     public boolean hasMessage() {

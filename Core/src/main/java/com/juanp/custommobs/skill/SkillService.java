@@ -261,8 +261,7 @@ public final class SkillService extends BukkitRunnable {
         }
         // Aviso opcional: en dano o curacion se le dice al jugador afectado.
         if (skill.hasMessage() && target instanceof Player player) {
-            player.sendMessage(com.juanp.custommobs.mob.Texts.color(
-                    this.spoken(customMob, skill, player)));
+            this.say(player, this.spoken(customMob, skill, player), skill);
         }
     }
 
@@ -550,6 +549,25 @@ public final class SkillService extends BukkitRunnable {
     }
 
     /**
+     * Muestra el mensaje de una skill segun su regla: dialogo al chat, combate y estados a
+     * la pantalla. {@code message-display} permite forzar uno u otro.
+     */
+    private void say(Player player, String text, SkillSpec skill) {
+        if (player == null || text == null || text.isBlank()) {
+            return;
+        }
+        boolean chat = skill.effect() == SkillEffect.MESSAGE
+                || skill.effect() == SkillEffect.CHAIN
+                || skill.messageDisplay() == MessageDisplay.CHAT;
+        if (chat) {
+            player.sendMessage(com.juanp.custommobs.mob.Texts.color(text));
+            return;
+        }
+        this.service.plugin().status().notice(player, text,
+                org.bukkit.boss.BarColor.WHITE);
+    }
+
+    /**
      * Dispara las skills de interaccion de un mob: las que un jugador activa con clic
      * derecho. En {@code MESSAGE} el texto va solo a quien hizo clic, y admite
      * {@code {jugador}} ademas de {@code {mob}}.
@@ -608,8 +626,7 @@ public final class SkillService extends BukkitRunnable {
             }
         }
         if (skill.hasMessage()) {
-            clicker.sendMessage(com.juanp.custommobs.mob.Texts.color(
-                    this.spoken(customMob, skill, clicker)));
+            this.say(clicker, this.spoken(customMob, skill, clicker), skill);
         }
     }
 
@@ -842,8 +859,7 @@ public final class SkillService extends BukkitRunnable {
             return;
         }
         if (skill.hasStartMessage()) {
-            caster.sendMessage(com.juanp.custommobs.mob.Texts.color(
-                    skill.startMessage().replace("{jugador}", caster.getName())));
+            this.say(caster, skill.startMessage().replace("{jugador}", caster.getName()), skill);
         }
         if (skill.effect() == SkillEffect.CONSOLE_COMMAND) {
             this.consoleCommandFromPlayer(caster, skill);

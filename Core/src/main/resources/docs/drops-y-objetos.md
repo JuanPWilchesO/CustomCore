@@ -121,11 +121,11 @@ usar:
 - El **cooldown efectivo** es el mayor entre `usar.cooldown` y el
   `cooldown-seconds` de las skills. No se suman.
 - `consume` decide si se gasta una unidad.
-- `usar.inicio` y `usar.fin`: avisos en el chat del jugador al usarlo y al caducar
-  el efecto. `usar.fin` solo aplica cuando el item usa `usar.efecto`; con
-  `usar.skills`, el fin lo pone el `fin` de cada skill.
-- `usar.cooldown-aviso`: aviso al intentar usarlo en espera; admite `{segundos}`,
-  `{tiempo}` o `{cooldown}`. Si falta, se usa el `cooldown-aviso` de la primera skill.
+- `usar.inicio` y `usar.fin`: avisos en pantalla al usarlo y al caducar el efecto.
+  `usar.fin` solo aplica cuando el item usa `usar.efecto`; con `usar.skills`, el fin lo
+  pone el `fin` de cada skill.
+- El cooldown es visual: barrido en la toolbar del item o boss bar si el material se
+  comparte entre varios items. `usar.cooldown-aviso` ya no se usa.
 - Los avisos van al jugador que usa el objeto, no al objetivo.
 - Si el objeto tiene `clase` y/o `faccion`, la restriccion se comprueba **antes** de
   lanzar la skill. Un admin pasa solo si tiene `customcore.bypass`, no por ser admin.
@@ -144,7 +144,6 @@ usar:
   consume: false
   cooldown: 120
   inicio: '&bCristal activado: 10 s de invulnerabilidad.'
-  cooldown-aviso: '&cEspera {segundos}s para volver a usarlo.'
 ```
 
 Para un efecto directo, donde sí vale `usar.fin`:
@@ -156,7 +155,6 @@ usar:
   cooldown: 60
   inicio: '&aCaída segura activada.'
   fin: '&7La caída segura terminó.'
-  cooldown-aviso: '&cEspera {segundos}s.'
 ```
 
 ### Skills al impactar

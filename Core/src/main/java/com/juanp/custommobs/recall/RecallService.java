@@ -210,7 +210,7 @@ public final class RecallService extends BukkitRunnable {
     private void notifyOwner(Pending state, String message) {
         Player owner = Bukkit.getPlayer(state.ownerId);
         if (owner != null) {
-            owner.sendMessage(Texts.color(message));
+            this.plugin.status().title(owner, message, null);
         }
     }
 

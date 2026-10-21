@@ -141,15 +141,13 @@ usar:
   cooldown: 60        # segundos por jugador
   inicio: '&aCaída segura activada.'
   fin: '&7La caída segura terminó.'
-  cooldown-aviso: '&cEspera {segundos}s.'
 ```
 
 - Si el objeto es **comida** → se aplica al comer (el juego lo consume).
 - Si no → **clic derecho** → se aplica y, con `consume: true`, se gasta una unidad.
 - La **facción** del objeto se respeta igual que en el resto del catálogo.
-- `inicio`, `fin` y `cooldown-aviso` son avisos al jugador. `fin` solo vale para
-  efectos del plugin con duración; `cooldown-aviso` admite `{segundos}`, `{tiempo}`
-  o `{cooldown}`.
+- `inicio` y `fin` se muestran en pantalla. `fin` solo vale para efectos del plugin con
+  duración. El cooldown es visual; `cooldown-aviso` ya no se usa.
 
 ## Fuego y hielo (skills)
 

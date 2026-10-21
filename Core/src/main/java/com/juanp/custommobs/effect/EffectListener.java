@@ -10,6 +10,8 @@ import org.bukkit.Material;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.block.Block;
+import org.bukkit.boss.BarColor;
+import org.bukkit.boss.BarStyle;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
@@ -214,6 +216,15 @@ public final class EffectListener implements Listener {
         return !this.plugin.drops().catalog().stunFree(item);
     }
 
+    private BarColor colorFor(EffectSpec effect) {
+        String type = effect.type() == null ? "" : effect.type();
+        return switch (type) {
+            case "negativo" -> BarColor.RED;
+            case "neutro" -> BarColor.WHITE;
+            default -> BarColor.BLUE;
+        };
+    }
+
     /** {@code true} si el objeto no tiene restriccion o el jugador la cumple. */
     public boolean canUse(Player player, ItemStack item) {
         ItemFactionLock lock = this.plugin.itemLock();
@@ -378,12 +389,12 @@ public final class EffectListener implements Listener {
         if (use.hasSkills() && this.allImpact(use)) {
             return false;
         }
-        if (!this.tryCooldown(player, name, use)) {
+        if (!this.tryCooldown(player, name, use, item)) {
             return true;   // en espera: el clic se consume igual
         }
         if (use.hasStartMessage()) {
-            player.sendMessage(Texts.color(use.startMessage()
-                    .replace("{jugador}", player.getName())));
+            this.plugin.status().notice(player, use.startMessage()
+                    .replace("{jugador}", player.getName()), BarColor.WHITE);
         }
         if (use.hasSkills()) {
             if (this.plugin.skillService() == null) {
@@ -437,7 +448,7 @@ public final class EffectListener implements Listener {
      *
      * @return {@code false} si todavia esta en espera; ya dejo el aviso
      */
-    public boolean tryCooldown(Player player, String name, UseSpec use) {
+    public boolean tryCooldown(Player player, String name, UseSpec use, ItemStack item) {
         int cooldown = use.cooldownSeconds();
         if (use.hasSkills() && this.plugin.skillCatalog() != null) {
             for (String id : use.skillIds()) {
@@ -451,13 +462,33 @@ public final class EffectListener implements Listener {
         long now = System.currentTimeMillis();
         Long until = this.cooldowns.get(key);
         if (until != null && until > now) {
-            this.warnCooldown(player, use, until - now);
+            this.showCooldown(player, name, item, (until - now + 999L) / 1000L);
             return false;
         }
         if (cooldown > 0) {
             this.cooldowns.put(key, now + cooldown * 1000L);
+            this.showCooldown(player, name, item, cooldown);
         }
         return true;
+    }
+
+    /**
+     * Cooldown visual. Si el material lo comparten varios items del catalogo, el barrido
+     * vanilla bloquearia los otros: se usa la boss bar y se deja el cooldown en el servidor.
+     */
+    private void showCooldown(Player player, String name, ItemStack item, long seconds) {
+        if (item == null || item.getType().isAir() || seconds <= 0L) {
+            return;
+        }
+        if (this.plugin.drops().catalog().materialShared(item.getType(), name)) {
+            String label = item.hasItemMeta() && item.getItemMeta().hasDisplayName()
+                    ? org.bukkit.ChatColor.stripColor(item.getItemMeta().getDisplayName())
+                    : name;
+            this.plugin.status().cooldown(player, "&8" + label);
+        } else {
+            player.setCooldown(item.getType(),
+                    (int) Math.min(Integer.MAX_VALUE, seconds * 20L));
+        }
     }
 
     /** Aviso de espera: usa el del item o, si falta, el de la primera skill. */
@@ -500,11 +531,17 @@ public final class EffectListener implements Listener {
         // EffectService, asi que hay que devolver la visibilidad a mano.
         boolean hadSigilo = this.service.hasMechanic(player, "sigilo");
         this.service.apply(player, effect, seconds, player.getUniqueId(), endMessage);
-        if (startMessage == null || startMessage.isBlank()) {
-            player.sendMessage(Texts.color("&8[&cCustomCore&8] &7" + effect.name()));
+        int effectSeconds = seconds > 0 ? seconds : effect.duration();
+        String label = startMessage == null || startMessage.isBlank()
+                ? effect.name()
+                : startMessage.replace("{jugador}", player.getName());
+        if ("quitar_positivos".equals(effect.mechanic())
+                || "quitar_negativos".equals(effect.mechanic())) {
+            // Purga instantanea: aviso puntual, no barra con duracion.
+            this.plugin.status().notice(player, label, BarColor.WHITE);
         } else {
-            player.sendMessage(Texts.color(startMessage
-                    .replace("{jugador}", player.getName())));
+            this.plugin.status().show(player, "effect:" + effect.id(), label, effectSeconds,
+                    this.colorFor(effect), BarStyle.SOLID, 60, true);
         }
         String mechanic = effect.mechanic();
         if (("quitar_positivos".equals(mechanic) || "quitar_negativos".equals(mechanic))

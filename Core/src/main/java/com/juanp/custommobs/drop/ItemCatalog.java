@@ -383,6 +383,25 @@ public final class ItemCatalog {
         return denied.contains("modificable") || denied.contains(normalized);
     }
 
+    /** {@code true} si otro objeto del catalogo comparte el mismo material. */
+    public boolean materialShared(org.bukkit.Material material, String name) {
+        if (material == null) {
+            return false;
+        }
+        boolean found = false;
+        for (String other : this.names()) {
+            ItemStack item = this.get(other).orElse(null);
+            if (item == null || item.getType() != material) {
+                continue;
+            }
+            if (found) {
+                return true;
+            }
+            found = true;
+        }
+        return false;
+    }
+
     /** {@code true} si el objeto se puede usar durante un aturdimiento o silencio. */
     public boolean stunFree(ItemStack item) {
         if (item == null || !item.hasItemMeta()) {

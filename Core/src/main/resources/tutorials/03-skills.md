@@ -76,7 +76,7 @@ skills:
 
 ## Avisos de la skill
 
-Una skill casteada por un jugador puede avisar por chat:
+Una skill casteada por un jugador avisa en pantalla, no por chat:
 
 ```yaml
   - id: manto
@@ -86,12 +86,12 @@ Una skill casteada por un jugador puede avisar por chat:
     potion-duration-seconds: 10
     inicio: '&bManto activado.'
     fin: '&7El manto se apagó.'
-    cooldown-aviso: '&cFaltan {segundos}s.'
 ```
 
-- `inicio` se manda al lanzarla; `fin`, cuando caduca el efecto del plugin.
+- `inicio` se muestra al lanzarla; `fin`, cuando caduca el efecto del plugin.
 - `fin` no vale para efectos instantáneos como `damage` o `heal`.
-- `cooldown-aviso` lo usa el objeto que lanza la skill cuando está en espera.
+- `message-display` decide: `auto`, `chat` o `screen`.
+- El cooldown es visual; `cooldown-aviso` ya no se usa.
 - Los avisos van a quien castea, no al objetivo.
 
 ## Conversaciones y comandos

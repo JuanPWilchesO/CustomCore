@@ -17,6 +17,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.boss.BarColor;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.potion.PotionEffectTypeCategory;
@@ -232,6 +233,9 @@ public final class EffectService {
                 if (match) {
                     this.removeAttributes(player, spec);
                     this.forgetNotice(player.getUniqueId(), entry.getKey());
+                    if (player instanceof Player online) {
+                        this.plugin.status().clear(online, "effect:" + entry.getKey());
+                    }
                     iterator.remove();
                     removed++;
                 }
@@ -435,7 +439,7 @@ public final class EffectService {
         }
         Player player = Bukkit.getPlayer(notice.receiver());
         if (player != null && player.isOnline()) {
-            player.sendMessage(Texts.color(notice.message()));
+            this.plugin.status().notice(player, notice.message(), BarColor.WHITE);
         }
     }
 
