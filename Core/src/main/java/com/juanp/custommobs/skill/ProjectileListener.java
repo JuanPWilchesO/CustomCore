@@ -57,8 +57,9 @@ public final class ProjectileListener implements Listener {
         if (this.shootLoaded(player, event, projectile)) {
             return;
         }
-        // Sin flecha cargada no hay cooldown que aplicar: la municion normal queda libre.
-        if (this.arm(player, event.getConsumable(), projectile, false)) {
+        // Sin flecha cargada: el disparo debe usar municion normal, no la custom que
+        // el juego haya elegido por estar primera en el inventario.
+        if (!this.useNormalAmmo(player, event)) {
             return;
         }
         this.arm(player, event.getBow(), projectile, false);
@@ -252,6 +253,34 @@ public final class ProjectileListener implements Listener {
     public void onHit(ProjectileHitEvent event) {
         LivingEntity hit = event.getHitEntity() instanceof LivingEntity living ? living : null;
         this.service.hit(event.getEntity(), event.getEntity().getLocation(), hit);
+    }
+
+    /**
+     * Fuerza municion normal cuando no hay flecha cargada. El servidor gasta la flecha
+     * antes del evento; si eligio una custom, se devuelve y se gasta una normal.
+     *
+     * @return {@code false} si no habia flechas normales y el disparo se cancelo
+     */
+    private boolean useNormalAmmo(Player player, EntityShootBowEvent event) {
+        ItemStack consumed = event.getConsumable();
+        var effects = this.plugin.effectListener();
+        if (consumed == null || effects == null) {
+            return true;
+        }
+        if (effects.catalogName(consumed) == null) {
+            return true;   // ya era una flecha normal
+        }
+        ItemStack plain = new ItemStack(consumed.getType(), 1);
+        if (!player.getInventory().removeItem(plain).isEmpty()) {
+            // No hay flechas normales de ese material: se devuelve la custom y se corta.
+            this.refund(player, consumed);
+            event.setCancelled(true);
+            this.plugin.status().notice(player, "&8No te quedan flechas normales.",
+                    BarColor.WHITE);
+            return false;
+        }
+        this.refund(player, consumed);
+        return true;
     }
 
     /** {@code true} si el objeto de la mano esta en cooldown. */
