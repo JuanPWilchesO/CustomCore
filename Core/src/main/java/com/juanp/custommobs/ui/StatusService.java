@@ -169,7 +169,9 @@ public final class StatusService {
             bar.setStyle(entry.style());
             long remaining = Math.max(0L, entry.endsAt() - now);
             String suffix = entry.progress()
-                    ? " &8· &7" + Math.max(1L, (remaining + 999L) / 1000L) + "s" : "";
+                    ? org.bukkit.ChatColor.DARK_GRAY + " · "
+                      + org.bukkit.ChatColor.GRAY
+                      + Math.max(1L, (remaining + 999L) / 1000L) + "s" : "";
             bar.setTitle(entry.text() + suffix);
             bar.setProgress(entry.progress()
                     ? Math.min(1.0F, Math.max(0.0F, (float) remaining / (float) entry.total()))

@@ -50,6 +50,10 @@ public final class ProjectileService {
         long now = System.currentTimeMillis();
         String shotKey = shooter.getUniqueId() + ":" + itemName + ":"
                 + (now / SHOT_WINDOW_MILLIS);
+        if (projectile instanceof org.bukkit.entity.AbstractArrow arrow) {
+            // Una flecha custom no se recoge: se destruye al impactar.
+            arrow.setPickupStatus(org.bukkit.entity.AbstractArrow.PickupStatus.DISALLOWED);
+        }
         this.pending.put(projectile.getUniqueId(), new Pending(shooter.getUniqueId(),
                 List.copyOf(skills), shotKey, now + LIFETIME_MILLIS));
     }
@@ -61,8 +65,16 @@ public final class ProjectileService {
      */
     public boolean hit(Projectile projectile, Location where, LivingEntity hit) {
         Pending shot = this.pending.remove(projectile.getUniqueId());
+        if (shot == null) {
+            return false;
+        }
+        if (projectile instanceof org.bukkit.entity.AbstractArrow arrow) {
+            // Se destruye siempre que fuera una flecha armada, aunque el skill no se
+            // ejecute (multishot, expirada o tirador desconectado).
+            arrow.remove();
+        }
         long now = System.currentTimeMillis();
-        if (shot == null || shot.expiresAt() < now) {
+        if (shot.expiresAt() < now) {
             return false;
         }
         Long until = this.spent.get(shot.shotKey());

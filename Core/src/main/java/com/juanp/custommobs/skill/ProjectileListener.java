@@ -98,12 +98,18 @@ public final class ProjectileListener implements Listener {
             player.sendMessage(Texts.color("&c" + denied));
             return true;
         }
+        // Cooldown del item de la flecha: se aplica al disparar y bloquea el disparo.
+        var effects = this.plugin.effectListener();
+        UseSpec use = effects == null ? null : effects.useOf(template);
+        if (use != null && !effects.tryCooldown(player, name, use, template)) {
+            event.setCancelled(true);
+            return true;
+        }
         boolean infinity = event.getBow() != null
                 && event.getBow().getEnchantmentLevel(org.bukkit.enchantments.Enchantment.INFINITY) > 0;
         // El servidor gasta la municion ANTES de este evento, dentro de 'draw'. Los flags
         // de consumo llegan tarde: se mira que flecha se gasto y se compensa.
         ItemStack consumed = infinity ? null : event.getConsumable();
-        var effects = this.plugin.effectListener();
         String consumedName = consumed == null || effects == null
                 ? null : effects.catalogName(consumed);
         boolean tookSelected = name.equals(consumedName);

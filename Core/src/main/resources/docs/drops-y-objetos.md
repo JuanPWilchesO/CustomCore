@@ -198,7 +198,8 @@ disparo se bloquea y se descarga. Si no quedan flechas de ese tipo, el disparo s
 se gasta otro tipo por accidente. Con `Infinity` no se consume ninguna.
 
 La flecha cargada manda sobre las skills del arco. Las del arco solo aplican cuando no hay
-ninguna cargada.
+ninguna cargada. El disparo respeta el cooldown del item de la flecha, y la flecha se
+destruye al impactar: no se puede recoger.
 
 ### Objetos usables bajo control
 
