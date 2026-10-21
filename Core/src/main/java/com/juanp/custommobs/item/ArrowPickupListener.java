@@ -36,6 +36,9 @@ public final class ArrowPickupListener implements Listener {
         if (!(event.getEntity() instanceof Player player)) {
             return;
         }
+        if (!this.isRanger(player)) {
+            return;
+        }
         Item entity = event.getItem();
         if (!entity.isValid()) {
             return;
@@ -63,6 +66,9 @@ public final class ArrowPickupListener implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onPickupArrow(PlayerPickupArrowEvent event) {
         Player player = event.getPlayer();
+        if (!this.isRanger(player)) {
+            return;
+        }
         AbstractArrow arrow = event.getArrow();
         ItemStack picked = arrow.getItemStack();
         if (!isArrow(picked) || this.catalogName(picked) != null) {
@@ -90,6 +96,9 @@ public final class ArrowPickupListener implements Listener {
             return;   // ya lo maneja el handler especifico
         }
         Player player = event.getPlayer();
+        if (!this.isRanger(player)) {
+            return;
+        }
         Item entity = event.getItem();
         if (!entity.isValid()) {
             return;
@@ -116,9 +125,24 @@ public final class ArrowPickupListener implements Listener {
     private ItemStack place(Player player, ItemStack picked) {
         PlayerInventory inventory = player.getInventory();
         ItemStack rest = picked.clone();
-        // Solo slots libres: asi una normal no se fusiona con ningun stack, ni custom
-        // ni normal. Es la unica forma segura si la marca del catalogo falta.
-        // 1) slots libres.
+        // 1) stacks normales del mismo tipo; los custom se saltan.
+        for (int slot = 0; slot < 36 && rest.getAmount() > 0; slot++) {
+            ItemStack current = inventory.getItem(slot);
+            if (current == null || current.getType().isAir()) {
+                continue;
+            }
+            if (this.catalogName(current) != null || !current.isSimilar(rest)) {
+                continue;
+            }
+            int space = current.getMaxStackSize() - current.getAmount();
+            if (space <= 0) {
+                continue;
+            }
+            int move = Math.min(space, rest.getAmount());
+            current.setAmount(current.getAmount() + move);
+            rest.setAmount(rest.getAmount() - move);
+        }
+        // 2) slots libres.
         for (int slot = 0; slot < 36 && rest.getAmount() > 0; slot++) {
             ItemStack current = inventory.getItem(slot);
             if (current != null && !current.getType().isAir()) {
@@ -132,6 +156,17 @@ public final class ArrowPickupListener implements Listener {
         }
         // Si queda algo, el llamador lo deja en el suelo o en la flecha, sin mensaje.
         return rest;
+    }
+
+    /** El sistema de flechas es exclusivo de la clase configurada. */
+    private boolean isRanger(Player player) {
+        if (player.hasPermission(this.plugin.config().bypassPermission())) {
+            return true;
+        }
+        String expected = this.plugin.config().arrowClass();
+        return this.plugin.playerClasses().of(player.getUniqueId())
+                .map(id -> id.equalsIgnoreCase(expected))
+                .orElse(false);
     }
 
     private boolean hasCustomArrow(Player player) {

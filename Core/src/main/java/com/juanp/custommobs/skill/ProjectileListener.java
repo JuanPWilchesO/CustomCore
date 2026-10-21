@@ -262,6 +262,9 @@ public final class ProjectileListener implements Listener {
      * @return {@code false} si no habia flechas normales y el disparo se cancelo
      */
     private boolean useNormalAmmo(Player player, EntityShootBowEvent event) {
+        if (!this.isRanger(player)) {
+            return true;   // fuera del cazador, el disparo es vanilla
+        }
         ItemStack consumed = event.getConsumable();
         var effects = this.plugin.effectListener();
         if (consumed == null || effects == null) {
@@ -300,6 +303,10 @@ public final class ProjectileListener implements Listener {
      */
     private boolean arm(Player player, ItemStack item, Projectile projectile, boolean applyCooldown) {
         if (item == null || item.getType().isAir()) {
+            return false;
+        }
+        // Las flechas custom son exclusivas de la clase de arqueros.
+        if (isArrow(item) && !this.isRanger(player)) {
             return false;
         }
         List<SkillSpec> skills = this.impactSkills(item);
