@@ -43,15 +43,16 @@ public final class ProjectileService {
     }
 
     /** Arma un proyectil con las skills de impacto del objeto que lo lanzo. */
-    public void arm(Projectile projectile, Player shooter, String itemName, List<SkillSpec> skills) {
+    public void arm(Projectile projectile, Player shooter, String itemName, List<SkillSpec> skills,
+                    boolean customAmmo) {
         if (projectile == null || shooter == null || skills == null || skills.isEmpty()) {
             return;
         }
         long now = System.currentTimeMillis();
         String shotKey = shooter.getUniqueId() + ":" + itemName + ":"
                 + (now / SHOT_WINDOW_MILLIS);
-        if (projectile instanceof org.bukkit.entity.AbstractArrow arrow) {
-            // Una flecha custom no se recoge: se destruye al impactar.
+        if (customAmmo && projectile instanceof org.bukkit.entity.AbstractArrow arrow) {
+            // Solo las flechas custom quedan como de infinidad: no se recogen.
             arrow.setPickupStatus(org.bukkit.entity.AbstractArrow.PickupStatus.DISALLOWED);
         }
         this.pending.put(projectile.getUniqueId(), new Pending(shooter.getUniqueId(),
@@ -67,10 +68,6 @@ public final class ProjectileService {
         Pending shot = this.pending.remove(projectile.getUniqueId());
         if (shot == null) {
             return false;
-        }
-        if (projectile instanceof org.bukkit.entity.AbstractArrow arrow) {
-            // Queda como una flecha de infinidad: no se recoge y el juego la borra sola.
-            arrow.setPickupStatus(org.bukkit.entity.AbstractArrow.PickupStatus.DISALLOWED);
         }
         long now = System.currentTimeMillis();
         if (shot.expiresAt() < now) {

@@ -105,7 +105,6 @@ public record PluginConfig(
         String ccCleanseMessage,
         int uiMaxBars,
         int uiNoticeSeconds,
-        int uiCooldownNoticeSeconds,
         int uiTitleFadeIn,
         int uiTitleStay,
         int uiTitleFadeOut
@@ -142,7 +141,6 @@ public record PluginConfig(
                 "&8Te liberas y ganas inmunidad.");
         int uiMaxBars = Math.max(1, cfg.getInt("ui.max-bars", 3));
         int uiNotice = Math.max(1, cfg.getInt("ui.notice-seconds", 2));
-        int uiCooldown = Math.max(1, cfg.getInt("ui.cooldown-notice-seconds", 3));
         int uiFadeIn = Math.max(0, cfg.getInt("ui.title-fade-in", 10));
         int uiStay = Math.max(1, cfg.getInt("ui.title-stay", 40));
         int uiFadeOut = Math.max(0, cfg.getInt("ui.title-fade-out", 10));
@@ -205,7 +203,6 @@ public record PluginConfig(
                 ccCleanse,
                 uiMaxBars,
                 uiNotice,
-                uiCooldown,
                 uiFadeIn,
                 uiStay,
                 uiFadeOut

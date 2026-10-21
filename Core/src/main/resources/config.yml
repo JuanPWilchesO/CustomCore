@@ -97,8 +97,6 @@ ui:
   max-bars: 3
   # Duracion de los avisos puntuales (flechas, inmunidad), en segundos.
   notice-seconds: 2
-  # Duracion del aviso de cooldown cuando el material se comparte entre items.
-  cooldown-notice-seconds: 3
   # Tiempos del titulo grande de recall, en ticks (20 = 1 segundo).
   title-fade-in: 10
   title-stay: 40

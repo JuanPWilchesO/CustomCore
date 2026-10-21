@@ -133,7 +133,7 @@ public final class ProjectileListener implements Listener {
             }
         }
         this.service.arm(projectile, player, name,
-                this.impactSkills(catalog.useOf(name).orElse(null)));
+                this.impactSkills(catalog.useOf(name).orElse(null)), true);
         if (!infinity && this.arrows.count(player, name) == 0) {
             // Se gasto la ultima: la proxima ya sale con normales.
             this.arrows.clear(player);
@@ -302,7 +302,7 @@ public final class ProjectileListener implements Listener {
             this.plugin.status().notice(player, use.startMessage()
                     .replace("{jugador}", player.getName()), BarColor.WHITE);
         }
-        this.service.arm(projectile, player, name, skills);
+        this.service.arm(projectile, player, name, skills, isArrow(item));
         return true;
     }
 
