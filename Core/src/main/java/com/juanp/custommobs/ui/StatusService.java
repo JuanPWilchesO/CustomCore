@@ -61,9 +61,11 @@ public final class StatusService {
                 color, BarStyle.SOLID, 40, false);
     }
 
-    /** Aviso de cooldown con prioridad maxima, cuando el material se comparte. */
-    public void cooldown(Player player, String text) {
-        this.show(player, "cooldown", text, this.plugin.config().uiCooldownNoticeSeconds(),
+    /** Aviso de cooldown con prioridad maxima; muestra el tiempo real del cooldown. */
+    public void cooldown(Player player, String text, double seconds) {
+        double duration = seconds > 0.0D
+                ? seconds : this.plugin.config().uiCooldownNoticeSeconds();
+        this.show(player, "cooldown", text, duration,
                 BarColor.YELLOW, BarStyle.SEGMENTED_10, 100, true);
     }
 

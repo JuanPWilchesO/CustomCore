@@ -247,8 +247,8 @@ ui:
 
 - `max-bars`: barras de estado visibles a la vez; el resto espera.
 - `notice-seconds`: duracion de los avisos puntuales (flechas, inmunidad).
-- `cooldown-notice-seconds`: duracion del aviso de cooldown cuando el material se comparte
-  entre varios items.
+- `cooldown-notice-seconds`: duracion de respaldo del aviso; la barra muestra el cooldown
+  real del item.
 - `title-*`: tiempos del titulo grande de recall, en ticks (20 = 1 segundo).
 
 La action bar sigue reservada para amigo/enemigo. Los errores y comandos siguen en el chat.

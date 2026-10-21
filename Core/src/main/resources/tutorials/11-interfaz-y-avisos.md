@@ -26,8 +26,8 @@ Sin cuenta atras, duran `ui.notice-seconds` (2 por defecto):
 ## Cooldowns
 
 - Si el material del item es unico en el catalogo: barrido vanilla en la toolbar.
-- Si varios items comparten material: boss bar con prioridad maxima durante
-  `ui.cooldown-notice-seconds`.
+- Si varios items comparten material: boss bar con prioridad maxima, mostrando el tiempo
+  real de cooldown.
 
 El cooldown real sigue en el servidor. `cooldown-aviso` ya no se usa.
 

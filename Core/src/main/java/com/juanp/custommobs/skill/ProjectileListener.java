@@ -57,13 +57,8 @@ public final class ProjectileListener implements Listener {
         if (this.shootLoaded(player, event, projectile)) {
             return;
         }
-        // Sin flecha cargada: la municion normal tambien respeta su cooldown.
-        if (this.blockedByCooldown(player, event.getConsumable())) {
-            this.refund(player, event.getConsumable());
-            event.setCancelled(true);
-            return;
-        }
-        if (this.arm(player, event.getConsumable(), projectile, true)) {
+        // Sin flecha cargada no hay cooldown que aplicar: la municion normal queda libre.
+        if (this.arm(player, event.getConsumable(), projectile, false)) {
             return;
         }
         this.arm(player, event.getBow(), projectile, false);
