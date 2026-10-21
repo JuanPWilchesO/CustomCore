@@ -199,7 +199,7 @@ public final class ProjectileListener implements Listener {
             return;
         }
         String name = effects.catalogName(item);
-        if (isArrow(item)) {
+        if (ArrowTypes.isArrow(item)) {
             if (!this.isRanger(player)) {
                 player.sendMessage(Texts.color("&8Solo la clase &f"
                         + this.plugin.config().arrowClass() + "&8 puede cargar flechas."));
@@ -275,10 +275,48 @@ public final class ProjectileListener implements Listener {
                 .orElse(false);
     }
 
-    private static boolean isArrow(ItemStack item) {
-        return item.getType() == org.bukkit.Material.ARROW
-                || item.getType() == org.bukkit.Material.SPECTRAL_ARROW
-                || item.getType() == org.bukkit.Material.TIPPED_ARROW;
+    /**
+     * Quita del inventario una flecha vanilla del tipo pedido. Se salta las del catalogo:
+     * una flecha con efecto lleva datos de pocion y no se puede fabricar con
+     * {@code new ItemStack(TIPPED_ARROW)}.
+     *
+     * @return la flecha quitada, o {@code null} si no habia
+     */
+    private ItemStack takeVanilla(Player player, org.bukkit.Material type) {
+        // Primero del mismo tipo; si no hay, cualquiera de la familia. Un cazador con
+        // flechas con efecto y ninguna normal tiene que poder disparar igual.
+        ItemStack same = this.takeVanillaOf(player, type);
+        if (same != null) {
+            return same;
+        }
+        for (org.bukkit.Material other : ArrowTypes.VANILLA) {
+            if (other == type) {
+                continue;
+            }
+            ItemStack found = this.takeVanillaOf(player, other);
+            if (found != null) {
+                return found;
+            }
+        }
+        return null;
+    }
+
+    private ItemStack takeVanillaOf(Player player, org.bukkit.Material type) {
+        var effects = this.plugin.effectListener();
+        for (ItemStack stack : player.getInventory().getContents()) {
+            if (stack == null || stack.getType() != type || stack.getAmount() <= 0) {
+                continue;
+            }
+            if (effects != null && effects.catalogName(stack) != null) {
+                continue;
+            }
+            ItemStack one = stack.clone();
+            one.setAmount(1);
+            if (player.getInventory().removeItem(one).isEmpty()) {
+                return one;
+            }
+        }
+        return null;
     }
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
@@ -306,9 +344,9 @@ public final class ProjectileListener implements Listener {
         if (effects.catalogName(consumed) == null) {
             return true;   // ya era una flecha normal
         }
-        ItemStack plain = new ItemStack(consumed.getType(), 1);
-        if (!player.getInventory().removeItem(plain).isEmpty()) {
-            // No hay flechas normales de ese material: se devuelve la custom y se corta.
+        ItemStack plain = this.takeVanilla(player, consumed.getType());
+        if (plain == null) {
+            // No hay flechas vanilla de ese tipo: se devuelve la custom y se corta.
             this.refund(player, consumed);
             event.setCancelled(true);
             this.plugin.status().notice(player, "&8No te quedan flechas normales.",
@@ -316,10 +354,10 @@ public final class ProjectileListener implements Listener {
             return false;
         }
         this.refund(player, consumed);
-        // El proyectil se creo con el NBT de la custom. Se convierte en una flecha
-        // normal para que no se pueda confundir ni recoger como custom.
+        // El proyectil se creo con el NBT de la custom. Se convierte en la flecha vanilla
+        // que se gasto, con sus datos, para que no se confunda ni se recoja como custom.
         if (projectile instanceof AbstractArrow arrow) {
-            arrow.setItemStack(new ItemStack(consumed.getType(), 1));
+            arrow.setItemStack(plain);
             arrow.setPickupStatus(AbstractArrow.PickupStatus.ALLOWED);
         }
         return true;
@@ -335,7 +373,7 @@ public final class ProjectileListener implements Listener {
             return false;
         }
         // Las flechas custom son exclusivas de la clase de arqueros.
-        if (isArrow(item) && !this.isRanger(player)) {
+        if (ArrowTypes.isArrow(item) && !this.isRanger(player)) {
             return false;
         }
         List<SkillSpec> skills = this.impactSkills(item);
@@ -367,7 +405,7 @@ public final class ProjectileListener implements Listener {
             this.plugin.status().notice(player, use.startMessage()
                     .replace("{jugador}", player.getName()), BarColor.WHITE);
         }
-        this.service.arm(projectile, player, name, skills, isArrow(item));
+        this.service.arm(projectile, player, name, skills, ArrowTypes.isArrow(item));
         return true;
     }
 

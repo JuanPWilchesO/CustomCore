@@ -422,9 +422,10 @@ Que bloquea cada uno:
 | `silence` | si | si | no | no |
 | `disarm` | si | no | si | no |
 
-`cancel-on-hit: true` hace que el control se rompa en cuanto el objetivo recibe dano. Sirve
-para un control de apertura que no debe encadenarse: el primer golpe lo corta. Por defecto
-es `false`.
+`cancel-on-hit: true` hace que el control se rompa en cuanto el objetivo recibe dano. El
+golpe que **aplica** el control no cuenta: una flecha que aturde y hace dano en el mismo
+impacto no se cancela a si misma; el siguiente golpe si. Sirve para un control de apertura
+que no debe encadenarse. Por defecto es `false`.
 
 Cada control dura exactamente lo que diga `amount`; el equilibrio se ajusta por skill con
 `amount` y `cooldown-seconds`. La inmunidad al salir es global por jugador y se configura

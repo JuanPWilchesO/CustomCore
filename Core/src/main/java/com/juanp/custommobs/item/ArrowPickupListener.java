@@ -1,6 +1,7 @@
 package com.juanp.custommobs.item;
 
 import com.juanp.custommobs.CustomMobsPlugin;
+import com.juanp.custommobs.skill.ArrowTypes;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.entity.AbstractArrow;
@@ -175,11 +176,6 @@ public final class ArrowPickupListener implements Listener {
     }
 
     private static boolean isArrow(ItemStack item) {
-        if (item == null) {
-            return false;
-        }
-        return item.getType() == Material.ARROW
-                || item.getType() == Material.SPECTRAL_ARROW
-                || item.getType() == Material.TIPPED_ARROW;
+        return ArrowTypes.isArrow(item);
     }
 }

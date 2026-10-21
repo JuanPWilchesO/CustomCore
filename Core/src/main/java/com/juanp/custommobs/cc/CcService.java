@@ -41,6 +41,10 @@ public final class CcService {
     private final Map<UUID, Double> savedSpeed = new ConcurrentHashMap<>();
     private final Map<UUID, Double> savedJump = new ConcurrentHashMap<>();
     private final Map<UUID, Boolean> savedAi = new ConcurrentHashMap<>();
+    /** Cuando se aplico cada tipo: el golpe que lo trae no lo rompe. */
+    private final Map<UUID, Map<String, Long>> appliedAt = new ConcurrentHashMap<>();
+    /** Ventana en la que el dano del propio golpe no rompe el control. */
+    private static final long BREAK_GRACE_MILLIS = 150L;
     private BukkitTask task;
 
     public CcService(CustomMobsPlugin plugin) {
@@ -113,6 +117,7 @@ public final class CcService {
         // si se mira el reloj, un control que expira entre ticks nunca se desbloquea.
         boolean wasLocked = this.locked(id);
         types.merge(type, ends, Math::max);
+        this.appliedAt.computeIfAbsent(id, key -> new ConcurrentHashMap<>()).put(type, now);
         if (cancelOnHit) {
             this.breakOnHit.computeIfAbsent(id, key -> new ConcurrentHashMap<>())
                     .put(type, Boolean.TRUE);
@@ -178,9 +183,21 @@ public final class CcService {
         if (flags == null || types == null) {
             return;
         }
+        long now = System.currentTimeMillis();
+        Map<String, Long> applied = this.appliedAt.get(id);
         List<String> brokenTypes = new ArrayList<>();
         for (Map.Entry<String, Boolean> entry : flags.entrySet()) {
-            if (Boolean.TRUE.equals(entry.getValue()) && types.remove(entry.getKey()) != null) {
+            if (!Boolean.TRUE.equals(entry.getValue())) {
+                continue;
+            }
+            // El golpe que trae el control no lo rompe: ProjectileHitEvent va antes que
+            // EntityDamageByEntityEvent, asi que sin esta gracia el dano de la misma
+            // flecha cancelaba el control en el mismo tick.
+            Long at = applied == null ? null : applied.get(entry.getKey());
+            if (at != null && now - at < BREAK_GRACE_MILLIS) {
+                continue;
+            }
+            if (types.remove(entry.getKey()) != null) {
                 brokenTypes.add(entry.getKey());
             }
         }
@@ -193,12 +210,18 @@ public final class CcService {
             }
         }
         flags.clear();
+        if (applied != null) {
+            for (String type : brokenTypes) {
+                applied.remove(type);
+            }
+        }
         if (!this.movementLocked(types)) {
             this.unlock(target);
         }
         if (types.isEmpty()) {
             this.active.remove(id);
             this.breakOnHit.remove(id);
+            this.appliedAt.remove(id);
         }
         this.notice(target, this.plugin.config().ccBreakMessage());
     }
@@ -216,6 +239,7 @@ public final class CcService {
         UUID id = target.getUniqueId();
         Map<String, Long> types = this.active.remove(id);
         this.breakOnHit.remove(id);
+        this.appliedAt.remove(id);
         // Siempre se intenta soltar: puede quedar un bloqueo huerfano aunque el
         // registro ya se hubiera limpiado.
         this.unlock(target);
@@ -238,6 +262,7 @@ public final class CcService {
         UUID id = target.getUniqueId();
         this.active.remove(id);
         this.breakOnHit.remove(id);
+        this.appliedAt.remove(id);
         this.unlock(target);
         if (target instanceof Player player) {
             this.clearBars(player);
@@ -252,6 +277,7 @@ public final class CcService {
         }
         this.active.clear();
         this.breakOnHit.clear();
+        this.appliedAt.clear();
         this.savedSpeed.clear();
         this.savedJump.clear();
         this.savedAi.clear();
@@ -267,6 +293,10 @@ public final class CcService {
             if (flags != null) {
                 flags.keySet().removeIf(type -> !types.containsKey(type));
             }
+            Map<String, Long> applied = this.appliedAt.get(entry.getKey());
+            if (applied != null) {
+                applied.keySet().removeIf(type -> !types.containsKey(type));
+            }
             boolean locked = this.movementLocked(types);
             var entity = Bukkit.getEntity(entry.getKey());
             if (wasLocked && !locked && entity instanceof LivingEntity living) {
@@ -281,6 +311,7 @@ public final class CcService {
             if (types.isEmpty()) {
                 this.active.remove(entry.getKey());
                 this.breakOnHit.remove(entry.getKey());
+                this.appliedAt.remove(entry.getKey());
                 if (entity instanceof LivingEntity living) {
                     int immunity = this.plugin.config().ccImmunitySeconds();
                     if (immunity > 0) {

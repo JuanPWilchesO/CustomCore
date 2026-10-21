@@ -204,7 +204,9 @@ los use ni los recoja del suelo: el plugin aplica esa restriccion al usar y al r
 flechas. El disparo respeta el cooldown del item de la flecha, **por tipo**: mientras una esta en
 espera puedes cargar y disparar otra. Sin una flecha cargada, el disparo usa municion
 normal: si el juego elige una custom por estar primera en el inventario, se devuelve y se
-gasta una normal. En un arco, el `usar.cooldown` del arma no se aplica
+gasta una flecha vanilla. Vale cualquiera de la familia (`ARROW`, `SPECTRAL_ARROW`,
+`TIPPED_ARROW`): se prefiere el mismo material y, si no hay, otra. La flecha gastada
+conserva su pocion. En un arco, el `usar.cooldown` del arma no se aplica
 al disparo: manda el de la flecha. Una flecha normal recogida no se mezcla con las
 custom: va a un stack normal o a un slot libre; si no hay hueco, se queda en el suelo. El aviso sale en la boss bar porque todas comparten
 el material `ARROW`. Al impactar, la

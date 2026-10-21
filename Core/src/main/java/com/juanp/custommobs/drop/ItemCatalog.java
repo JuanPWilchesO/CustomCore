@@ -399,9 +399,7 @@ public final class ItemCatalog {
         // Todas las flechas comparten material. El barrido vanilla es por material y
         // bloquearia todos los tipos; para flechas, el cooldown va siempre en boss bar
         // y se controla por nombre de item.
-        if (material == org.bukkit.Material.ARROW
-                || material == org.bukkit.Material.SPECTRAL_ARROW
-                || material == org.bukkit.Material.TIPPED_ARROW) {
+        if (com.juanp.custommobs.skill.ArrowTypes.isArrow(material)) {
             return true;
         }
         boolean found = false;
