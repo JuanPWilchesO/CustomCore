@@ -17,6 +17,7 @@ import org.bukkit.event.entity.ProjectileLaunchEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -217,6 +218,7 @@ public final class ProjectileListener implements Listener {
                 player.sendMessage(Texts.color("&c" + denied));
                 return;
             }
+            this.stampLabel(player, event, item, name);
             this.arrows.load(player, name);
             this.plugin.status().notice(player, "&8Flecha cargada: &f"
                     + this.arrows.displayName(name) + " &8(&f"
@@ -230,6 +232,32 @@ public final class ProjectileListener implements Listener {
             return;
         }
         this.recent.put(player.getUniqueId(), new Hand(item.clone(), System.currentTimeMillis()));
+    }
+
+    /**
+     * Pone al stack la etiqueta visible del catalogo si no tiene nombre. Sin nombre, una
+     * flecha custom vieja es indistinguible de una normal y el juego las apila.
+     */
+    private void stampLabel(Player player, PlayerInteractEvent event, ItemStack item, String name) {
+        ItemStack template = this.plugin.drops().catalog().get(name).orElse(null);
+        if (template == null || !template.hasItemMeta()) {
+            return;
+        }
+        String label = template.getItemMeta().getDisplayName();
+        if (label == null || label.isBlank()) {
+            return;
+        }
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null || (meta.hasDisplayName() && !meta.getDisplayName().isBlank())) {
+            return;
+        }
+        meta.setDisplayName(label);
+        item.setItemMeta(meta);
+        if (event.getHand() == EquipmentSlot.HAND) {
+            player.getInventory().setItemInMainHand(item);
+        } else {
+            player.getInventory().setItemInOffHand(item);
+        }
     }
 
     /** La carga de flechas es de una clase: por defecto, el cazador. */

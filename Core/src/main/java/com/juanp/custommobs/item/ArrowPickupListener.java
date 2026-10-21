@@ -135,6 +135,11 @@ public final class ArrowPickupListener implements Listener {
             if (this.catalogName(current) != null || !current.isSimilar(rest)) {
                 continue;
             }
+            // Un stack con nombre visible es custom (o al menos no es una flecha
+            // normal anonima): no se usa como destino de fusion.
+            if (current.hasItemMeta() && current.getItemMeta().hasDisplayName()) {
+                continue;
+            }
             int space = current.getMaxStackSize() - current.getAmount();
             if (space <= 0) {
                 continue;
