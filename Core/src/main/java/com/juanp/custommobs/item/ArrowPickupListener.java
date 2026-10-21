@@ -2,6 +2,7 @@ package com.juanp.custommobs.item;
 
 import com.juanp.custommobs.CustomMobsPlugin;
 import org.bukkit.Material;
+import org.bukkit.Sound;
 import org.bukkit.entity.AbstractArrow;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
@@ -153,6 +154,10 @@ public final class ArrowPickupListener implements Listener {
             placed.setAmount(move);
             inventory.setItem(slot, placed);
             rest.setAmount(rest.getAmount() - move);
+        }
+        if (picked.getAmount() > rest.getAmount()) {
+            // El pickup vanilla se cancela, asi que el sonido hay que devolverlo a mano.
+            player.playSound(player.getLocation(), Sound.ENTITY_ITEM_PICKUP, 0.2F, 1.4F);
         }
         // Si queda algo, el llamador lo deja en el suelo o en la flecha, sin mensaje.
         return rest;

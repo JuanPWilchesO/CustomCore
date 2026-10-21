@@ -198,7 +198,10 @@ disparo se bloquea y se descarga. Si no quedan flechas de ese tipo, el disparo s
 se gasta otro tipo por accidente. Con `Infinity` no se consume ninguna.
 
 La flecha cargada manda sobre las skills del arco. Las del arco solo aplican cuando no hay
-ninguna cargada. El disparo respeta el cooldown del item de la flecha, **por tipo**: mientras una esta en
+ninguna cargada. El arco y **cada flecha** deben llevar `clase:` para que otra clase no
+los use ni los recoja del suelo: el plugin aplica esa restriccion al usar y al recoger.
+`items.arrows-class` es aparte: decide que clase puede cargar y disparar el sistema de
+flechas. El disparo respeta el cooldown del item de la flecha, **por tipo**: mientras una esta en
 espera puedes cargar y disparar otra. Sin una flecha cargada, el disparo usa municion
 normal: si el juego elige una custom por estar primera en el inventario, se devuelve y se
 gasta una normal. En un arco, el `usar.cooldown` del arma no se aplica
