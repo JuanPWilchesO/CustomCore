@@ -61,9 +61,14 @@ public final class StatusService {
                 color, BarStyle.SOLID, 40, false);
     }
 
-    /** Aviso pasajero de cooldown, sin barra de progreso; prioridad maxima. */
-    public void cooldown(Player player, String text) {
-        this.show(player, "cooldown", text, this.plugin.config().uiNoticeSeconds(),
+    /**
+     * Aviso pasajero de cooldown, sin barra de progreso; prioridad maxima.
+     *
+     * <p>El id lleva el nombre del objeto: dos flechas distintas no se pisan el aviso.
+     */
+    public void cooldown(Player player, String id, String text) {
+        String key = id == null || id.isBlank() ? "cooldown" : "cooldown:" + id;
+        this.show(player, key, text, this.plugin.config().uiNoticeSeconds(),
                 BarColor.YELLOW, BarStyle.SOLID, 100, false);
     }
 

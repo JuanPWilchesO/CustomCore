@@ -192,6 +192,9 @@ amount: 5
 Reglas:
 
 - Sin `target-type`, es **una sola entidad**: la golpeada. No hay area por accidente.
+- Una combinacion invalida, como `target: impacto` con `target-type: radius`, **descarta
+  la skill entera** al cargar: el log avisa `Skill invalida, se omite`. No se aplica a
+  medias ni se corrige sola.
 - `range` se mide desde el punto de impacto, no desde el jugador.
 - Impacto en bloque: `target: impacto` no hace nada; `radius` si funciona, con el bloque
   como centro.

@@ -490,7 +490,7 @@ public final class EffectListener implements Listener {
             String label = item.hasItemMeta() && item.getItemMeta().hasDisplayName()
                     ? org.bukkit.ChatColor.stripColor(item.getItemMeta().getDisplayName())
                     : name;
-            this.plugin.status().cooldown(player,
+            this.plugin.status().cooldown(player, name,
                     "&8" + label + " &7(" + seconds + "s)");
         } else {
             player.setCooldown(item.getType(),

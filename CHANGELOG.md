@@ -1,5 +1,36 @@
 # Changelog
 
+## 1.0.5 — avisos de cooldown por flecha
+
+- **Aviso de cooldown por objeto**: cada flecha custom conserva su propio aviso en la
+  boss bar. Antes todas compartian el id `cooldown` y la ultima tapaba a las demas.
+- Documentado que una combinacion invalida de `target`/`target-type` **descarta la skill
+  entera** al cargar (`Skill invalida, se omite`), en vez de aplicarse a medias.
+
+## 1.0.4 — control con flechas y municion vanilla
+
+- **`cancel-on-hit`** ya no lo rompe el mismo golpe que aplica el control: ventana de
+  gracia de 150 ms. `ProjectileHitEvent` (aplica) va antes que
+  `EntityDamageByEntityEvent` (rompe), asi que el control desaparecia en el mismo tick.
+- **Familia de flechas** (`ArrowTypes`): el fallback de municion acepta `ARROW`,
+  `SPECTRAL_ARROW` y `TIPPED_ARROW`, conserva la pocion de la flecha gastada y devuelve
+  la custom al inventario.
+
+## 1.0.1 — soporte real de Paper 26.3
+
+- **`api-version`** pasa a `26.3`. La 1.0.0 declaraba `1.21`, pero el codigo usa
+  `Attribute#getDefaultValue()`, que no existe en esa API: Paper cargaba el plugin y
+  fallaba despues. Ahora rechaza las versiones anteriores.
+- Requisitos reales: Paper 26.3 y Java 25.
+
+## 1.0.0 — primera version publica
+
+- Interfaz sin chat: boss bars (maximo 3), action bar y titulos.
+- Flechas custom del cazador: carga por jugador, cooldown por tipo y no recogibles.
+- Control de masas: stun, root, silence, disarm, escudo e inmunidad.
+- Pociones arrojadizas y persistentes con radio y bando.
+- Documentacion y tutoriales dentro del jar.
+
 ## 0.6.4 — sigilo tambien contra mobs
 
 - **`sigilo`** ahora corta la deteccion de los mobs: cancela
