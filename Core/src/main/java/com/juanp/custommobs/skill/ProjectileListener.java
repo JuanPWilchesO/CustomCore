@@ -60,7 +60,7 @@ public final class ProjectileListener implements Listener {
         }
         // Sin flecha cargada: el disparo debe usar municion normal, no la custom que
         // el juego haya elegido por estar primera en el inventario.
-        if (!this.useNormalAmmo(player, event)) {
+        if (!this.useNormalAmmo(player, event, projectile)) {
             return;
         }
         this.arm(player, event.getBow(), projectile, false);
@@ -162,11 +162,15 @@ public final class ProjectileListener implements Listener {
     /** Bola de nieve, huevo y tridente: el objeto puede seguir en la mano o no. */
     @EventHandler(ignoreCancelled = true)
     public void onLaunch(ProjectileLaunchEvent event) {
-        if (!(event.getEntity().getShooter() instanceof Player player)) {
+        // Una flecha con marca de catalogo nunca debe poder recogerse.
+        if (event.getEntity() instanceof AbstractArrow arrow) {
+            var effects = this.plugin.effectListener();
+            if (effects != null && effects.catalogName(arrow.getItemStack()) != null) {
+                arrow.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
+            }
             return;
         }
-        // Las flechas ya pasan por EntityShootBowEvent.
-        if (event.getEntity() instanceof AbstractArrow) {
+        if (!(event.getEntity().getShooter() instanceof Player player)) {
             return;
         }
         if (this.arm(player, player.getInventory().getItemInMainHand(), event.getEntity(), true)) {
@@ -289,7 +293,8 @@ public final class ProjectileListener implements Listener {
      *
      * @return {@code false} si no habia flechas normales y el disparo se cancelo
      */
-    private boolean useNormalAmmo(Player player, EntityShootBowEvent event) {
+    private boolean useNormalAmmo(Player player, EntityShootBowEvent event,
+                                   Projectile projectile) {
         if (!this.isRanger(player)) {
             return true;   // fuera del cazador, el disparo es vanilla
         }
@@ -311,6 +316,12 @@ public final class ProjectileListener implements Listener {
             return false;
         }
         this.refund(player, consumed);
+        // El proyectil se creo con el NBT de la custom. Se convierte en una flecha
+        // normal para que no se pueda confundir ni recoger como custom.
+        if (projectile instanceof AbstractArrow arrow) {
+            arrow.setItemStack(new ItemStack(consumed.getType(), 1));
+            arrow.setPickupStatus(AbstractArrow.PickupStatus.ALLOWED);
+        }
         return true;
     }
 
