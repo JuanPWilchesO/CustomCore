@@ -42,6 +42,9 @@ public final class ArrowPickupListener implements Listener {
         if (!this.hasCustomArrow(player)) {
             return;   // sin customs, el comportamiento vanilla es correcto
         }
+        this.plugin.getLogger().info("[ArrowPickup] item=" + picked.getType()
+                + " player=" + player.getName() + " catalog=" + this.catalogName(picked)
+                + " customs=true");
         event.setCancelled(true);
         ItemStack rest = this.place(player, picked);
         if (rest.getAmount() <= 0) {
@@ -63,6 +66,9 @@ public final class ArrowPickupListener implements Listener {
         if (!this.hasCustomArrow(player)) {
             return;
         }
+        this.plugin.getLogger().info("[ArrowPickup] arrow item=" + picked.getType()
+                + " player=" + player.getName() + " catalog=" + this.catalogName(picked)
+                + " customs=true");
         event.setCancelled(true);
         ItemStack rest = this.place(player, picked);
         if (rest.getAmount() <= 0) {
@@ -75,24 +81,9 @@ public final class ArrowPickupListener implements Listener {
     private ItemStack place(Player player, ItemStack picked) {
         PlayerInventory inventory = player.getInventory();
         ItemStack rest = picked.clone();
-        // 1) stacks normales del mismo tipo; nunca uno custom.
-        for (int slot = 0; slot < 36 && rest.getAmount() > 0; slot++) {
-            ItemStack current = inventory.getItem(slot);
-            if (current == null || current.getType().isAir()) {
-                continue;
-            }
-            if (this.catalogName(current) != null || !current.isSimilar(rest)) {
-                continue;
-            }
-            int space = current.getMaxStackSize() - current.getAmount();
-            if (space <= 0) {
-                continue;
-            }
-            int move = Math.min(space, rest.getAmount());
-            current.setAmount(current.getAmount() + move);
-            rest.setAmount(rest.getAmount() - move);
-        }
-        // 2) slots libres.
+        // Solo slots libres: asi una normal no se fusiona con ningun stack, ni custom
+        // ni normal. Es la unica forma segura si la marca del catalogo falta.
+        // 1) slots libres.
         for (int slot = 0; slot < 36 && rest.getAmount() > 0; slot++) {
             ItemStack current = inventory.getItem(slot);
             if (current != null && !current.getType().isAir()) {
@@ -114,7 +105,10 @@ public final class ArrowPickupListener implements Listener {
                 return true;
             }
         }
-        return false;
+        // Si hay una flecha cargada, el jugador esta usando customs aunque la marca
+        // del stack se haya perdido.
+        return new com.juanp.custommobs.skill.ArrowSelection(this.plugin)
+                .selected(player).isPresent();
     }
 
     private String catalogName(ItemStack item) {
