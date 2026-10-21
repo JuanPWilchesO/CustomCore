@@ -498,29 +498,6 @@ public final class EffectListener implements Listener {
         }
     }
 
-    /** Aviso de espera: usa el del item o, si falta, el de la primera skill. */
-    private void warnCooldown(Player player, UseSpec use, long millis) {
-        long seconds = Math.max(1L, (millis + 999L) / 1000L);
-        String warning = use.cooldownMessage();
-        if ((warning == null || warning.isBlank()) && this.plugin.skillCatalog() != null) {
-            for (String id : use.skillIds()) {
-                var skill = this.plugin.skillCatalog().get(id).orElse(null);
-                if (skill != null && skill.hasCooldownMessage()) {
-                    warning = skill.cooldownMessage();
-                    break;
-                }
-            }
-        }
-        if (warning == null || warning.isBlank()) {
-            return;
-        }
-        player.sendMessage(Texts.color(warning
-                .replace("{segundos}", Long.toString(seconds))
-                .replace("{tiempo}", Long.toString(seconds))
-                .replace("{cooldown}", Long.toString(seconds))
-                .replace("{jugador}", player.getName())));
-    }
-
     /** Aplica un efecto ya resuelto: mensaje y, si toca, las acciones de fuera. */
     private boolean applyEffect(Player player, EffectSpec effect, int seconds) {
         return this.applyEffect(player, effect, seconds, null, null);

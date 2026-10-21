@@ -1,12 +1,14 @@
 # CustomCore - pociones.
 #
 # Cada pocion es un item que CustomCore genera: material, color del liquido, nombre y el efecto
-# que aplica al beberse. El efecto sale de effects.yml (se define una vez y se reutiliza).
+# que aplica al beberse o al impactar. El efecto sale de effects.yml (se define una vez y se reutiliza).
 #
 #   efecto    id del efecto en effects.yml
 #   duracion  segundos (si falta, la del efecto)
-#   material  que item es (POTION por defecto)
+#   material  POTION (se bebe), SPLASH_POTION (se lanza) o LINGERING_POTION (deja nube)
 #   color     color del liquido (nombre de color de Minecraft; opcional)
+#   radio     radio del area al impactar (0 = 4 arrojadiza, 3 persistente)
+#   bando     aliados | enemigos | todos (si falta, se deduce del tipo del efecto)
 #   faccion   opcional: solo la puede usar esa faccion
 #   receta    opcional: como se craftea (mismo esquema que los objetos del catalogo)
 

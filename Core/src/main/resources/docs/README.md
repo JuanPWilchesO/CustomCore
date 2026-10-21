@@ -64,3 +64,4 @@ cualquiera de ellos el plugin sigue funcionando: cada uno degrada por su cuenta.
 | `comandos-permisos-y-cupos.md` | Comandos, permisos y cupo por grupo |
 | `configuracion.md` | `config.yml` linea por linea |
 | `api-y-problemas.md` | API para otros plugins y problemas frecuentes |
+| `desarrollo.md` | Compilacion, arquitectura, versionado y publicacion |

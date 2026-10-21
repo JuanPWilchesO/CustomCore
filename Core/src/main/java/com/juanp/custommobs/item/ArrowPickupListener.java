@@ -1,7 +1,6 @@
 package com.juanp.custommobs.item;
 
 import com.juanp.custommobs.CustomMobsPlugin;
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.entity.AbstractArrow;
@@ -30,18 +29,11 @@ public final class ArrowPickupListener implements Listener {
 
     public ArrowPickupListener(CustomMobsPlugin plugin) {
         this.plugin = plugin;
-        plugin.getLogger().info("[ArrowPickup] listener registrado");
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onPickup(EntityPickupItemEvent event) {
-        if (!(event.getEntity() instanceof Player player)) {
-            return;
-        }
-        this.plugin.getLogger().info("[ArrowPickup] ENTITY player=" + player.getName()
-                + " ranger=" + this.isRanger(player));
-        this.dump(player, "entity-start", null);
-        if (!this.isRanger(player)) {
+        if (!(event.getEntity() instanceof Player player) || !this.isRanger(player)) {
             return;
         }
         Item entity = event.getItem();
@@ -49,11 +41,8 @@ public final class ArrowPickupListener implements Listener {
             return;
         }
         ItemStack picked = entity.getItemStack();
-        this.dump(player, "entity-picked", picked);
-        if (!isArrow(picked) || this.catalogName(picked) != null) {
-            return;
-        }
-        if (!this.hasCustomArrow(player)) {
+        if (!isArrow(picked) || this.catalogName(picked) != null
+                || !this.hasCustomArrow(player)) {
             return;
         }
         event.setCancelled(true);
@@ -63,26 +52,19 @@ public final class ArrowPickupListener implements Listener {
         } else {
             entity.setItemStack(rest);
         }
-        this.after(player);
     }
 
     /** Las flechas clavadas o en el suelo usan este evento, no el de items. */
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onPickupArrow(PlayerPickupArrowEvent event) {
         Player player = event.getPlayer();
-        this.plugin.getLogger().info("[ArrowPickup] ARROW player=" + player.getName()
-                + " ranger=" + this.isRanger(player));
-        this.dump(player, "arrow-start", null);
         if (!this.isRanger(player)) {
             return;
         }
         AbstractArrow arrow = event.getArrow();
         ItemStack picked = arrow.getItemStack();
-        this.dump(player, "arrow-picked", picked);
-        if (!isArrow(picked) || this.catalogName(picked) != null) {
-            return;
-        }
-        if (!this.hasCustomArrow(player)) {
+        if (!isArrow(picked) || this.catalogName(picked) != null
+                || !this.hasCustomArrow(player)) {
             return;
         }
         event.setCancelled(true);
@@ -92,7 +74,6 @@ public final class ArrowPickupListener implements Listener {
         } else {
             arrow.setItemStack(rest);
         }
-        this.after(player);
     }
 
     /** Compatibilidad: algunas versiones disparan el evento de jugador, no el de entidad. */
@@ -102,9 +83,6 @@ public final class ArrowPickupListener implements Listener {
             return;
         }
         Player player = event.getPlayer();
-        this.plugin.getLogger().info("[ArrowPickup] LEGACY player=" + player.getName()
-                + " ranger=" + this.isRanger(player));
-        this.dump(player, "legacy-start", null);
         if (!this.isRanger(player)) {
             return;
         }
@@ -113,11 +91,8 @@ public final class ArrowPickupListener implements Listener {
             return;
         }
         ItemStack picked = entity.getItemStack();
-        this.dump(player, "legacy-picked", picked);
-        if (!isArrow(picked) || this.catalogName(picked) != null) {
-            return;
-        }
-        if (!this.hasCustomArrow(player)) {
+        if (!isArrow(picked) || this.catalogName(picked) != null
+                || !this.hasCustomArrow(player)) {
             return;
         }
         event.setCancelled(true);
@@ -127,11 +102,9 @@ public final class ArrowPickupListener implements Listener {
         } else {
             entity.setItemStack(rest);
         }
-        this.after(player);
     }
 
     private ItemStack place(Player player, ItemStack picked) {
-        this.dump(player, "place-before", picked);
         PlayerInventory inventory = player.getInventory();
         ItemStack rest = picked.clone();
         // 1) stacks normales del mismo tipo; los custom se saltan.
@@ -151,11 +124,6 @@ public final class ArrowPickupListener implements Listener {
                 continue;
             }
             int move = Math.min(space, rest.getAmount());
-            this.plugin.getLogger().info("[ArrowPickup] MERGE slot=" + slot
-                    + " before=" + current.getAmount() + " move=" + move
-                    + " pdc=" + this.catalogName(current)
-                    + " name=" + (current.hasItemMeta()
-                        && current.getItemMeta().hasDisplayName()));
             current.setAmount(current.getAmount() + move);
             rest.setAmount(rest.getAmount() - move);
         }
@@ -169,37 +137,12 @@ public final class ArrowPickupListener implements Listener {
             ItemStack placed = rest.clone();
             placed.setAmount(move);
             inventory.setItem(slot, placed);
-            this.plugin.getLogger().info("[ArrowPickup] FREE slot=" + slot + " move=" + move);
             rest.setAmount(rest.getAmount() - move);
         }
         if (picked.getAmount() > rest.getAmount()) {
             player.playSound(player.getLocation(), Sound.ENTITY_ITEM_PICKUP, 0.2F, 1.4F);
         }
-        this.dump(player, "place-after", picked);
         return rest;
-    }
-
-    private void after(Player player) {
-        Bukkit.getScheduler().runTask(this.plugin,
-                () -> this.dump(player, "next-tick", null));
-    }
-
-    private void dump(Player player, String tag, ItemStack picked) {
-        this.plugin.getLogger().info("[ArrowPickup] DUMP " + tag + " player=" + player.getName());
-        ItemStack[] contents = player.getInventory().getContents();
-        for (int slot = 0; slot < contents.length; slot++) {
-            ItemStack stack = contents[slot];
-            if (stack == null || !isArrow(stack)) {
-                continue;
-            }
-            this.plugin.getLogger().info("[ArrowPickup]   slot=" + slot
-                    + " amt=" + stack.getAmount()
-                    + " mat=" + stack.getType()
-                    + " pdc=" + this.catalogName(stack)
-                    + " name=" + (stack.hasItemMeta() && stack.getItemMeta().hasDisplayName()
-                        ? stack.getItemMeta().getDisplayName() : "-")
-                    + (picked == null ? "" : " similar=" + stack.isSimilar(picked)));
-        }
     }
 
     /** El sistema de flechas es exclusivo de la clase configurada. */

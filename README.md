@@ -83,7 +83,7 @@ cualquiera de ellos el plugin sigue funcionando: cada uno degrada por su cuenta.
 
 ## Novedades 0.6.3
 
-- **Avisos de skill y de objeto**: `inicio`, `fin` y `cooldown-aviso`, con
+- **Avisos de skill y de objeto**: `inicio` y `fin`, con
   `{segundos}` para la espera restante. Se muestran a quien castea o usa el objeto.
 
 ## Novedades 0.6.2
@@ -585,12 +585,12 @@ Todos bajo `/customcore` (alias `cmobs`, `cm`).
 
 | Permiso | Para que | Por defecto |
 |---|---|---|
-| `custommobs.player` | invocar mobs con los huevos | `true` |
-| `custommobs.admin` | comandos de administracion | `op` |
+| `customcore.player` | invocar mobs con los huevos | `true` |
+| `customcore.admin` | comandos de administracion | `op` |
 
 Un jugador raso puede hacer **tres cosas** por su cuenta, y nada mas: `cuota` sin
 argumentos (su cupo), y `color` / `glow` (el estilo de **sus** mobs; con Teams lo decide
-solo el jefe y aplica a todo el team). Todo lo demas exige `custommobs.admin`.
+solo el jefe y aplica a todo el team). Todo lo demas exige `customcore.admin`.
 
 > **Ojo con `default: false`**: a diferencia de `op`, **ignora** el flag de operador.
 > Si lo cambias, ni tu (siendo op) podreis invocar hasta que se os conceda el permiso.
@@ -677,8 +677,8 @@ skills:
   interval-ticks: 20           # cada cuanto se evaluan las skills
 
 permissions:
-  player: custommobs.player
-  admin: custommobs.admin
+  player: customcore.player
+  admin: customcore.admin
 
 limits:
   default-player-mobs: 3          # mobs que te siguen
@@ -778,7 +778,7 @@ aparte. Los spawners son la excepcion: su punto debe sobrevivir a la muerte del 
 ## Resolucion de problemas
 
 **Un mob no aparece al usar el huevo.**
-Revisa en este orden: (1) que tengas `custommobs.player`; (2) que no hayas llegado a tu
+Revisa en este orden: (1) que tengas `customcore.player`; (2) que no hayas llegado a tu
 cupo — `/customcore cuota`; (3) que el mob tenga `egg` y que su crafteo no este apagado
 (`recipe.amount: 0`).
 

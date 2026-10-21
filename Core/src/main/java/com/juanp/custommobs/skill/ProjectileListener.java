@@ -325,16 +325,6 @@ public final class ProjectileListener implements Listener {
         return true;
     }
 
-    /** {@code true} si el objeto de la mano esta en cooldown. */
-    private boolean blockedByCooldown(Player player, ItemStack item) {
-        var effects = this.plugin.effectListener();
-        if (effects == null || item == null || item.getType().isAir()) {
-            return false;
-        }
-        String name = effects.catalogName(item);
-        return name != null && effects.onCooldown(player, name);
-    }
-
     /**
      * Arma el proyectil con las skills de impacto del objeto, si las tiene.
      *
