@@ -118,8 +118,10 @@ cualquiera de ellos el plugin sigue funcionando: cada uno degrada por su cuenta.
 
 ## Requisitos
 
-- **Paper** 1.21 o superior (probado en Paper 26.3).
-- **Java 21+**. Ojo: Paper 26.3 exige **Java 25** en el servidor.
+- **Paper 26.3** (Minecraft 26.3). Es la unica version probada. El plugin declara
+  `api-version: 26.3`, asi que Paper rechaza versiones anteriores en vez de cargarlo y
+  fallar despues.
+- **Java 25**, el que exige Paper 26.3.
 - Opcionales, cada uno independiente:
   - **LuckPerms** — para el cupo por grupo. Sin el, todos caen al cupo por defecto.
   - **Teams** — para bandos de jugadores. Sin el, cada jugador solo se protege a si mismo.
@@ -809,8 +811,8 @@ muerte ni retirada (un plugin externo, un corte), la cuenta queda alta:
 ## Compilar y publicar una version
 
 Para compilar hace falta **JDK 25**: `paper-api` 26.3 viene en bytecode de Java 25 y un
-javac anterior no puede leerlo. La salida, en cambio, es **bytecode 21**, o sea que el jar
-funciona en servidores con **Java 21+**.
+javac anterior no puede leerlo. La salida se compila con `--release 21`, pero eso no basta:
+el servidor necesita **Java 25** porque lo exige Paper 26.3.
 
 ```
 mvn -B clean package        # deja Core/target/CustomCore-<version>.jar

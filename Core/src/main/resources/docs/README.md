@@ -12,8 +12,10 @@ cualquiera de ellos el plugin sigue funcionando: cada uno degrada por su cuenta.
 
 ## Requisitos
 
-- **Paper** 1.21 o superior (probado en Paper 26.3).
-- **Java 21+**. Ojo: Paper 26.3 exige **Java 25** en el servidor.
+- **Paper 26.3** (Minecraft 26.3). Es la unica version probada. `api-version` vale
+  26.3, asi que Paper rechaza versiones anteriores en vez de cargar el plugin y fallar
+  despues.
+- **Java 25**, el que exige Paper 26.3.
 - Opcionales, cada uno independiente:
   - **LuckPerms** — para el cupo por grupo. Sin el, todos caen al cupo por defecto.
   - **Teams** — para bandos de jugadores. Sin el, cada jugador solo se protege a si mismo.

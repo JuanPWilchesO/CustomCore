@@ -1,7 +1,7 @@
 name: CustomCore
 version: '${project.version}'
 main: com.juanp.custommobs.CustomMobsPlugin
-api-version: '1.21'
+api-version: '26.3'
 author: Juan Pablo
 description: Mobs, objetos, recetas, facciones y pociones custom definidos por YAML.
 website: https://github.com/JuanPWilchesO/CustomCore

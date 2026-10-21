@@ -4,9 +4,9 @@ Guia para compilar, entender y publicar CustomCore.
 
 ## Requisitos
 
-- **JDK 21+**. Paper 26.3 exige **Java 25** en el servidor.
+- **JDK 25**. `paper-api` 26.3 viene en bytecode de Java 25 y un javac anterior no lo lee.
 - **Maven 3.9+**.
-- **Paper 1.21+** para probar.
+- **Paper 26.3** para probar. Es la unica version soportada.
 
 ## Estructura
 
@@ -44,7 +44,7 @@ La version vive en los tres `pom.xml` (`pom.xml`, `Core/pom.xml`, `API/pom.xml`)
 
 ## Publicar una release
 
-1. Probar en un servidor Paper 1.21+ con los plugins opcionales instalados.
+1. Probar en un servidor Paper 26.3 con los plugins opcionales instalados.
 2. Actualizar `README.md`, `docs/`, `tutorials/` y los comentarios de la config inicial.
 3. Subir la version en los tres `pom.xml` (quitar `-SNAPSHOT`).
 4. `mvn -q -DskipTests package`.
