@@ -63,15 +63,10 @@ public final class ProjectileListener implements Listener {
             event.setCancelled(true);
             return;
         }
-        if (this.arm(player, event.getConsumable(), projectile)) {
+        if (this.arm(player, event.getConsumable(), projectile, true)) {
             return;
         }
-        if (this.blockedByCooldown(player, event.getBow())) {
-            this.refund(player, event.getConsumable());
-            event.setCancelled(true);
-            return;
-        }
-        this.arm(player, event.getBow(), projectile);
+        this.arm(player, event.getBow(), projectile, false);
     }
 
     /**
@@ -177,12 +172,12 @@ public final class ProjectileListener implements Listener {
         if (event.getEntity() instanceof AbstractArrow) {
             return;
         }
-        if (this.arm(player, player.getInventory().getItemInMainHand(), event.getEntity())) {
+        if (this.arm(player, player.getInventory().getItemInMainHand(), event.getEntity(), true)) {
             return;
         }
         Hand hand = this.recent.remove(player.getUniqueId());
         if (hand != null && System.currentTimeMillis() - hand.at() < 1_000L) {
-            this.arm(player, hand.item(), event.getEntity());
+            this.arm(player, hand.item(), event.getEntity(), true);
         }
     }
 
@@ -279,7 +274,7 @@ public final class ProjectileListener implements Listener {
      *
      * @return {@code true} si el objeto era del catalogo y llevaba skills de impacto
      */
-    private boolean arm(Player player, ItemStack item, Projectile projectile) {
+    private boolean arm(Player player, ItemStack item, Projectile projectile, boolean applyCooldown) {
         if (item == null || item.getType().isAir()) {
             return false;
         }
@@ -303,11 +298,12 @@ public final class ProjectileListener implements Listener {
         if (!effects.canUse(player, item)) {
             return false;
         }
-        // El cooldown arranca al disparar, no al impactar.
-        if (!effects.tryCooldown(player, name, use, item)) {
+        // El cooldown arranca al disparar, no al impactar. En el arco no se aplica:
+        // el cooldown es de la flecha, para no bloquear todos los tipos.
+        if (applyCooldown && !effects.tryCooldown(player, name, use, item)) {
             return false;
         }
-        if (use.hasStartMessage()) {
+        if (applyCooldown && use.hasStartMessage()) {
             this.plugin.status().notice(player, use.startMessage()
                     .replace("{jugador}", player.getName()), BarColor.WHITE);
         }

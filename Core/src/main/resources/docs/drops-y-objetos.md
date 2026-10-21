@@ -199,7 +199,8 @@ se gasta otro tipo por accidente. Con `Infinity` no se consume ninguna.
 
 La flecha cargada manda sobre las skills del arco. Las del arco solo aplican cuando no hay
 ninguna cargada. El disparo respeta el cooldown del item de la flecha, **por tipo**: mientras una esta en
-espera puedes cargar y disparar otra. El aviso sale en la boss bar porque todas comparten
+espera puedes cargar y disparar otra. En un arco, el `usar.cooldown` del arma no se aplica
+al disparo: manda el de la flecha. El aviso sale en la boss bar porque todas comparten
 el material `ARROW`. Al impactar, la
 flecha queda en el mundo como una flecha de infinidad: no se puede recoger y el juego la
 borra con el tiempo.
