@@ -69,9 +69,8 @@ public final class ProjectileService {
             return false;
         }
         if (projectile instanceof org.bukkit.entity.AbstractArrow arrow) {
-            // Se destruye siempre que fuera una flecha armada, aunque el skill no se
-            // ejecute (multishot, expirada o tirador desconectado).
-            arrow.remove();
+            // Queda como una flecha de infinidad: no se recoge y el juego la borra sola.
+            arrow.setPickupStatus(org.bukkit.entity.AbstractArrow.PickupStatus.DISALLOWED);
         }
         long now = System.currentTimeMillis();
         if (shot.expiresAt() < now) {

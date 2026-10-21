@@ -57,7 +57,18 @@ public final class ProjectileListener implements Listener {
         if (this.shootLoaded(player, event, projectile)) {
             return;
         }
+        // Sin flecha cargada: la municion normal tambien respeta su cooldown.
+        if (this.blockedByCooldown(player, event.getConsumable())) {
+            this.refund(player, event.getConsumable());
+            event.setCancelled(true);
+            return;
+        }
         if (this.arm(player, event.getConsumable(), projectile)) {
+            return;
+        }
+        if (this.blockedByCooldown(player, event.getBow())) {
+            this.refund(player, event.getConsumable());
+            event.setCancelled(true);
             return;
         }
         this.arm(player, event.getBow(), projectile);
@@ -102,6 +113,8 @@ public final class ProjectileListener implements Listener {
         var effects = this.plugin.effectListener();
         UseSpec use = effects == null ? null : effects.useOf(template);
         if (use != null && !effects.tryCooldown(player, name, use, template)) {
+            // El juego ya gasto la municion antes del evento: se devuelve.
+            this.refund(player, event.getConsumable());
             event.setCancelled(true);
             return true;
         }
@@ -249,6 +262,16 @@ public final class ProjectileListener implements Listener {
     public void onHit(ProjectileHitEvent event) {
         LivingEntity hit = event.getHitEntity() instanceof LivingEntity living ? living : null;
         this.service.hit(event.getEntity(), event.getEntity().getLocation(), hit);
+    }
+
+    /** {@code true} si el objeto de la mano esta en cooldown. */
+    private boolean blockedByCooldown(Player player, ItemStack item) {
+        var effects = this.plugin.effectListener();
+        if (effects == null || item == null || item.getType().isAir()) {
+            return false;
+        }
+        String name = effects.catalogName(item);
+        return name != null && effects.onCooldown(player, name);
     }
 
     /**

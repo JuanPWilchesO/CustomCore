@@ -448,6 +448,12 @@ public final class EffectListener implements Listener {
      *
      * @return {@code false} si todavia esta en espera; ya dejo el aviso
      */
+    /** {@code true} si el objeto sigue en espera; no aplica ni avisa nada. */
+    public boolean onCooldown(Player player, String name) {
+        Long until = this.cooldowns.get(player.getUniqueId() + ":" + name);
+        return until != null && until > System.currentTimeMillis();
+    }
+
     public boolean tryCooldown(Player player, String name, UseSpec use, ItemStack item) {
         int cooldown = use.cooldownSeconds();
         if (use.hasSkills() && this.plugin.skillCatalog() != null) {
