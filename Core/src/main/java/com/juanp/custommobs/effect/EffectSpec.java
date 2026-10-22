@@ -1,9 +1,9 @@
 package com.juanp.custommobs.effect;
 
-import org.bukkit.attribute.Attribute;
-
 import java.util.List;
 import java.util.Map;
+
+import org.bukkit.attribute.Attribute;
 
 /**
  * Un efecto reutilizable: se define en {@code effects.yml} y sirve para una pocion, una skill
@@ -22,5 +22,8 @@ import java.util.Map;
  */
 public record EffectSpec(String id, String name, String description, int duration,
                          double power, String mechanic, List<String> vanilla, String type,
-                         Map<Attribute, Double> attributes) {
+                         Map<Attribute, Double> attributes, HitEffect hit) {
+    /** Efecto que aplica un golpe del portador: tipo vanilla, nivel, duracion */
+    public record HitEffect(String potion, int level, int durationSeconds) {
+    } 
 }

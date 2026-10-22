@@ -16,6 +16,7 @@ de mob o el uso de un objeto del catálogo.
 | `quitar_negativos` | Quita todos los efectos negativos, del plugin y de Minecraft. |
 | `invulnerabilidad` | No recibe ningún daño mientras dure. |
 | `furia` | Aplica modificadores temporales de atributos (ejemplo). |
+| `golpe_efecto` | Mientras dure, cada golpe cuerpo a cuerpo aplica un efecto vanilla al objetivo. |
 
 En el juego: `/customcore effects list` y `/customcore effects info <id>`.
 
@@ -32,7 +33,8 @@ congelamiento:
 ```
 
 `mecanica` es lo que hace CustomCore: `congelamiento`, `caida`, `robo_vida`, `sigilo`,
-`paso_helado`, `quitar_positivos`, `quitar_negativos`, `invulnerabilidad` o `atributos`.
+`paso_helado`, `quitar_positivos`, `quitar_negativos`, `invulnerabilidad`,
+`atributos` o `golpe_efecto`.
 `potencia` la usan las mecánicas que la necesitan (robo de vida).
 
 `tipo` clasifica el efecto del plugin como `positivo`, `negativo` o `neutro`. Lo usan las
@@ -192,6 +194,27 @@ efecto se vuelve a lanzar, **se renueva**: se quita el modificador anterior y se
 poner con la misma clave, sin acumular. Atributos admitidos: `max_health`,
 `attack_damage`, `attack_speed`, `movement_speed`, `armor`, `armor_toughness`,
 `knockback_resistance`, `attack_knockback`, `max_absorption` y `safe_fall_distance`.
+
+## Golpes con efecto (`mecanica: golpe_efecto`)
+
+```yaml
+armas_venenosas:
+  nombre: 'Armas envenenadas'
+  duracion: 30
+  mecanica: golpe_efecto
+  tipo: positivo
+  golpe:
+    efecto: poison
+    nivel: 2
+    duracion: 5
+```
+
+- `duracion` = cuánto dura el modo de golpes (segundos).
+- `golpe.efecto` = efecto vanilla (POISON, SLOWNESS, WITHER, WEAKNESS...).
+- `golpe.nivel` = nivel del efecto (1 = nivel I, 2 = nivel II...).
+- `golpe.duracion` = segundos que dura sobre quien recibe el golpe.
+
+Solo cuenta el daño **cuerpo a cuerpo** (no flechas ni proyectiles), igual que `robo_vida`.
 
 ## Aviso
 

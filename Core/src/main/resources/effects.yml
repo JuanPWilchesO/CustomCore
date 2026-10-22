@@ -19,6 +19,7 @@
 #                  paso_helado   -> congela el agua bajo tus pies
 #                  invulnerabilidad -> no recibe dano mientras dure
 #                  atributos     -> modifica atributos temporalmente (bloque 'atributos')
+#                  golpe_efecto  -> tus golpes aplican un efecto vanilla (bloque 'golpe')
 #                  quitar_positivos -> quita todos los efectos positivos (plugin y Minecraft)
 #                  quitar_negativos -> quita todos los efectos negativos (plugin y Minecraft)
 #   tipo         positivo | negativo | neutro (por defecto positivo). Lo usan las purgas.
@@ -92,3 +93,14 @@ furia:
     attack_speed: 0.5
     armor: 2
     movement_speed: 0.02
+
+armas_venenosas:
+  nombre: 'Armas envenenadas'
+  descripcion: 'Tus golpes aplican Veneno II durante 5 s.'
+  duracion: 30
+  mecanica: golpe_efecto
+  tipo: positivo
+  golpe:
+    efecto: poison
+    nivel: 2
+    duracion: 5
