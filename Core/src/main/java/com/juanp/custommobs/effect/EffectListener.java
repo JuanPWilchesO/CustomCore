@@ -7,6 +7,8 @@ import com.juanp.custommobs.mob.Texts;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Registry;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.block.Block;
@@ -30,6 +32,7 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
 import java.util.Map;
@@ -588,6 +591,28 @@ public final class EffectListener implements Listener {
         AttributeInstance maxHealth = attacker.getAttribute(Attribute.MAX_HEALTH);
         double max = maxHealth == null ? 20.0D : maxHealth.getValue();
         attacker.setHealth(Math.min(max, attacker.getHealth() + event.getFinalDamage() * power));
+    }
+
+    /** Golpes con efecto: mientras dure, cada golpe aplica una pocion al objetivo. */
+    @EventHandler(ignoreCancelled = true)
+    public void onHitApplyEffect(EntityDamageByEntityEvent event) {
+        if (!(event.getDamager() instanceof LivingEntity attacker)
+                || !(event.getEntity() instanceof LivingEntity target)) {
+            return;
+        }
+        var hit = this.service.hitOf(attacker);
+        if (hit.isEmpty()) {
+            return;
+        }
+        PotionEffectType type = Registry.EFFECT.get(
+                NamespacedKey.minecraft(hit.get().potion()));
+        if (type == null) {
+            return;
+        }
+        target.addPotionEffect(new PotionEffect(type,
+                Math.max(1, hit.get().durationSeconds()) * 20,
+                Math.max(0, hit.get().level() - 1),
+                false, true, true));
     }
 
     // ------------------------------------------------------------------ tarea

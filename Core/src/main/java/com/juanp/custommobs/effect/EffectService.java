@@ -1,27 +1,5 @@
 package com.juanp.custommobs.effect;
 
-import com.juanp.custommobs.CustomMobsPlugin;
-import com.juanp.custommobs.mob.Texts;
-import org.bukkit.Bukkit;
-import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
-import org.bukkit.Registry;
-import org.bukkit.attribute.Attribute;
-import org.bukkit.attribute.AttributeInstance;
-import org.bukkit.attribute.AttributeModifier;
-import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.inventory.meta.PotionMeta;
-import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.boss.BarColor;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
-import org.bukkit.potion.PotionEffectTypeCategory;
-
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -33,6 +11,29 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+
+import com.juanp.custommobs.CustomMobsPlugin;
+import com.juanp.custommobs.mob.Texts;
+
+import org.bukkit.Bukkit;
+import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Registry;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeInstance;
+import org.bukkit.attribute.AttributeModifier;
+import org.bukkit.boss.BarColor;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.PotionMeta;
+import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
+import org.bukkit.potion.PotionEffectTypeCategory;
 
 /**
  * Efectos y pociones: se cargan de {@code effects.yml} y {@code potions.yml}.
@@ -91,7 +92,8 @@ public final class EffectService {
                             .replace('-', '_'),
                     section.getStringList("vanilla"),
                     typeOf(section.getString("tipo")),
-                    this.attributesOf(section.getConfigurationSection("atributos"))));
+                    this.attributesOf(section.getConfigurationSection("atributos")),
+                    this.parseHit(section.getConfigurationSection("golpe"))));
         }
 
         YamlConfiguration potionYaml = this.load("potions.yml");
@@ -279,6 +281,21 @@ public final class EffectService {
         return Map.copyOf(attributes);
     }
 
+    private EffectSpec.HitEffect parseHit(ConfigurationSection section) {
+        if (section == null) {
+            return null;
+        }
+        String potion = section.getString("efecto");
+        if (potion == null || potion.isBlank()) {
+            this.plugin.getLogger().warning("El bloque 'golpe:' necesita 'efecto'; se ignora");
+            return null;
+        }
+        return new EffectSpec.HitEffect(
+                potion.toLowerCase(Locale.ROOT).trim(),
+                Math.max(1, section.getInt("nivel", 1)),
+                Math.max(1, section.getInt("duracion", 3)));
+    }
+
     /** Aplica o renueva los modificadores de atributo de un efecto. */
     private void applyAttributes(LivingEntity entity, EffectSpec spec) {
         for (Map.Entry<Attribute, Double> entry : spec.attributes().entrySet()) {
@@ -366,6 +383,25 @@ public final class EffectService {
             }
         }
         return 0.0D;
+    }
+
+    public java.util.Optional<EffectSpec.HitEffect> hitOf(LivingEntity player) {
+        Map<String, Long> mine = this.active.get(player.getUniqueId());
+        if (mine == null) {
+            return java.util.Optional.empty();
+        }
+        long now = System.currentTimeMillis();
+        for (Map.Entry<String, Long> entry : mine.entrySet()) {
+            if (entry.getValue() <= now) {
+                continue;
+            }
+            EffectSpec spec = this.effects.get(entry.getKey());
+            if (spec != null && "golpe_efecto".equals(spec.mechanic()) && spec.hit() != null) {
+                return java.util.Optional.of(spec.hit());
+            }
+
+        }
+        return java.util.Optional.empty();
     }
 
     /** Quita los efectos caducados y devuelve los ids que se han ido. */
