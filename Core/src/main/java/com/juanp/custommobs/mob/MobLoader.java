@@ -530,8 +530,12 @@ public final class MobLoader {
                 Math.round(asNumber(entry.get("block-depth"), 1.0D))));
         boolean breakBlocks = asBoolean(entry.get("break-blocks"))
                 || asBoolean(entry.get("romper-bloques"));
-        double distance = Math.min(5.0D, Math.max(0.5D,
-                asNumber(entry.get("distance"), 1.0D)));
+        boolean throughBlocks = asBoolean(entry.get("through-blocks"))
+                || asBoolean(entry.get("through_blocks"))
+                || asBoolean(entry.get("atravesar-bloques"))
+                || asBoolean(entry.get("atravesar_bloques"));
+        double distance = Math.min(SkillSpec.MAX_DISTANCE,
+                Math.max(SkillSpec.MIN_DISTANCE, asNumber(entry.get("distance"), 1.0D)));
         boolean cancelOnHit = asBoolean(entry.get("cancel-on-hit"))
                 || asBoolean(entry.get("cancel_on_hit"));
         boolean revealOnAttack = asBoolean(entry.get("reveal-on-attack"))
@@ -566,6 +570,7 @@ public final class MobLoader {
                 blockRadius,
                 blockDepth,
                 breakBlocks,
+                throughBlocks,
                 distance,
                 startMessage,
                 endMessage,

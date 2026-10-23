@@ -23,6 +23,11 @@
 - **Sin aviso `inicio` duplicado**: las skills que aplican un efecto del plugin ya no
   muestran el aviso momentáneo de `inicio`; la boss bar del efecto lo sustituye. `fin` se
   mantiene al caducar.
+- **`backstep` y `teleport_behind` más robustos**: el destino se busca a varias alturas
+  (±4 bloques) y, si el punto ideal está ocupado, en un radio de 2 bloques alrededor;
+  también se prueban distancias más cortas. Nuevo `through-blocks` (por defecto `false`)
+  para decidir si el teletransporte puede atravesar paredes; también acepta
+  `atravesar-bloques`. El límite de `distance` sube de 5 a 20 bloques.
 
 ## 1.0.5 — avisos de cooldown por flecha
 

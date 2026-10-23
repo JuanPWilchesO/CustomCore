@@ -81,7 +81,8 @@ siendo objetivos especiales de mob.
 | `block-radius` | radio del area de `block_below` (0-5; 0 = solo el bloque de abajo) | `0` |
 | `block-depth` | profundidad de `block_below` (1-5) | `1` |
 | `break-blocks` | si `explosion` rompe terreno | `false` |
-| `distance` | distancia para `teleport_behind`/`backstep` (0.5-5) | `1.0` |
+| `distance` | distancia para `teleport_behind`/`backstep` (0.5-20) | `1.0` |
+| `through-blocks` | si `teleport_behind`/`backstep` pueden atravesar bloques (también `atravesar-bloques`) | `false` |
 | `message` | texto con `&` | — |
 | `inicio` | aviso al lanzar la skill (solo si castea un jugador) | — |
 | `fin` | aviso cuando caduca el efecto del plugin que aplica la skill (solo si castea un jugador) | — |
@@ -395,6 +396,10 @@ skills:
 | `disarm` | desarme: no ataca ni dispara; se mueve y usa items; `amount` son segundos |
 | `cc_immune` | escudo: inmune a controles; `amount` son segundos (0 = config) |
 
+`teleport_behind` y `backstep` buscan el hueco seguro más cercano en varias alturas y, si
+hace falta, en un radio de 2 bloques alrededor. `through-blocks` decide si pueden cruzar
+bloques (por defecto `false`).
+
 ## Control de masas (PvP)
 
 `stun` es un aturdimiento completo: no se mueve, no ataca y no usa items. `amount` son
@@ -543,9 +548,15 @@ las ignora aunque un mob las referencie.
   target-type: RADIUS
   target: SELF
   distance: 8
+  through-blocks: false
 ```
 
-Busca un punto libre detrás del objetivo y deja al lanzador mirándolo. Con
+Busca un punto libre detrás del objetivo y deja al lanzador mirándolo. `distance` va de
+0.5 a 20 bloques; lo que pidas por encima se recorta a 20. El destino se busca a distintas
+alturas (±4 bloques) y, si no hay hueco,
+en un radio de 2 bloques alrededor; también se prueban distancias más cortas. Con
+`through-blocks: false` (por defecto) el trayecto no puede cruzar bloques: el jugador
+no aparecerá al otro lado de una pared. Pon `true` para permitirlo. Con
 `teleports.respect-protections: true` consulta las protecciones; por defecto es `false`.
 
 ## Detalles que importan
