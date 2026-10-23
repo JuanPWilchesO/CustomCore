@@ -8,6 +8,9 @@
   de sprint; los sonidos se mantienen.
 - **`reveal-on-attack`** en el yml de la skill: con `potion: sigilo`, el jugador se muestra
   al hacer daño (cuerpo a cuerpo o proyectil) y se le quita el sigilo. Por defecto `false`.
+- **Docs y tutoriales siempre al día**: `docs/` y `tutorials/` se restauran desde el jar en
+  cada arranque. No guardes archivos propios ahí: se sobrescriben. El instalador solo toca
+  esas dos carpetas.
 - **Corregido** un `UnsupportedOperationException` en `StatusService.clear` al limpiar una
   barra de estado que no existía. Cortaba el revelado de `reveal-on-attack` (quitaba el
   efecto pero dejaba al jugador invisible) y también saltaba al salir con controles activos.

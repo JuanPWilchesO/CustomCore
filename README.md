@@ -141,6 +141,10 @@ cualquiera de ellos el plugin sigue funcionando: cada uno degrada por su cuenta.
 3. Edita lo que quieras.
 4. `/customcore reload` — recarga mobs, `skills/`, items, config y facciones **sin reiniciar**.
 
+> Las carpetas `docs/` y `tutorials/` de `plugins/CustomCore/` se **restauran desde el jar
+> en cada arranque**. No guardes ahi archivos propios: se sobrescriben en la siguiente
+> actualizacion. El plugin no toca ninguna otra carpeta de su directorio.
+
 > `plugin.yml` es la excepcion: los permisos que declara solo se leen al arrancar. Si
 > cambias sus valores por defecto hace falta reiniciar el servidor.
 

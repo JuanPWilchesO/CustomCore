@@ -178,8 +178,8 @@ public final class CustomMobsPlugin extends JavaPlugin {
         // disco para que un admin pueda leerlos sin descomprimir nada.
         int docs = new DocsInstaller(this).install();
         if (docs > 0) {
-            this.getLogger().info("Documentacion y tutoriales instalados: " + docs
-                    + " archivo(s) en docs/ y tutorials/.");
+            this.getLogger().info("Documentacion y tutoriales restaurados: " + docs
+                    + " archivo(s). No guardes archivos propios en docs/ ni tutorials/.");
         }
 
         // La firma va lo primero que escribe el plugin, para que se vea al arrancar.
