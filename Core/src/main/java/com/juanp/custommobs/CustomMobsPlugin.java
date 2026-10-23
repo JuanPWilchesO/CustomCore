@@ -96,6 +96,8 @@ public final class CustomMobsPlugin extends JavaPlugin {
     private SkillCatalog skillCatalog;
     private MobRegistry registry;
     private MobService mobService;
+    private com.juanp.custommobs.effect.SigiloService sigiloService;
+    private com.juanp.custommobs.effect.SigiloPacketListener sigiloPacketListener;
     private com.juanp.custommobs.effect.EffectService effectService;
     private TeamLink teamLink;
     private GroupLink groupLink;
@@ -222,7 +224,8 @@ public final class CustomMobsPlugin extends JavaPlugin {
 
         // Efectos y pociones antes de las recetas: el bloque 'receta:' de potions.yml se
         // lee del catalogo de pociones. Sin esto se registraba en silencio como inexistente.
-        this.effectService = new com.juanp.custommobs.effect.EffectService(this);
+        this.sigiloService = new com.juanp.custommobs.effect.SigiloService(this);
+        this.effectService = new com.juanp.custommobs.effect.EffectService(this, this.sigiloService);
         this.effectService.reload();
 
         this.craftService = new CraftService(this, this.registry, this.mobService.keys());
@@ -278,6 +281,16 @@ public final class CustomMobsPlugin extends JavaPlugin {
         // cargo antes de registrar las recetas.
         this.effectListener = new com.juanp.custommobs.effect.EffectListener(this, this.effectService);
         pluginManager.registerEvents(this.effectListener, this);
+        pluginManager.registerEvents(this.sigiloService, this);
+        // Limpia el flag de sprint de los ocultos: sin el, el cliente dibuja particulas.
+        try {
+            this.sigiloPacketListener =
+                    new com.juanp.custommobs.effect.SigiloPacketListener(this.sigiloService);
+            com.github.retrooper.packetevents.PacketEvents.getAPI().getEventManager()
+                    .registerListener(this.sigiloPacketListener);
+        } catch (Throwable ignored) {
+            // Sin PacketEvents el sigilo sigue funcionando; solo se pierde el filtro.
+        }
         // Cada tick: la congelacion y el paso helado necesitan ir al dia.
         this.getServer().getScheduler().runTaskTimer(this, this.effectListener::tick, 1L, 1L);
         // Skills al impactar: se arman al disparar y se resuelven al tocar.
@@ -385,6 +398,17 @@ public final class CustomMobsPlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (this.sigiloService != null) {
+            this.sigiloService.showAll();
+        }
+        if (this.sigiloPacketListener != null) {
+            try {
+                com.github.retrooper.packetevents.PacketEvents.getAPI().getEventManager()
+                        .unregisterListener(this.sigiloPacketListener);
+            } catch (Throwable ignored) {
+                // PacketEvents puede haber desaparecido antes que este plugin.
+            }
+        }
         if (this.mobService != null) {
             this.mobService.playerMobs().save();
         }
@@ -514,6 +538,11 @@ public final class CustomMobsPlugin extends JavaPlugin {
     /** Efectos y pociones. */
     public com.juanp.custommobs.effect.EffectService effects() {
         return this.effectService;
+    }
+
+    /** Sigilo: invisibilidad sin sacar la entidad del cliente (conserva colision). */
+    public com.juanp.custommobs.effect.SigiloService sigilo() {
+        return this.sigiloService;
     }
 
     public DropService drops() {

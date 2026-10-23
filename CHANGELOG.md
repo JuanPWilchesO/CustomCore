@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+- **`sigilo` completo también desde skills**: el efecto aplicado por una skill ya oculta al
+  jugador de los demás (cuerpo, armadura y objetos), no solo de los mobs. No saca la entidad
+  del cliente, así que conserva colisión, tab list y daño normal. Se limpian las partículas
+  de sprint; los sonidos se mantienen.
+- **`reveal-on-attack`** en el yml de la skill: con `potion: sigilo`, el jugador se muestra
+  al hacer daño (cuerpo a cuerpo o proyectil) y se le quita el sigilo. Por defecto `false`.
+- **Corregido** un `UnsupportedOperationException` en `StatusService.clear` al limpiar una
+  barra de estado que no existía. Cortaba el revelado de `reveal-on-attack` (quitaba el
+  efecto pero dejaba al jugador invisible) y también saltaba al salir con controles activos.
+- **Sigilo sin equipos de scoreboard**: se quitó el equipo falso para no chocar con TAB ni
+  con otros plugins de equipos. La invisibilidad ya oculta la placa; se conservan colisión,
+  tab list y daño.
+
 ## 1.0.5 — avisos de cooldown por flecha
 
 - **Aviso de cooldown por objeto**: cada flecha custom conserva su propio aviso en la

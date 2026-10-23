@@ -79,6 +79,9 @@ no deben encadenarse.
   cancel-on-hit: true
 ```
 
+El equivalente para el sigilo es `reveal-on-attack: true`: el jugador se muestra al hacer
+daño. Se explica en `03-skills.md`.
+
 ## Escudo de inmunidad
 
 `cc_immune` no limpia el control activo: impide que te apliquen uno nuevo mientras dure.

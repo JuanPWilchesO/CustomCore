@@ -45,6 +45,7 @@ import org.bukkit.potion.PotionEffectTypeCategory;
 public final class EffectService {
 
     private final CustomMobsPlugin plugin;
+    private final SigiloService sigilo;
     private final NamespacedKey potionKey;
     private final Map<String, EffectSpec> effects = new LinkedHashMap<>();
     private final Map<String, PotionSpec> potions = new LinkedHashMap<>();
@@ -63,8 +64,9 @@ public final class EffectService {
             "armor", "armor_toughness", "knockback_resistance", "attack_knockback",
             "max_absorption", "safe_fall_distance");
 
-    public EffectService(CustomMobsPlugin plugin) {
+    public EffectService(CustomMobsPlugin plugin, SigiloService sigilo) {
         this.plugin = plugin;
+        this.sigilo = sigilo;
         this.potionKey = new NamespacedKey(plugin, "potion");
     }
 
@@ -171,7 +173,7 @@ public final class EffectService {
 
     /** Aplica un efecto a un jugador. {@code seconds <= 0} usa la duracion del efecto. */
     public void apply(LivingEntity player, EffectSpec spec, int seconds) {
-        this.apply(player, spec, seconds, null, null);
+        this.apply(player, spec, seconds, null, null, false);
     }
 
     /**
@@ -182,6 +184,16 @@ public final class EffectService {
      */
     public void apply(LivingEntity player, EffectSpec spec, int seconds,
                       UUID notify, String endMessage) {
+        this.apply(player, spec, seconds, notify, endMessage, false);
+    }
+
+    /**
+     * Aplica un efecto con aviso opcional y la opcion de revelar el sigilo al atacar.
+     *
+     * @param revealOnAttack solo para {@code sigilo}: si el jugador se muestra al hacer dano
+     */
+    public void apply(LivingEntity player, EffectSpec spec, int seconds,
+                      UUID notify, String endMessage, boolean revealOnAttack) {
         // Las purgas son instantaneas: no se quedan en la lista de efectos activos.
         if ("quitar_positivos".equals(spec.mechanic())) {
             this.clearByType(player, true);
@@ -205,6 +217,9 @@ public final class EffectService {
             }
             int level = parts.length > 1 ? Math.max(1, parseInt(parts[1], 1)) : 1;
             player.addPotionEffect(new PotionEffect(type, duration * 20, level - 1, true, true, true));
+        }
+        if ("sigilo".equals(spec.mechanic()) && player instanceof Player target) {
+            this.sigilo.hide(target, spec.id(), duration, revealOnAttack);
         }
     }
 
@@ -235,11 +250,16 @@ public final class EffectService {
                 if (match) {
                     this.removeAttributes(player, spec);
                     this.forgetNotice(player.getUniqueId(), entry.getKey());
+                    iterator.remove();
+                    removed++;
+                    // Primero devolver la visibilidad: un fallo de la UI no debe dejar a nadie invisible.
+                    if ("sigilo".equals(spec.mechanic()) && player instanceof Player online
+                            && !this.hasMechanic(online, "sigilo")) {
+                        this.sigilo.show(online);
+                    }
                     if (player instanceof Player online) {
                         this.plugin.status().clear(online, "effect:" + entry.getKey());
                     }
-                    iterator.remove();
-                    removed++;
                 }
             }
             if (mine.isEmpty()) {
@@ -411,6 +431,10 @@ public final class EffectService {
             EffectSpec spec = this.effects.get(id);
             if (spec != null) {
                 this.removeAttributes(player, spec);
+                if ("sigilo".equals(spec.mechanic()) && player instanceof Player online
+                        && !this.hasMechanic(online, "sigilo")) {
+                    this.sigilo.show(online);
+                }
             }
         }
         return gone;
@@ -437,6 +461,36 @@ public final class EffectService {
             this.active.remove(id);
         }
         return gone;
+    }
+
+    /**
+     * Quita un efecto concreto del jugador. Si era el sigilo, lo devuelve a la vista.
+     *
+     * @return {@code true} si estaba activo y se ha quitado
+     */
+    public boolean remove(LivingEntity player, String id) {
+        String key = id.toLowerCase(Locale.ROOT);
+        Map<String, Long> mine = this.active.get(player.getUniqueId());
+        if (mine == null || mine.remove(key) == null) {
+            return false;
+        }
+        if (mine.isEmpty()) {
+            this.active.remove(player.getUniqueId());
+        }
+        EffectSpec spec = this.effects.get(key);
+        if (spec == null) {
+            return true;
+        }
+        this.removeAttributes(player, spec);
+        this.forgetNotice(player.getUniqueId(), key);
+        if (player instanceof Player online) {
+            // Primero devolver la visibilidad: un fallo de la UI no debe dejar a nadie invisible.
+            if ("sigilo".equals(spec.mechanic()) && !this.hasMechanic(online, "sigilo")) {
+                this.sigilo.show(online);
+            }
+            this.plugin.status().clear(online, "effect:" + key);
+        }
+        return true;
     }
 
     /** Guarda (o borra, si no hay aviso) el aviso de fin de un efecto. */

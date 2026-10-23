@@ -11,6 +11,8 @@ softdepend:
   - LibsDisguises
   - LuckPerms
   - WorldGuard
+  # Necesario para el filtro de metadatos/equipo del sigilo (y para el brillo de facciones).
+  - packetevents
 
 commands:
   customcore:

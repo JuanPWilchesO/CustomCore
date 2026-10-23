@@ -74,6 +74,25 @@ skills:
 | `teleport_behind` | aparece detrás del objetivo, mirándolo |
 | `backstep` | retrocede y mira al punto de origen |
 
+## Sigilo desde una skill
+
+`potion: sigilo` aplica el efecto de `effects.yml` con `mecanica: sigilo`. Para que el
+jugador se muestre al atacar, añade `reveal-on-attack: true` a la **skill**:
+
+```yaml
+  - id: sombra
+    effect: potion
+    target: self
+    potion: sigilo
+    potion-duration-seconds: 30
+    reveal-on-attack: true
+```
+
+- `reveal-on-attack` es opcional; por defecto es `false` y el sigilo aguanta hasta caducar.
+- Si es `true`, cualquier daño que haga el jugador (cuerpo a cuerpo o proyectil) le quita
+  el sigilo y vuelve a ser visible.
+- El `potion` tiene que ser el id del efecto con `mecanica: sigilo` (por defecto, `sigilo`).
+
 ## Avisos de la skill
 
 Una skill casteada por un jugador avisa en pantalla, no por chat:

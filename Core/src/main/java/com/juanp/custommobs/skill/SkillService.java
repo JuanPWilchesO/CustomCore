@@ -520,7 +520,8 @@ public final class SkillService extends BukkitRunnable {
                 if (end != null && caster instanceof Player player) {
                     end = end.replace("{jugador}", player.getName());
                 }
-                effects.apply(target, custom, skill.potionDurationSeconds(), notify, end);
+                effects.apply(target, custom, skill.potionDurationSeconds(), notify, end,
+                        skill.revealOnAttack());
                 return;
             }
         }

@@ -76,7 +76,10 @@ public final class StatusService {
         if (player == null) {
             return;
         }
-        this.entries.getOrDefault(player.getUniqueId(), Map.of()).remove(id);
+        Map<String, Entry> playerEntries = this.entries.get(player.getUniqueId());
+        if (playerEntries != null) {
+            playerEntries.remove(id);
+        }
         Map<String, BossBar> playerBars = this.bars.get(player.getUniqueId());
         if (playerBars != null) {
             BossBar bar = playerBars.remove(id);

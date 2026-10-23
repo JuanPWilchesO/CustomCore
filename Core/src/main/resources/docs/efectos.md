@@ -10,7 +10,7 @@ de mob o el uso de un objeto del catálogo.
 | `congelamiento` | No sufres daño por congelación, el hielo no te agarra y se te quita la lentitud del frío. |
 | `caida` | No sufres daño al caer. |
 | `robo_vida` | Te curas un 25% del daño que haces (en cada golpe, no al matar). |
-| `sigilo` | Desapareces para los demás jugadores, armadura y equipo incluidos; los mobs también pierden tu objetivo y no pueden fijarte mientras dure. |
+| `sigilo` | Desapareces para los demás jugadores (cuerpo, armadura y objetos) sin perder colisión ni la tab list; los mobs pierden tu objetivo y no pueden fijarte. |
 | `paso_helado` | Congelas el agua bajo tus pies y por delante. Se descongela a los 5 s. |
 | `quitar_positivos` | Quita todos los efectos positivos, del plugin y de Minecraft. |
 | `quitar_negativos` | Quita todos los efectos negativos, del plugin y de Minecraft. |
@@ -19,6 +19,17 @@ de mob o el uso de un objeto del catálogo.
 | `golpe_efecto` | Mientras dure, cada golpe cuerpo a cuerpo aplica un efecto vanilla al objetivo. |
 
 En el juego: `/customcore effects list` y `/customcore effects info <id>`.
+
+### Sigilo
+
+`sigilo` oculta el cuerpo, la armadura y los objetos en mano a los demás jugadores. No saca
+la entidad del cliente, así que **conservas la colisión, la tab list y el daño normal**. La
+placa de nombre la oculta la invisibilidad y las partículas de sprint se limpian. **No toca
+los equipos de scoreboard**, así que no choca con TAB ni con otros plugins de equipos.
+
+Los mobs no pueden fijarte como objetivo mientras dure. Si el efecto se aplica desde una
+skill con `potion: sigilo`, la clave `reveal-on-attack: true` hace que te muestres al hacer
+daño (cuerpo a cuerpo o proyectil) y que se te quite el sigilo.
 
 ## Definir un efecto (`effects.yml`)
 
