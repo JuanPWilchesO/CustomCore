@@ -116,6 +116,8 @@ usar:
 ```
 
 - `usar.skills` es una lista, en orden; `usar.skill` sirve para una sola.
+- Si una skill aplica `potion: sigilo`, `reveal-on-attack: true` va en la skill, no en el
+  item. Mira `skills.md`.
 - `usar.efecto` sigue existiendo para un efecto de `effects.yml`. Si un item define
   `usar.skills` y `usar.efecto`, se ejecutan las skills y el efecto se ignora.
 - El **cooldown efectivo** es el mayor entre `usar.cooldown` y el

@@ -508,6 +508,15 @@ public final class SkillService extends BukkitRunnable {
         return hit != null && hit.getHitEntity() instanceof LivingEntity living ? living : null;
     }
 
+    /** {@code true} si la skill aplica un efecto de {@code effects.yml} (y tendra boss bar). */
+    private boolean hasPluginEffect(SkillSpec skill) {
+        if (skill.effect() != SkillEffect.POTION || skill.potion() == null) {
+            return false;
+        }
+        var effects = this.service.plugin().effects();
+        return effects != null && effects.effect(skill.potion()).isPresent();
+    }
+
     private void potion(LivingEntity caster, LivingEntity target, SkillSpec skill) {
         // Un efecto del plugin (effects.yml) manda sobre los de Minecraft, y vale tambien para
         // buffear al propio mob con target: self.
@@ -520,7 +529,8 @@ public final class SkillService extends BukkitRunnable {
                 if (end != null && caster instanceof Player player) {
                     end = end.replace("{jugador}", player.getName());
                 }
-                effects.apply(target, custom, skill.potionDurationSeconds(), notify, end);
+                effects.apply(target, custom, skill.potionDurationSeconds(), notify, end,
+                        skill.revealOnAttack());
                 return;
             }
         }
@@ -858,7 +868,9 @@ public final class SkillService extends BukkitRunnable {
                     + skill.effect() + "; ese efecto no se admite desde un item.");
             return;
         }
-        if (skill.hasStartMessage()) {
+        // Si la skill aplica un efecto del plugin, su boss bar ya informa del inicio: el
+        // aviso momentaneo sobra. En las demas skills, 'inicio' se sigue mostrando.
+        if (skill.hasStartMessage() && !this.hasPluginEffect(skill)) {
             this.say(caster, skill.startMessage().replace("{jugador}", caster.getName()), skill);
         }
         if (skill.effect() == SkillEffect.CONSOLE_COMMAND) {

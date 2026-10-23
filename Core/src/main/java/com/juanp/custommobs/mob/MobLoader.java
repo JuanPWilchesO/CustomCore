@@ -534,6 +534,8 @@ public final class MobLoader {
                 asNumber(entry.get("distance"), 1.0D)));
         boolean cancelOnHit = asBoolean(entry.get("cancel-on-hit"))
                 || asBoolean(entry.get("cancel_on_hit"));
+        boolean revealOnAttack = asBoolean(entry.get("reveal-on-attack"))
+                || asBoolean(entry.get("reveal_on_attack"));
         String displayRaw = asString(entry.get("message-display"));
         if (displayRaw == null) {
             displayRaw = asString(entry.get("message_display"));
@@ -569,6 +571,7 @@ public final class MobLoader {
                 endMessage,
                 cooldownMessage,
                 cancelOnHit,
+                revealOnAttack,
                 messageDisplay
         );
     }

@@ -86,12 +86,20 @@ siendo objetivos especiales de mob.
 | `inicio` | aviso al lanzar la skill (solo si castea un jugador) | — |
 | `fin` | aviso cuando caduca el efecto del plugin que aplica la skill (solo si castea un jugador) | — |
 | `cancel-on-hit` | si el control se rompe cuando el objetivo recibe dano (solo stun/root/silence/disarm) | `false` |
+| `reveal-on-attack` | si el sigilo se rompe cuando el jugador hace dano (solo `potion: sigilo`) | `false` |
 | `message-display` | donde se muestra el mensaje: `auto`, `chat` o `screen` | `auto` |
 | `cooldown-aviso` | ya no se usa: el cooldown se muestra en la toolbar o en la boss bar | — |
 | `potion` | `poison`, `speed`, `weakness`… | — |
 | `summon` | la definicion que invoca (SUMMON), tal como su `id` | — |
 | `potion-duration-seconds` | entero | `5` |
 | `potion-amplifier` | entero (`0` = nivel I) | `0` |
+
+Cuando una skill aplica `potion:`, el efecto muestra su boss bar al jugador durante toda la
+duración, igual que si viniera de una poción. No hay que configurar nada.
+
+Si la skill aplica un efecto del plugin (`potion:` con un id de `effects.yml`), `inicio` no
+se muestra: la boss bar del efecto ya informa del inicio. `fin` sí se sigue mostrando al
+caducar.
 
 ## Avisos al jugador
 
@@ -429,6 +437,20 @@ Que bloquea cada uno:
 golpe que **aplica** el control no cuenta: una flecha que aturde y hace dano en el mismo
 impacto no se cancela a si misma; el siguiente golpe si. Sirve para un control de apertura
 que no debe encadenarse. Por defecto es `false`.
+
+`reveal-on-attack: true` es el equivalente para el sigilo: si la skill aplica
+`potion: sigilo` a un jugador, en cuanto ese jugador hace daño (cuerpo a cuerpo o con un
+proyectil) se le quita el sigilo y vuelve a ser visible. Por defecto es `false`, así que el
+sigilo aguanta hasta caducar.
+
+```yaml
+- id: sombra_ataque
+  effect: potion
+  target: self
+  potion: sigilo
+  potion-duration-seconds: 30
+  reveal-on-attack: true
+```
 
 Cada control dura exactamente lo que diga `amount`; el equilibrio se ajusta por skill con
 `amount` y `cooldown-seconds`. La inmunidad al salir es global por jugador y se configura

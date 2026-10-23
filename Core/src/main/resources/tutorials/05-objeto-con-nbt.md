@@ -76,6 +76,8 @@ usar:
 - `usar.inicio` es del item; el cooldown es visual. El `fin` de un item con
   `usar.skills` no se usa: pon el `fin` en cada skill.
 - `{jugador}` se sustituye por el nombre de quien usa el objeto.
+- Si una skill aplica `potion: sigilo`, `reveal-on-attack: true` va en la **skill**, no en
+  el item. Se explica en `03-skills.md`.
 
 Las skills compartidas viven en `plugins/CustomCore/skills/<id>.yml` y se referencian
 por su id. Para probar sin depender del clic: `/customcore testcast <skill>`.

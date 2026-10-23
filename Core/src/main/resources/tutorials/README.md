@@ -1,5 +1,9 @@
 # Tutoriales
 
+> ⚠️ **Esta carpeta se restaura desde el jar en cada arranque.** No guardes aquí archivos
+> propios ni edites estos: se sobrescriben en la siguiente actualización. Para tus notas,
+> usa otra carpeta.
+
 Guias paso a paso. Se leen en orden; cada una anade una funcionalidad sobre la anterior.
 
 | Tutorial | Que aprendes |

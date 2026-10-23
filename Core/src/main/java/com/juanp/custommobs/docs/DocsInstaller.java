@@ -7,17 +7,19 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
 /**
- * Copia la documentacion y los tutoriales que viajan dentro del jar a la carpeta del
+ * Restaura la documentacion y los tutoriales que viajan dentro del jar en la carpeta del
  * plugin, para que un admin pueda leerlos sin abrir el jar.
  *
- * <p><b>No sobrescribe</b>: si el archivo ya existe —porque el admin lo edito o lo
- * tradujo— se respeta. Solo escribe lo que falta.
+ * <p><b>Sobrescribe siempre</b>: estas dos carpetas son del plugin, no del admin. Si se
+ * editan o se meten archivos propios, la siguiente actualizacion los pisa. Solo toca
+ * {@code docs/} y {@code tutorials/}; el resto de la carpeta del plugin no se toca.
  */
 public final class DocsInstaller {
 
@@ -30,7 +32,7 @@ public final class DocsInstaller {
         this.plugin = plugin;
     }
 
-    /** Copia lo que falte. Devuelve cuantos archivos escribio. */
+    /** Restaura lo que haya en el jar. Devuelve cuantos archivos ha escrito. */
     public int install() {
         File jar = this.plugin.jarFile();
         if (jar == null) {
@@ -45,6 +47,7 @@ public final class DocsInstaller {
 
     private int copyFromJar(File jar) {
         int copied = 0;
+        Path data = this.plugin.getDataFolder().toPath();
         try (JarFile archive = new JarFile(jar)) {
             Enumeration<JarEntry> entries = archive.entries();
             while (entries.hasMoreElements()) {
@@ -52,23 +55,28 @@ public final class DocsInstaller {
                 if (entry.isDirectory() || !this.isDoc(entry.getName())) {
                     continue;
                 }
-                File target = new File(this.plugin.getDataFolder(), entry.getName());
-                if (target.exists() || !this.ensureParent(target)) {
+                Path target = this.target(data, entry.getName());
+                if (target == null) {
                     continue;
                 }
                 try (InputStream in = archive.getInputStream(entry)) {
-                    Files.copy(in, target.toPath());
+                    Files.createDirectories(target.getParent());
+                    Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
                     copied++;
+                } catch (IOException ex) {
+                    this.warn(entry.getName(), ex);
                 }
             }
         } catch (IOException ex) {
-            this.plugin.getLogger().warning("No se pudo copiar la documentacion: " + ex.getMessage());
+            this.plugin.getLogger().warning(
+                    "No se pudo restaurar la documentacion: " + ex.getMessage());
         }
         return copied;
     }
 
     private int copyFromFolder(Path root) {
         int copied = 0;
+        Path data = this.plugin.getDataFolder().toPath();
         for (String folder : FOLDERS) {
             Path source = root.resolve(folder);
             if (!Files.isDirectory(source)) {
@@ -76,30 +84,49 @@ public final class DocsInstaller {
             }
             try (var walk = Files.walk(source)) {
                 for (Path file : walk.filter(Files::isRegularFile).toList()) {
-                    String relative = root.relativize(file).toString().replace(File.separatorChar, '/');
+                    String relative = root.relativize(file).toString()
+                            .replace(File.separatorChar, '/');
                     if (!this.isDoc(relative)) {
                         continue;
                     }
-                    File target = new File(this.plugin.getDataFolder(), relative);
-                    if (target.exists() || !this.ensureParent(target)) {
+                    Path target = this.target(data, relative);
+                    if (target == null) {
                         continue;
                     }
-                    Files.copy(file, target.toPath());
-                    copied++;
+                    try {
+                        Files.createDirectories(target.getParent());
+                        Files.copy(file, target, StandardCopyOption.REPLACE_EXISTING);
+                        copied++;
+                    } catch (IOException ex) {
+                        this.warn(relative, ex);
+                    }
                 }
             } catch (IOException ex) {
-                this.plugin.getLogger().warning("No se pudo copiar la documentacion: " + ex.getMessage());
+                this.plugin.getLogger().warning(
+                        "No se pudo restaurar la documentacion: " + ex.getMessage());
             }
         }
         return copied;
     }
 
-    private boolean ensureParent(File target) {
-        File parent = target.getParentFile();
-        return parent == null || parent.isDirectory() || parent.mkdirs();
+    /**
+     * Resuelve la ruta de destino y comprueba que no se sale de {@code docs/} o
+     * {@code tutorials/}. Devuelve {@code null} si la entrada no es de esas carpetas.
+     */
+    private Path target(Path root, String name) {
+        Path resolved = root.resolve(name).normalize();
+        if (!resolved.startsWith(root.resolve("docs").normalize())
+                && !resolved.startsWith(root.resolve("tutorials").normalize())) {
+            return null;
+        }
+        return resolved;
     }
 
-    /** {@code true} si esa ruta del jar es documentacion que hay que copiar. */
+    private void warn(String name, IOException ex) {
+        this.plugin.getLogger().warning("No se pudo restaurar " + name + ": " + ex.getMessage());
+    }
+
+    /** {@code true} si esa ruta del jar es documentacion que hay que restaurar. */
     private boolean isDoc(String name) {
         for (String folder : FOLDERS) {
             if (name.startsWith(folder + "/") && (name.endsWith(".md") || name.endsWith(".txt"))) {

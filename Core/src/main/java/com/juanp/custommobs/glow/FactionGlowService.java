@@ -109,6 +109,13 @@ public final class FactionGlowService extends BukkitRunnable {
                 if (target.getUniqueId().equals(viewer.getUniqueId())) {
                     continue;
                 }
+                // Un jugador en sigilo no debe recibir equipo ni metadatos de brillo: podrian
+                // volver a mostrarle la placa o el contorno.
+                var sigilo = this.plugin.sigilo();
+                if (sigilo != null && sigilo.isHidden(target.getUniqueId())) {
+                    this.forget(viewer, target, seen);
+                    continue;
+                }
                 if (!wants || !this.near(viewer, target, radius)
                         || !this.service.factionGlowActive(target.getWorld())) {
                     this.forget(viewer, target, seen);

@@ -15,7 +15,7 @@
 #                  congelamiento -> inmune al dano de congelacion y el hielo no agarra
 #                  caida         -> inmune al dano de caida
 #                  robo_vida     -> cura un % del dano que haces
-#                  sigilo        -> oculta tu nombre y corta la deteccion de mobs
+#                  sigilo        -> te oculta de los jugadores y corta la deteccion de mobs
 #                  paso_helado   -> congela el agua bajo tus pies
 #                  invulnerabilidad -> no recibe dano mientras dure
 #                  atributos     -> modifica atributos temporalmente (bloque 'atributos')
@@ -48,7 +48,7 @@ robo_vida:
 
 sigilo:
   nombre: 'Sigilo'
-  descripcion: 'Los demas no te ven el nombre.'
+  descripcion: 'Desapareces para los demas: cuerpo, armadura y objetos. Conservas colision y tab list.'
   duracion: 60
   mecanica: sigilo
   tipo: positivo
