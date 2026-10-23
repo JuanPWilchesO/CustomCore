@@ -12,3 +12,6 @@ AGENTS.md
 memory/
 IDENTITY.md
 MEMORY.md
+
+# Guia local de trabajo: no forma parte del plugin ni se sube a git.
+flujo-feature-customcore.md
