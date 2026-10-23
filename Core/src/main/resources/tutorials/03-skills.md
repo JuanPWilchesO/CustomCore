@@ -74,6 +74,24 @@ skills:
 | `teleport_behind` | aparece detrás del objetivo, mirándolo |
 | `backstep` | retrocede y mira al punto de origen |
 
+## Retroceso y teletransporte
+
+`backstep` y `teleport_behind` buscan un hueco seguro sin depender del bloque exacto:
+prueban varias alturas y, si no hay sitio, un radio pequeño alrededor; también prueban
+distancias más cortas. `distance` va de 0.5 a 20 bloques.
+
+```yaml
+  - id: escapar
+    effect: backstep
+    target: self
+    distance: 8
+    through-blocks: false
+```
+
+- `through-blocks: false` (por defecto) no deja atravesar paredes: el trayecto tiene que
+  estar despejado.
+- `through-blocks: true` permite aparecer al otro lado de un bloque.
+
 ## Sigilo desde una skill
 
 `potion: sigilo` aplica el efecto de `effects.yml` con `mecanica: sigilo`. Para que el
