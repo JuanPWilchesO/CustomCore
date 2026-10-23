@@ -94,6 +94,13 @@ siendo objetivos especiales de mob.
 | `potion-duration-seconds` | entero | `5` |
 | `potion-amplifier` | entero (`0` = nivel I) | `0` |
 
+Cuando una skill aplica `potion:`, el efecto muestra su boss bar al jugador durante toda la
+duración, igual que si viniera de una poción. No hay que configurar nada.
+
+Si la skill aplica un efecto del plugin (`potion:` con un id de `effects.yml`), `inicio` no
+se muestra: la boss bar del efecto ya informa del inicio. `fin` sí se sigue mostrando al
+caducar.
+
 ## Avisos al jugador
 
 Los avisos ya no van al chat. Se muestran en la boss bar (arriba) o en un título, segun el caso:

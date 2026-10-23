@@ -108,6 +108,8 @@ Una skill casteada por un jugador avisa en pantalla, no por chat:
 ```
 
 - `inicio` se muestra al lanzarla; `fin`, cuando caduca el efecto del plugin.
+- Si la skill aplica un efecto del plugin (`potion:`), `inicio` no se muestra: la boss bar
+  del efecto ya lo representa. `fin` sí sigue saliendo al caducar.
 - `fin` no vale para efectos instantáneos como `damage` o `heal`.
 - `message-display` decide: `auto`, `chat` o `screen`.
 - El cooldown es visual; `cooldown-aviso` ya no se usa.

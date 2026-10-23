@@ -13,7 +13,6 @@ import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.block.Block;
 import org.bukkit.boss.BarColor;
-import org.bukkit.boss.BarStyle;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
@@ -213,15 +212,6 @@ public final class EffectListener implements Listener {
             return false;
         }
         return !this.plugin.drops().catalog().stunFree(item);
-    }
-
-    private BarColor colorFor(EffectSpec effect) {
-        String type = effect.type() == null ? "" : effect.type();
-        return switch (type) {
-            case "negativo" -> BarColor.RED;
-            case "neutro" -> BarColor.WHITE;
-            default -> BarColor.BLUE;
-        };
     }
 
     /** {@code true} si el objeto no tiene restriccion o el jugador la cumple. */
@@ -511,7 +501,6 @@ public final class EffectListener implements Listener {
     private boolean applyEffect(Player player, EffectSpec effect, int seconds,
                                 String startMessage, String endMessage) {
         this.service.apply(player, effect, seconds, player.getUniqueId(), endMessage);
-        int effectSeconds = seconds > 0 ? seconds : effect.duration();
         String label = startMessage == null || startMessage.isBlank()
                 ? effect.name()
                 : startMessage.replace("{jugador}", player.getName());
@@ -519,9 +508,6 @@ public final class EffectListener implements Listener {
                 || "quitar_negativos".equals(effect.mechanic())) {
             // Purga instantanea: aviso puntual, no barra con duracion.
             this.plugin.status().notice(player, label, BarColor.WHITE);
-        } else {
-            this.plugin.status().show(player, "effect:" + effect.id(), label, effectSeconds,
-                    this.colorFor(effect), BarStyle.SOLID, 60, true);
         }
         return true;
     }

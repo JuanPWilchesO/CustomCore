@@ -23,6 +23,7 @@ import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.attribute.AttributeModifier;
 import org.bukkit.boss.BarColor;
+import org.bukkit.boss.BarStyle;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.LivingEntity;
@@ -221,6 +222,32 @@ public final class EffectService {
         if ("sigilo".equals(spec.mechanic()) && player instanceof Player target) {
             this.sigilo.hide(target, spec.id(), duration, revealOnAttack);
         }
+        // La barra se crea aqui, punto unico: vale igual para pocion, objeto, skill y splash.
+        if (player instanceof Player online) {
+            this.showBar(online, spec, duration);
+        }
+    }
+
+    /**
+     * Boss bar con la cuenta atras del efecto. Da igual el tipo: positivos, negativos y
+     * neutros se muestran para quien los tiene. No se envia a nadie mas.
+     */
+    private void showBar(Player player, EffectSpec spec, int duration) {
+        var status = this.plugin.status();
+        if (status == null || duration <= 0) {
+            return;
+        }
+        status.show(player, "effect:" + spec.id(), spec.name(), duration,
+                barColor(spec), BarStyle.SOLID, 60, true);
+    }
+
+    private static BarColor barColor(EffectSpec spec) {
+        String type = spec.type() == null ? "" : spec.type().toLowerCase(Locale.ROOT);
+        return switch (type) {
+            case "negativo", "negative", "malo" -> BarColor.RED;
+            case "neutro", "neutral" -> BarColor.WHITE;
+            default -> BarColor.BLUE;
+        };
     }
 
     /**

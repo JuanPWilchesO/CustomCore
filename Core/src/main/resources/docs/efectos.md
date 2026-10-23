@@ -31,6 +31,9 @@ Los mobs no pueden fijarte como objetivo mientras dure. Si el efecto se aplica d
 skill con `potion: sigilo`, la clave `reveal-on-attack: true` hace que te muestres al hacer
 daño (cuerpo a cuerpo o proyectil) y que se te quite el sigilo.
 
+Cada efecto con duración muestra su propia **boss bar** mientras está activo, venga de una
+poción, un objeto, una skill o una poción arrojadiza. Solo la ve quien tiene el efecto.
+
 ## Definir un efecto (`effects.yml`)
 
 ```yaml

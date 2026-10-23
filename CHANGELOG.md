@@ -14,9 +14,15 @@
 - **Corregido** un `UnsupportedOperationException` en `StatusService.clear` al limpiar una
   barra de estado que no existía. Cortaba el revelado de `reveal-on-attack` (quitaba el
   efecto pero dejaba al jugador invisible) y también saltaba al salir con controles activos.
+- **Boss bar para todos los efectos con duración**: también cuando el efecto viene de una
+  skill (`potion:`), no solo de poción u objeto. Positivos, negativos y neutros, con su
+  color; solo la ve quien tiene el efecto.
 - **Sigilo sin equipos de scoreboard**: se quitó el equipo falso para no chocar con TAB ni
   con otros plugins de equipos. La invisibilidad ya oculta la placa; se conservan colisión,
   tab list y daño.
+- **Sin aviso `inicio` duplicado**: las skills que aplican un efecto del plugin ya no
+  muestran el aviso momentáneo de `inicio`; la boss bar del efecto lo sustituye. `fin` se
+  mantiene al caducar.
 
 ## 1.0.5 — avisos de cooldown por flecha
 
