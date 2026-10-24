@@ -28,6 +28,9 @@
   también se prueban distancias más cortas. Nuevo `through-blocks` (por defecto `false`)
   para decidir si el teletransporte puede atravesar paredes; también acepta
   `atravesar-bloques`. El límite de `distance` sube de 5 a 20 bloques.
+- **Corregido** `backstep`/`teleport_behind` por debajo de `y = 0`: la guarda de la caja
+  del suelo descartaba cualquier suelo con `maxY` negativo. Ahora la caja vacía se detecta
+  comparando `minY` y `maxY`, así que la búsqueda también funciona en alturas negativas.
 
 ## 1.0.5 — avisos de cooldown por flecha
 

@@ -9,6 +9,7 @@ import org.bukkit.Material;
 
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
+import org.bukkit.util.BoundingBox;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 import org.bukkit.block.Block;
@@ -542,10 +543,11 @@ public final class SkillService extends BukkitRunnable {
         if (!isFloor(floor)) {
             return null;
         }
-        double floorTop = floor.getBoundingBox().getMaxY();
-        if (floorTop <= 0.0D) {
+        BoundingBox box = floor.getBoundingBox();
+        if (box.getMinY() >= box.getMaxY()) {
             return null;
         }
+        double floorTop = box.getMaxY();
         int last = (int) Math.floor(floorTop + height);
         if (last >= world.getMaxHeight()) {
             return null;
