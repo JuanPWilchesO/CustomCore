@@ -108,3 +108,8 @@ usar:
 Con `target: impacto` cura a quien golpee, si es aliado. Para un area, `target-type: radius`
 con `target: allies` y `range`. La municion tambien puede llevar las skills: una flecha
 custom funciona con cualquier arco.
+
+Lo mismo vale para un **tridente** o una **bola de nieve** custom: se arman al lanzarlos y
+resuelven al tocar. El tridente se lanza siempre, aunque su cooldown este activo; en ese
+caso el lanzamiento es normal y solo se salta el efecto. `consume` no aplica a proyectiles:
+la flecha y la bola de nieve se gastan al lanzarse y el tridente no se destruye.

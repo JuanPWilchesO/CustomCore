@@ -207,8 +207,12 @@ Reglas:
 - `range` se mide desde el punto de impacto, no desde el jugador.
 - Impacto en bloque: `target: impacto` no hace nada; `radius` si funciona, con el bloque
   como centro.
-- El cooldown arranca **al disparar**, y el aviso de inicio tambien. Si el proyectil falla,
-  el cooldown se gasto igual.
+- El cooldown del objeto arranca **al disparar**, y el aviso de inicio tambien. Si el
+  proyectil falla, el cooldown se gasto igual.
+- **Tridente**: se lanza siempre. El cooldown del objeto no bloquea el lanzamiento: se
+  comprueba **al impactar**, junto con el aviso de inicio. Si esta en espera, el
+  tridente vuela y golpea igual, pero no se aplica el efecto. El aviso sale solo en la
+  boss bar, para no activar el barrido vanilla que impediria volver a lanzarlo.
 - `chance` se tira **al impactar**.
 - Solo valen `impacto`, `self`, `enemies` y `allies`. `owner`, `target` y `look` se
   rechazan al cargar. `chain`, `summon`, `console_command` y `player_command` tampoco
