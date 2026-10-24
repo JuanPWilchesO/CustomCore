@@ -3,14 +3,19 @@ package com.juanp.custommobs.skill;
 import com.juanp.custommobs.CustomMobsPlugin;
 import com.juanp.custommobs.item.UseSpec;
 import com.juanp.custommobs.mob.Texts;
+import org.bukkit.Material;
 import org.bukkit.entity.AbstractArrow;
+import org.bukkit.entity.Egg;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.boss.BarColor;
 import org.bukkit.entity.Projectile;
+import org.bukkit.entity.Snowball;
+import org.bukkit.entity.Trident;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.entity.ProjectileLaunchEvent;
@@ -162,8 +167,10 @@ public final class ProjectileListener implements Listener {
     /** Bola de nieve, huevo y tridente: el objeto puede seguir en la mano o no. */
     @EventHandler(ignoreCancelled = true)
     public void onLaunch(ProjectileLaunchEvent event) {
-        // Una flecha con marca de catalogo nunca debe poder recogerse.
-        if (event.getEntity() instanceof AbstractArrow arrow) {
+        // Una flecha con marca de catalogo nunca debe poder recogerse. El tridente tambien
+        // hereda de AbstractArrow, pero no es municion: sigue por la ruta normal para
+        // poder armarlo con sus skills de impacto.
+        if (event.getEntity() instanceof AbstractArrow arrow && !(arrow instanceof Trident)) {
             var effects = this.plugin.effectListener();
             if (effects != null && effects.catalogName(arrow.getItemStack()) != null) {
                 arrow.setPickupStatus(AbstractArrow.PickupStatus.DISALLOWED);
@@ -174,6 +181,12 @@ public final class ProjectileListener implements Listener {
             return;
         }
         if (this.arm(player, player.getInventory().getItemInMainHand(), event.getEntity(), true)) {
+            return;
+        }
+        // El tridente tambien puede lanzarse desde la mano secundaria.
+        if (event.getEntity() instanceof Trident
+                && this.arm(player, player.getInventory().getItemInOffHand(),
+                        event.getEntity(), true)) {
             return;
         }
         Hand hand = this.recent.remove(player.getUniqueId());
@@ -232,9 +245,8 @@ public final class ProjectileListener implements Listener {
         if (name == null || this.impactSkills(item).isEmpty()) {
             return;
         }
-        if (event.getHand() != EquipmentSlot.HAND) {
-            return;
-        }
+        // Se graba lo que hay en cualquiera de las dos manos: el lanzamiento puede
+        // consumir el stack antes del ProjectileLaunchEvent.
         this.recent.put(player.getUniqueId(), new Hand(item.clone(), System.currentTimeMillis()));
     }
 
@@ -322,7 +334,28 @@ public final class ProjectileListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onHit(ProjectileHitEvent event) {
         LivingEntity hit = event.getHitEntity() instanceof LivingEntity living ? living : null;
+        // Paper a veces avisa del impacto del tridente sin la entidad golpeada. Ese caso
+        // lo resuelve onTridentDamage; consumirlo aqui perderia el efecto.
+        if (hit == null && event.getEntity() instanceof Trident && event.getHitBlock() == null) {
+            return;
+        }
         this.service.hit(event.getEntity(), event.getEntity().getLocation(), hit);
+    }
+
+    /**
+     * Respaldo del tridente: al golpear una entidad no siempre llega
+     * {@link ProjectileHitEvent}. {@link ProjectileService#hit} es idempotente, asi que
+     * si el evento normal ya resolvio la skill esta llamada no hace nada.
+     */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = false)
+    public void onTridentDamage(EntityDamageByEntityEvent event) {
+        if (!(event.getDamager() instanceof Trident trident)) {
+            return;
+        }
+        if (!(event.getEntity() instanceof LivingEntity hit)) {
+            return;
+        }
+        this.service.hit(trident, trident.getLocation(), hit);
     }
 
     /**
@@ -376,6 +409,14 @@ public final class ProjectileListener implements Listener {
         if (ArrowTypes.isArrow(item) && !this.isRanger(player)) {
             return false;
         }
+        // El objeto tiene que corresponder al proyectil: un tridente custom en la otra
+        // mano no debe armar una bola de nieve ni al reves.
+        Material type = item.getType();
+        if ((type == Material.TRIDENT && !(projectile instanceof Trident))
+                || (type == Material.SNOWBALL && !(projectile instanceof Snowball))
+                || (type == Material.EGG && !(projectile instanceof Egg))) {
+            return false;
+        }
         List<SkillSpec> skills = this.impactSkills(item);
         if (skills.isEmpty()) {
             return false;
@@ -396,12 +437,15 @@ public final class ProjectileListener implements Listener {
         if (!effects.canUse(player, item)) {
             return false;
         }
+        // El tridente se lanza siempre: su cooldown no puede bloquear el uso vanilla.
+        // Se guarda para comprobarlo al impactar (ProjectileService).
+        boolean trident = projectile instanceof Trident;
         // El cooldown arranca al disparar, no al impactar. En el arco no se aplica:
         // el cooldown es de la flecha, para no bloquear todos los tipos.
-        if (applyCooldown && !effects.tryCooldown(player, name, use, item)) {
+        if (applyCooldown && !trident && !effects.tryCooldown(player, name, use, item)) {
             return false;
         }
-        if (applyCooldown && use.hasStartMessage()) {
+        if (applyCooldown && !trident && use.hasStartMessage()) {
             this.plugin.status().notice(player, use.startMessage()
                     .replace("{jugador}", player.getName()), BarColor.WHITE);
         }

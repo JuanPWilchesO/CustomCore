@@ -432,18 +432,8 @@ public final class EffectListener implements Listener {
         return any;
     }
 
-    /**
-     * Aplica el cooldown del objeto: el mayor entre el suyo y el de sus skills.
-     *
-     * @return {@code false} si todavia esta en espera; ya dejo el aviso
-     */
-    /** {@code true} si el objeto sigue en espera; no aplica ni avisa nada. */
-    public boolean onCooldown(Player player, String name) {
-        Long until = this.cooldowns.get(player.getUniqueId() + ":" + name);
-        return until != null && until > System.currentTimeMillis();
-    }
-
-    public boolean tryCooldown(Player player, String name, UseSpec use, ItemStack item) {
+    /** Cooldown efectivo del objeto: el mayor entre el suyo y el de sus skills. */
+    private int effectiveCooldown(UseSpec use) {
         int cooldown = use.cooldownSeconds();
         if (use.hasSkills() && this.plugin.skillCatalog() != null) {
             for (String id : use.skillIds()) {
@@ -453,6 +443,55 @@ public final class EffectListener implements Listener {
                 }
             }
         }
+        return cooldown;
+    }
+
+    /** {@code true} si el objeto sigue en espera; no aplica ni avisa nada. */
+    public boolean onCooldown(Player player, String name) {
+        Long until = this.cooldowns.get(player.getUniqueId() + ":" + name);
+        return until != null && until > System.currentTimeMillis();
+    }
+
+    /**
+     * Cooldown para objetos cuyo uso no puede bloquearse, como el tridente: se lanza
+     * siempre y lo que espera es el efecto. Se guarda en el mismo mapa que
+     * {@link #tryCooldown} y se avisa solo en boss bar, nunca con el barrido vanilla,
+     * que impediria volver a lanzarlo.
+     *
+     * @return {@code false} si todavia esta en espera; ya dejo el aviso
+     */
+    public boolean tryImpactCooldown(Player player, String name, UseSpec use) {
+        int cooldown = this.effectiveCooldown(use);
+        String key = player.getUniqueId() + ":" + name;
+        long now = System.currentTimeMillis();
+        Long until = this.cooldowns.get(key);
+        if (until != null && until > now) {
+            this.showImpactCooldown(player, name, (until - now + 999L) / 1000L);
+            return false;
+        }
+        if (cooldown > 0) {
+            this.cooldowns.put(key, now + cooldown * 1000L);
+            this.showImpactCooldown(player, name, cooldown);
+        }
+        return true;
+    }
+
+    /** Aviso de cooldown sin barrido vanilla: solo boss bar. */
+    private void showImpactCooldown(Player player, String name, long seconds) {
+        if (seconds <= 0L) {
+            return;
+        }
+        String label = name;
+        ItemStack template = this.plugin.drops().catalog().get(name).orElse(null);
+        if (template != null && template.hasItemMeta()
+                && template.getItemMeta().hasDisplayName()) {
+            label = org.bukkit.ChatColor.stripColor(template.getItemMeta().getDisplayName());
+        }
+        this.plugin.status().cooldown(player, name, "&8" + label + " &7(" + seconds + "s)");
+    }
+
+    public boolean tryCooldown(Player player, String name, UseSpec use, ItemStack item) {
+        int cooldown = this.effectiveCooldown(use);
         String key = player.getUniqueId() + ":" + name;
         long now = System.currentTimeMillis();
         Long until = this.cooldowns.get(key);
