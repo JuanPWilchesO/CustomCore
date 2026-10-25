@@ -51,6 +51,8 @@ import java.util.Map;
  * @param itemIgnoreCancelledUse procesar el 'usar:' aunque otro plugin cancele el clic
  * @param teleportRespectProtections si las skills de teletransporte respetan protecciones
  * @param arrowClass          clase que puede cargar flechas en el arco (por defecto, cazador)
+ * @param modelsRequireHitBox si un modelo de BetterModel debe declarar hitbox para que se
+ *                            oculte el cuerpo vanilla (un mob invisible sin hitbox no recibe dano)
  */
 public record PluginConfig(
         boolean debug,
@@ -92,6 +94,7 @@ public record PluginConfig(
         boolean itemIgnoreCancelledUse,
         boolean teleportRespectProtections,
         String arrowClass,
+        boolean modelsRequireHitBox,
         int ccImmunitySeconds,
         int ccShieldSeconds,
         String ccShieldMessage,
@@ -190,6 +193,8 @@ public record PluginConfig(
                 // Por defecto el plugin no consulta protecciones al teletransportar.
                 cfg.getBoolean("teleports.respect-protections", false),
                 arrowClass,
+                // Por defecto, si: ocultar el cuerpo sin hitbox deja al mob intocable.
+                cfg.getBoolean("models.require-hitbox", true),
                 ccImmunity,
                 ccShield,
                 ccShieldMessage,

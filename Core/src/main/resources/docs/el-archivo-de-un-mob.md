@@ -186,6 +186,107 @@ respawn-seconds: 30
 - `respawn-seconds`: solo mobs de servidor. `0` = una sola vida. Con un valor mayor,
   el punto funciona como **spawner** de ese mob.
 
+## Modelo 3D (`model`, BetterModel)
+
+Un mob puede llevar un modelo de [BetterModel](https://modrinth.com/plugin/bettermodel)
+encima: el mob sigue siendo el mismo (misma vida, mismo dano, mismos objetivos), pero el
+cliente ve el modelo en vez del cuerpo vanilla.
+
+```yaml
+model:
+  enabled: true
+  name: guardia_espada
+  hide-body: true
+  hide-equipment: true
+  hide-glow: false
+  scale: 1.0
+  damage-animation: true
+  damage-tint: true
+  seat: true
+  animations:
+    idle: idle
+    walk: { name: walk, speed: 1.0 }
+    attack: { name: attack, once: true }
+    hurt:   { name: hurt,   once: true }
+    death:  { name: death,  once: true, end: 5 }
+    spawn:  spawn
+```
+
+| Clave | Valores | Por defecto | Notas |
+|---|---|---|---|
+| `enabled` | `true` \| `false` | `true` | `false`: el mob se ve vanilla |
+| `name` | texto | — | nombre del modelo en `plugins/BetterModel/models/`; **obligatorio** |
+| `hide-body` | `true` \| `false` | `true` | oculta el cuerpo de la entidad |
+| `hide-equipment` | `true` \| `false` | `true` | oculta el equipo que lleva |
+| `hide-glow` | `true` \| `false` | `false` | deja ver el brillo (por ejemplo, el de faccion) |
+| `scale` | numero | el del modelo | escala del modelo |
+| `damage-animation` | `true` \| `false` | `true` | animacion de dano del propio modelo |
+| `damage-tint` | `true` \| `false` | `true` | tinte rojo al recibir dano |
+| `sight-trace` | `true` \| `false` | el de BetterModel | solo se dibuja con linea de vision |
+| `seat` | `true` \| `false` | `true` | usar el hueso `seat` del modelo como asiento (`category: mount`) |
+| `animations` | mapa | vacio | animaciones por evento, ver abajo |
+
+**Si el mob tambien tiene `disguise:` activo, gana el disfraz** y el modelo se ignora (se
+avisa una vez en el log). Es a proposito: un disfraz y un modelo encima se pelean por el
+mismo cliente.
+
+**Sin BetterModel instalado** la seccion no hace nada: el mob se ve como siempre y el
+plugin sigue funcionando. Si el plugin esta pero el modelo no existe, pasa lo mismo y el
+log avisa (y `/customcore model validate` los lista).
+
+**El modelo tiene que estar cargado** en `plugins/BetterModel/models/`. CustomCore no anade
+ni quita modelos: solo los usa por nombre. Anadir un `.bbmodel` cambia el pack de BetterModel,
+asi que si lo sirves con AutoPack hay que regenerarlo y recargarlo.
+
+**El cuerpo solo se oculta si el modelo tiene hitbox.** Un modelo debe declarar un hueso
+con el tag `hitbox` (o `seat`) en Blockbench. Si no lo tiene, se deja el cuerpo vanilla
+visible: un mob invisible sin caja de colision no recibe dano. Este comportamiento se
+desactiva con `models.require-hitbox: false` en el config.
+
+### Animaciones por evento
+
+| Clave | Cuando se reproduce |
+|---|---|
+| `idle` | en reposo |
+| `walk` | al empezar a andar |
+| `attack` | al golpear a alguien |
+| `hurt` | al recibir dano |
+| `death` | al morir, antes de desaparecer |
+| `spawn` | al aparecer |
+
+Los valores son **los nombres que las animaciones tienen dentro del modelo**, no los de
+esta tabla. Cada entrada admite la forma corta (`idle: reposo`) o la larga:
+
+```yaml
+animations:
+  walk:
+    name: walk        # nombre dentro del modelo
+    once: false       # una sola vez, en vez de en bucle (death lo es por defecto)
+    speed: 1.2        # velocidad de reproduccion
+    start: 0          # ticks de entrada (lerp)
+    end: 5            # ticks de salida (lerp)
+```
+
+Un evento sin clave no anima nada. `death` se reproduce y el modelo aguanta 2 segundos
+extra sobre el cadaver antes de cerrarse.
+
+### Asiento de montura (`seat`, solo `category: mount`)
+
+Con `seat: true`, el jugador se sube al hueso marcado como `seat` del modelo: el caballo
+vanilla se oculta y se ve solo el modelo montable.
+
+```yaml
+category: mount
+type: HORSE
+model:
+  name: caballo_guerra
+  seat: true
+```
+
+Si el modelo no tiene hueso `seat`, el jugador se monta al asiento vanilla del caballo y
+el log avisa. El modelo se marca como montable en Blockbench con el tag `seat` en el
+hueso donde se sienta el jinete.
+
 ## Un mob custom no se modifica a mano
 
 El mob cambia **solo** por lo que el plugin permite: el estilo de su dueno, los items de

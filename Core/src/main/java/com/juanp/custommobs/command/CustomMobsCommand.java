@@ -102,6 +102,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
             case "effects" -> this.effects(sender, args);
             case "testcast", "cast" -> this.testCast(sender, args);
             case "potion" -> this.potion(sender, args);
+            case "model", "modelo" -> this.model(sender, args);
             case "spawner" -> this.spawner(sender, args);
             case "book", "libro" -> this.book(sender, args);
             case "upgrade", "mejora" -> this.upgrade(sender, args);
@@ -1155,6 +1156,115 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
     }
 
     /** Pociones: listarlas o repartirlas. */
+    /**
+     * Modelos de BetterModel: los cargados en el servidor y los que usan los mobs.
+     *
+     * <p>{@code model list} lista los modelos disponibles; {@code model list <mob>} los de un
+     * mob; {@code model validate} avisa de los nombres que no existen en BetterModel.
+     */
+    private void model(CommandSender sender, String[] args) {
+        var link = this.plugin.modelLink();
+        if (args.length < 2 || "list".equalsIgnoreCase(args[1])) {
+            if (args.length >= 3) {
+                this.modelOfMob(sender, args[2]);
+                return;
+            }
+            if (!(link instanceof com.juanp.custommobs.model.BetterModelLink better)) {
+                sender.sendMessage(TAG + " BetterModel no esta instalado: no hay modelos que listar.");
+                this.modelSummary(sender);
+                return;
+            }
+            var names = better.modelNames();
+            sender.sendMessage(TAG + " Modelos de BetterModel (" + names.size() + "):");
+            for (String name : names) {
+                sender.sendMessage(com.juanp.custommobs.mob.Texts.color(" &7" + name));
+            }
+            this.modelSummary(sender);
+            return;
+        }
+        if ("validate".equalsIgnoreCase(args[1]) || "validar".equalsIgnoreCase(args[1])) {
+            this.validateModels(sender, link);
+            return;
+        }
+        sender.sendMessage(TAG + " Uso: /customcore model list [mob] | model validate");
+    }
+
+    /** Cuantos mobs del catalogo llevan modelo y cuantos no. */
+    private void modelSummary(CommandSender sender) {
+        int withModel = 0;
+        for (MobDefinition definition : this.plugin.registry().all()) {
+            if (definition.model() != null && definition.model().active()) {
+                withModel++;
+            }
+        }
+        sender.sendMessage(com.juanp.custommobs.mob.Texts.color(" &8Mobs con modelo: &f" + withModel
+                + " &8de &f" + this.plugin.registry().size()));
+    }
+
+    /** Modelo y animaciones de un mob concreto. */
+    private void modelOfMob(CommandSender sender, String id) {
+        MobDefinition definition = this.plugin.registry().get(id.toLowerCase(Locale.ROOT)).orElse(null);
+        if (definition == null) {
+            sender.sendMessage(TAG + " No existe el mob: " + id);
+            return;
+        }
+        var spec = definition.model();
+        if (spec == null || !spec.active()) {
+            sender.sendMessage(TAG + " '" + definition.id() + "' no lleva modelo.");
+            return;
+        }
+        sender.sendMessage(TAG + " '" + definition.id() + "': modelo '" + spec.name() + "'"
+                + (spec.scale() != null ? " x" + spec.scale() : "")
+                + (spec.seat() ? " con asiento propio" : ""));
+        sender.sendMessage(com.juanp.custommobs.mob.Texts.color(" &8cuerpo: "
+                + (spec.hideBody() ? "oculto" : "visible")
+                + " &8| equipo: " + (spec.hideEquipment() ? "oculto" : "visible")
+                + " &8| brillo: " + (spec.hideGlow() ? "oculto" : "visible")));
+        if (spec.animations().isEmpty()) {
+            sender.sendMessage(com.juanp.custommobs.mob.Texts.color(" &8animaciones: ninguna"));
+            return;
+        }
+        for (var entry : spec.animations().entrySet()) {
+            var animation = entry.getValue();
+            sender.sendMessage(com.juanp.custommobs.mob.Texts.color(" &7" + entry.getKey().key()
+                    + " &8-> &f" + animation.name()
+                    + (animation.once() ? " &8(una vez)" : "")
+                    + (animation.speed() != null ? " &8x" + animation.speed() : "")));
+        }
+    }
+
+    /** Recorre el catalogo y avisa de los modelos que BetterModel no conoce. */
+    private void validateModels(CommandSender sender, com.juanp.custommobs.model.ModelLink link) {
+        int checked = 0;
+        int wrong = 0;
+        for (MobDefinition definition : this.plugin.registry().all()) {
+            var spec = definition.model();
+            if (spec == null || !spec.active()) {
+                continue;
+            }
+            checked++;
+            boolean exists = link instanceof com.juanp.custommobs.model.BetterModelLink better
+                    && better.hasModelName(spec.name());
+            if (!exists) {
+                wrong++;
+                sender.sendMessage(com.juanp.custommobs.mob.Texts.color(" &c" + definition.id()
+                        + " &8-> &f" + spec.name() + " &8(no existe)"));
+            }
+            if (definition.disguise() != null && definition.disguise().enabled()) {
+                sender.sendMessage(com.juanp.custommobs.mob.Texts.color(" &e" + definition.id()
+                        + " &8tiene 'disguise' y 'model': gana el disfraz"));
+            }
+        }
+        if (checked == 0) {
+            sender.sendMessage(TAG + " Ningun mob declara modelo.");
+            return;
+        }
+        sender.sendMessage(TAG + (wrong == 0
+                ? com.juanp.custommobs.mob.Texts.color(" &aTodo correcto: " + checked + " modelo(s).")
+                : com.juanp.custommobs.mob.Texts.color(" &c" + wrong + " de " + checked
+                        + " modelo(s) no existen.")));
+    }
+
     private void potion(CommandSender sender, String[] args) {
         var all = this.plugin.effects().potions();
         if (args.length < 2 || "list".equalsIgnoreCase(args[1])) {
@@ -1209,6 +1319,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(TAG + "           | spawner list | spawner remove <id> | spawner removeall [mob] | spawner reload");
         sender.sendMessage(TAG + "           | book [jugador]  (libro de inspeccion)");
         sender.sendMessage(TAG + "           | upgrade list | upgrade give <id> [jugador] | upgrade reload");
+        sender.sendMessage(TAG + "           | model list [mob] | model validate  (modelos de BetterModel)");
         sender.sendMessage(TAG + "           | despedir <todos|id|id#marca>  (tus mobs; cualquiera puede usarlo)");
     }
 
@@ -1224,7 +1335,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
             List<String> options = admin
                     ? List.of("reload", "list", "give", "spawn", "remove", "active", "kill",
                             "enchants", "cuota", "item", "color", "glow", "spawner", "book", "upgrade",
-                            "despedir", "faction", "class", "effects", "potion")
+                            "despedir", "faction", "class", "effects", "potion", "model")
                     : List.of("cuota", "color", "glow", "despedir");
             for (String option : options) {
                 if (option.startsWith(args[0].toLowerCase(Locale.ROOT))) {
@@ -1276,6 +1387,24 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
         }
         // De aqui para abajo, todo es administracion: sin permiso, no se completa nada.
         if (!admin) {
+            return out;
+        }
+        if (args.length == 2 && (args[0].equalsIgnoreCase("model") || args[0].equalsIgnoreCase("modelo"))) {
+            for (String option : List.of("list", "validate")) {
+                if (option.startsWith(args[1].toLowerCase(Locale.ROOT))) {
+                    out.add(option);
+                }
+            }
+            return out;
+        }
+        if (args.length == 3 && (args[0].equalsIgnoreCase("model") || args[0].equalsIgnoreCase("modelo"))
+                && args[1].equalsIgnoreCase("list")) {
+            for (MobDefinition definition : this.plugin.registry().all()) {
+                var spec = definition.model();
+                if (spec != null && spec.active() && definition.id().startsWith(args[2].toLowerCase(Locale.ROOT))) {
+                    out.add(definition.id());
+                }
+            }
             return out;
         }
         if (args.length == 2 && (args[0].equalsIgnoreCase("upgrade") || args[0].equalsIgnoreCase("mejora"))) {

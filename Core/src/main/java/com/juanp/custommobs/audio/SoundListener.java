@@ -1,6 +1,7 @@
 package com.juanp.custommobs.audio;
 
 import com.juanp.custommobs.mob.MobService;
+import com.juanp.custommobs.model.ModelAnimation;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Projectile;
@@ -25,11 +26,17 @@ public final class SoundListener implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onDamage(EntityDamageByEntityEvent event) {
         if (event.getEntity() instanceof LivingEntity victim) {
-            this.service.find(victim.getUniqueId()).ifPresent(this.sounds::playHurt);
+            this.service.find(victim.getUniqueId()).ifPresent(customMob -> {
+                this.sounds.playHurt(customMob);
+                this.service.modelLink().animate(victim, customMob.definition(), ModelAnimation.HURT);
+            });
         }
         LivingEntity attacker = this.attackerOf(event);
         if (attacker != null) {
-            this.service.find(attacker.getUniqueId()).ifPresent(this.sounds::playAttack);
+            this.service.find(attacker.getUniqueId()).ifPresent(customMob -> {
+                this.sounds.playAttack(customMob);
+                this.service.modelLink().animate(attacker, customMob.definition(), ModelAnimation.ATTACK);
+            });
         }
     }
 
