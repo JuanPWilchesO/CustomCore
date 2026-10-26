@@ -9,6 +9,7 @@ import org.bukkit.Material;
 
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
+import org.bukkit.util.BoundingBox;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 import org.bukkit.block.Block;
@@ -53,6 +54,12 @@ public final class SkillService extends BukkitRunnable {
 
     /** Tope de invocados por uso, para que un yml descuidado no suelte una horda. */
     private static final int MAX_SUMMON = 10;
+
+    /** Radio horizontal de la busqueda de emergencia alrededor del punto ideal. */
+    private static final int NEARBY_RADIUS = 2;
+
+    /** Margen vertical, en bloques, de la busqueda de un punto seguro. */
+    private static final int HEIGHT_RANGE = 4;
 
     private final MobService service;
     private final Random random = new Random();
@@ -351,7 +358,8 @@ public final class SkillService extends BukkitRunnable {
      * seguro y, si la config lo pide, consulta las protecciones.
      */
     private void teleportBehind(Entity caster, LivingEntity target, SkillSpec skill) {
-        Location destination = this.safeBehind(target, skill.distance());
+        Location destination = this.safeBehind(caster, target, skill.distance(),
+                skill.throughBlocks());
         if (destination == null) {
             return;
         }
@@ -362,21 +370,28 @@ public final class SkillService extends BukkitRunnable {
         this.teleport(caster, destination);
     }
 
-    /** Retrocede al lanzador y lo deja mirando al punto de origen. */
+    /**
+     * Retrocede al lanzador y lo deja mirando al punto de origen.
+     *
+     * <p>Se prueba la distancia pedida y, si no hay hueco, distancias cada vez mas cortas.
+     * En cada una se buscan varias alturas y un pequeno radio alrededor, para no depender
+     * de que el bloque justo detras este libre.
+     */
     private void backstep(Entity caster, SkillSpec skill) {
         Vector facing = caster.getLocation().getDirection().setY(0);
         if (facing.lengthSquared() < 0.001D) {
             facing = new Vector(0, 0, 1);
         }
         facing.normalize();
-        Location base = caster.getLocation().subtract(facing.multiply(
-                Math.max(0.5D, Math.min(5.0D, skill.distance()))));
-        Location destination = this.safeSpot(base);
+        Vector behind = facing.clone().multiply(-1);
+        Location from = caster.getLocation();
+        Location destination = this.searchSpot(caster, from, facing, skill.distance(),
+                skill.throughBlocks(), behind);
         if (destination == null) {
             return;
         }
         double eye = caster instanceof Player ? 1.62D : caster.getHeight() * 0.5D;
-        Location origin = caster.getLocation().clone().add(0, eye, 0);
+        Location origin = from.clone().add(0, eye, 0);
         destination.setDirection(origin.toVector()
                 .subtract(destination.clone().add(0, eye, 0).toVector()));
         this.teleport(caster, destination);
@@ -405,34 +420,187 @@ public final class SkillService extends BukkitRunnable {
     }
 
     /** Punto libre detras del objetivo, o {@code null} si no hay sitio. */
-    private Location safeBehind(LivingEntity target, double distance) {
+    private Location safeBehind(Entity caster, LivingEntity target, double distance,
+                                boolean throughBlocks) {
+        if (!target.getWorld().equals(caster.getWorld())) {
+            return null;
+        }
         Vector facing = target.getLocation().getDirection().setY(0);
         if (facing.lengthSquared() < 0.001D) {
             facing = new Vector(0, 0, 1);
         }
         facing.normalize();
-        Location base = target.getLocation().subtract(facing.multiply(
-                Math.max(0.5D, Math.min(5.0D, distance))));
-        return this.safeSpot(base);
+        Vector behind = facing.clone().multiply(-1);
+        Location reference = target.getLocation();
+        return this.searchSpot(caster, reference, facing, distance, throughBlocks, behind);
     }
 
-    /** Busca dos bloques libres con suelo solido a partir de una base. */
-    private Location safeSpot(Location base) {
-        World world = base.getWorld();
-        for (int dy = 0; dy <= 3; dy++) {
-            Location candidate = base.clone().add(0, dy, 0);
-            if (candidate.getY() <= world.getMinHeight() + 1
-                    || candidate.getY() >= world.getMaxHeight() - 1) {
-                continue;
-            }
-            Block feet = candidate.getBlock();
-            Block head = feet.getRelative(BlockFace.UP);
-            Block below = feet.getRelative(BlockFace.DOWN);
-            if (feet.isPassable() && head.isPassable() && below.getType().isSolid()) {
-                return candidate;
+    /**
+     * Prueba la distancia pedida y, si no hay hueco, distancias cada vez mas cortas.
+     * Con distancias largas usa pasos de un bloque para no repetir la busqueda 3D
+     * decenas de veces; el ultimo intento siempre es la distancia minima.
+     */
+    private Location searchSpot(Entity caster, Location reference, Vector facing, double distance,
+                                boolean throughBlocks, Vector behind) {
+        double max = Math.max(SkillSpec.MIN_DISTANCE,
+                Math.min(SkillSpec.MAX_DISTANCE, distance));
+        double step = max > 5.0D ? 1.0D : 0.5D;
+        for (double d = max; d >= SkillSpec.MIN_DISTANCE; d -= step) {
+            Location base = reference.clone().subtract(facing.clone().multiply(d));
+            Location destination = this.safeSpot(caster, base, throughBlocks, reference, behind);
+            if (destination != null) {
+                return destination;
             }
         }
+        // Con paso de un bloque, la ultima distancia probada puede ser 1, no 0.5.
+        if ((max - SkillSpec.MIN_DISTANCE) % step > 1.0E-6D) {
+            Location base = reference.clone()
+                    .subtract(facing.clone().multiply(SkillSpec.MIN_DISTANCE));
+            return this.safeSpot(caster, base, throughBlocks, reference, behind);
+        }
         return null;
+    }
+
+    /**
+     * Punto seguro mas cercano al ideal.
+     *
+     * <p>Se prueban varias alturas en la misma columna y, si no hay hueco, un radio
+     * pequeno en las tres dimensiones. Nunca se elige un hueco sin suelo solido, con
+     * liquidos o con bloques que hacen dano. Con {@code throughBlocks} en {@code false},
+     * la linea entre el lanzador y el destino tambien tiene que estar despejada. Si se
+     * pasa {@code behind}, el destino tiene que quedar al menos medio bloque detras de
+     * {@code reference}: asi la busqueda de emergencia no acaba delante del lanzador.
+     */
+    private Location safeSpot(Entity caster, Location base, boolean throughBlocks,
+                              Location reference, Vector behind) {
+        if (caster == null || base == null) {
+            return null;
+        }
+        World world = base.getWorld();
+        if (world == null || !world.equals(caster.getWorld())) {
+            return null;
+        }
+        Location origin = caster.getLocation();
+        double height = Math.max(0.9D, caster.getHeight());
+        Location best = null;
+        double bestScore = Double.MAX_VALUE;
+        int centerY = base.getBlockY();
+        for (int radius = 0; radius <= NEARBY_RADIUS; radius++) {
+            for (int dx = -radius; dx <= radius; dx++) {
+                for (int dz = -radius; dz <= radius; dz++) {
+                    if (Math.max(Math.abs(dx), Math.abs(dz)) != radius) {
+                        continue;
+                    }
+                    int x = base.getBlockX() + dx;
+                    int z = base.getBlockZ() + dz;
+                    double atX = base.getX() + dx;
+                    double atZ = base.getZ() + dz;
+                    for (int dy = -HEIGHT_RANGE; dy <= HEIGHT_RANGE; dy++) {
+                        Location candidate = this.safeAt(world, x, centerY + dy, z,
+                                atX, atZ, height);
+                        if (candidate == null) {
+                            continue;
+                        }
+                        if (behind != null && reference != null
+                                && candidate.toVector().subtract(reference.toVector())
+                                .dot(behind) < 0.5D) {
+                            continue;
+                        }
+                        if (candidate.distanceSquared(origin) < 0.25D) {
+                            continue;
+                        }
+                        if (!throughBlocks && !this.hasClearPath(origin, candidate, height)) {
+                            continue;
+                        }
+                        // Terreno llano y despejado: el punto ideal ya es el mejor posible.
+                        if (radius == 0 && dx == 0 && dz == 0 && dy == 0
+                                && Math.abs(candidate.getY() - base.getY()) < 0.01D) {
+                            return candidate;
+                        }
+                        double score = candidate.distanceSquared(base)
+                                + Math.abs(dy) * 0.01D;
+                        if (score < bestScore) {
+                            bestScore = score;
+                            best = candidate;
+                        }
+                    }
+                }
+            }
+        }
+        return best;
+    }
+
+    /**
+     * Hueco sobre un suelo solido en la columna indicada. Devuelve la ubicacion con los
+     * pies sobre la cara superior del suelo, o {@code null} si no cabe el lanzador.
+     */
+    private Location safeAt(World world, int x, int blockY, int z,
+                            double atX, double atZ, double height) {
+        if (blockY <= world.getMinHeight() + 1 || blockY >= world.getMaxHeight() - 1) {
+            return null;
+        }
+        Block floor = world.getBlockAt(x, blockY - 1, z);
+        if (!isFloor(floor)) {
+            return null;
+        }
+        BoundingBox box = floor.getBoundingBox();
+        if (box.getMinY() >= box.getMaxY()) {
+            return null;
+        }
+        double floorTop = box.getMaxY();
+        int last = (int) Math.floor(floorTop + height);
+        if (last >= world.getMaxHeight()) {
+            return null;
+        }
+        for (int y = blockY; y <= last; y++) {
+            Block space = world.getBlockAt(x, y, z);
+            if (!space.isPassable() || space.isLiquid() || isHazard(space)) {
+                return null;
+            }
+        }
+        Location candidate = new Location(world, atX, floorTop, atZ);
+        return world.getWorldBorder().isInside(candidate) ? candidate : null;
+    }
+
+    /** Suelo que se puede pisar: no deja pasar, no es liquido y no hace dano. */
+    private static boolean isFloor(Block block) {
+        return !block.isPassable() && !block.isLiquid() && !isHazard(block);
+    }
+
+    /** Bloques que no se deben pisar aunque se pueda estar encima. */
+    private static boolean isHazard(Block block) {
+        return switch (block.getType()) {
+            case LAVA, FIRE, SOUL_FIRE, MAGMA_BLOCK, CACTUS, CAMPFIRE, SOUL_CAMPFIRE,
+                 POWDER_SNOW, SWEET_BERRY_BUSH, WITHER_ROSE, POINTED_DRIPSTONE, COBWEB -> true;
+            default -> false;
+        };
+    }
+
+    /**
+     * {@code true} si el corredor horizontal entre el lanzador y el destino no cruza
+     * bloques solidos. Se mide a la altura del suelo mas alto para permitir escalones y
+     * caidas de un bloque, pero no paredes.
+     */
+    private boolean hasClearPath(Location from, Location to, double height) {
+        World world = from.getWorld();
+        if (world == null || !world.equals(to.getWorld())) {
+            return false;
+        }
+        double baseY = Math.max(from.getY(), to.getY());
+        for (double offset : new double[]{0.6D, Math.max(1.0D, height * 0.75D)}) {
+            Vector start = new Vector(from.getX(), baseY + offset, from.getZ());
+            Vector delta = new Vector(to.getX(), baseY + offset, to.getZ()).subtract(start);
+            double length = delta.length();
+            if (length < 0.01D) {
+                continue;
+            }
+            RayTraceResult hit = world.rayTraceBlocks(start.toLocation(world),
+                    delta.normalize(), length, FluidCollisionMode.NEVER, true);
+            if (hit != null && hit.getHitBlock() != null) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -508,6 +676,15 @@ public final class SkillService extends BukkitRunnable {
         return hit != null && hit.getHitEntity() instanceof LivingEntity living ? living : null;
     }
 
+    /** {@code true} si la skill aplica un efecto de {@code effects.yml} (y tendra boss bar). */
+    private boolean hasPluginEffect(SkillSpec skill) {
+        if (skill.effect() != SkillEffect.POTION || skill.potion() == null) {
+            return false;
+        }
+        var effects = this.service.plugin().effects();
+        return effects != null && effects.effect(skill.potion()).isPresent();
+    }
+
     private void potion(LivingEntity caster, LivingEntity target, SkillSpec skill) {
         // Un efecto del plugin (effects.yml) manda sobre los de Minecraft, y vale tambien para
         // buffear al propio mob con target: self.
@@ -520,7 +697,8 @@ public final class SkillService extends BukkitRunnable {
                 if (end != null && caster instanceof Player player) {
                     end = end.replace("{jugador}", player.getName());
                 }
-                effects.apply(target, custom, skill.potionDurationSeconds(), notify, end);
+                effects.apply(target, custom, skill.potionDurationSeconds(), notify, end,
+                        skill.revealOnAttack());
                 return;
             }
         }
@@ -858,7 +1036,9 @@ public final class SkillService extends BukkitRunnable {
                     + skill.effect() + "; ese efecto no se admite desde un item.");
             return;
         }
-        if (skill.hasStartMessage()) {
+        // Si la skill aplica un efecto del plugin, su boss bar ya informa del inicio: el
+        // aviso momentaneo sobra. En las demas skills, 'inicio' se sigue mostrando.
+        if (skill.hasStartMessage() && !this.hasPluginEffect(skill)) {
             this.say(caster, skill.startMessage().replace("{jugador}", caster.getName()), skill);
         }
         if (skill.effect() == SkillEffect.CONSOLE_COMMAND) {

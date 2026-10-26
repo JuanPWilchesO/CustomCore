@@ -11,8 +11,10 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -51,6 +53,12 @@ public final class MountEffectTask extends BukkitRunnable {
                 continue;
             }
             horses++;
+            // Una montura sin jinete se queda quieta: deambular por la IA vanilla hace que se
+            // aleje sola del dueno. Antes de la comprobacion de efectos, que no todas tienen.
+            boolean ridden = !this.ridersOf(horse).isEmpty();
+            if (horse.hasAI() == !ridden) {
+                horse.setAI(!ridden);
+            }
             List<MountEffect> effects = customMob.definition().mountEffects();
             if (effects.isEmpty()) {
                 continue;
@@ -66,8 +74,8 @@ public final class MountEffectTask extends BukkitRunnable {
                 PotionEffect potion = new PotionEffect(type, DURATION_TICKS,
                         Math.max(0, effect.amplifier()), false, effect.visible(), effect.visible());
                 if (effect.toRider()) {
-                    for (Entity passenger : horse.getPassengers()) {
-                        if (passenger instanceof Player riding && this.isFriendly(customMob, riding)) {
+                    for (Player riding : this.ridersOf(horse)) {
+                        if (this.isFriendly(customMob, riding)) {
                             riding.addPotionEffect(potion);
                         }
                     }
@@ -107,6 +115,47 @@ public final class MountEffectTask extends BukkitRunnable {
             return true;
         }
         return this.service.teamLink().isAlly(ownerId, player.getUniqueId());
+    }
+
+    /**
+     * Los jugadores que van montados en esa montura.
+     *
+     * <p>Normalmente es el pasajero del caballo. Pero una montura con modelo lleva al jinete en
+     * el asiento del modelo (un hitbox aparte), asi que el caballo no tiene pasajeros: se busca
+     * al jugador que este montado sobre el, sea cual sea el vehiculo.
+     */
+    private Set<Player> ridersOf(AbstractHorse horse) {
+        Set<Player> riders = new LinkedHashSet<>();
+        for (Entity passenger : horse.getPassengers()) {
+            if (passenger instanceof Player player) {
+                riders.add(player);
+            }
+        }
+        if (riders.isEmpty()) {
+            // El modelo monta al jugador en el asiento, que es OTRA entidad (un hitbox de
+            // BetterModel). Por eso no sirve comparar con el UUID del caballo: se mira quien
+            // esta montado lo bastante cerca del caballo como para ir en su asiento.
+            for (Entity near : horse.getNearbyEntities(6.0D, 6.0D, 6.0D)) {
+                if (near instanceof Player player && this.ridesThis(player, horse)) {
+                    riders.add(player);
+                }
+            }
+        }
+        return riders;
+    }
+
+    /** {@code true} si ese jugador esta montado en el carrito/asiento de esa montura. */
+    private boolean ridesThis(Player player, AbstractHorse horse) {
+        Entity vehicle = player.getVehicle();
+        if (vehicle == null) {
+            return false;
+        }
+        if (vehicle.getUniqueId().equals(horse.getUniqueId())) {
+            return true;
+        }
+        // Asiento del modelo: el vehiculo es el hitbox, que se mueve pegado al caballo.
+        return vehicle.getLocation().distanceSquared(horse.getLocation()) <= 16.0D
+                && !vehicle.getUniqueId().equals(player.getUniqueId());
     }
 
     /** El efecto de Bukkit, o {@code null} si el yml trae un id que no existe. */

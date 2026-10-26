@@ -81,17 +81,26 @@ siendo objetivos especiales de mob.
 | `block-radius` | radio del area de `block_below` (0-5; 0 = solo el bloque de abajo) | `0` |
 | `block-depth` | profundidad de `block_below` (1-5) | `1` |
 | `break-blocks` | si `explosion` rompe terreno | `false` |
-| `distance` | distancia para `teleport_behind`/`backstep` (0.5-5) | `1.0` |
+| `distance` | distancia para `teleport_behind`/`backstep` (0.5-20) | `1.0` |
+| `through-blocks` | si `teleport_behind`/`backstep` pueden atravesar bloques (también `atravesar-bloques`) | `false` |
 | `message` | texto con `&` | — |
 | `inicio` | aviso al lanzar la skill (solo si castea un jugador) | — |
 | `fin` | aviso cuando caduca el efecto del plugin que aplica la skill (solo si castea un jugador) | — |
 | `cancel-on-hit` | si el control se rompe cuando el objetivo recibe dano (solo stun/root/silence/disarm) | `false` |
+| `reveal-on-attack` | si el sigilo se rompe cuando el jugador hace dano (solo `potion: sigilo`) | `false` |
 | `message-display` | donde se muestra el mensaje: `auto`, `chat` o `screen` | `auto` |
 | `cooldown-aviso` | ya no se usa: el cooldown se muestra en la toolbar o en la boss bar | — |
 | `potion` | `poison`, `speed`, `weakness`… | — |
 | `summon` | la definicion que invoca (SUMMON), tal como su `id` | — |
 | `potion-duration-seconds` | entero | `5` |
 | `potion-amplifier` | entero (`0` = nivel I) | `0` |
+
+Cuando una skill aplica `potion:`, el efecto muestra su boss bar al jugador durante toda la
+duración, igual que si viniera de una poción. No hay que configurar nada.
+
+Si la skill aplica un efecto del plugin (`potion:` con un id de `effects.yml`), `inicio` no
+se muestra: la boss bar del efecto ya informa del inicio. `fin` sí se sigue mostrando al
+caducar.
 
 ## Avisos al jugador
 
@@ -198,8 +207,12 @@ Reglas:
 - `range` se mide desde el punto de impacto, no desde el jugador.
 - Impacto en bloque: `target: impacto` no hace nada; `radius` si funciona, con el bloque
   como centro.
-- El cooldown arranca **al disparar**, y el aviso de inicio tambien. Si el proyectil falla,
-  el cooldown se gasto igual.
+- El cooldown del objeto arranca **al disparar**, y el aviso de inicio tambien. Si el
+  proyectil falla, el cooldown se gasto igual.
+- **Tridente**: se lanza siempre. El cooldown del objeto no bloquea el lanzamiento: se
+  comprueba **al impactar**, junto con el aviso de inicio. Si esta en espera, el
+  tridente vuela y golpea igual, pero no se aplica el efecto. El aviso sale solo en la
+  boss bar, para no activar el barrido vanilla que impediria volver a lanzarlo.
 - `chance` se tira **al impactar**.
 - Solo valen `impacto`, `self`, `enemies` y `allies`. `owner`, `target` y `look` se
   rechazan al cargar. `chain`, `summon`, `console_command` y `player_command` tampoco
@@ -387,6 +400,10 @@ skills:
 | `disarm` | desarme: no ataca ni dispara; se mueve y usa items; `amount` son segundos |
 | `cc_immune` | escudo: inmune a controles; `amount` son segundos (0 = config) |
 
+`teleport_behind` y `backstep` buscan el hueco seguro más cercano en varias alturas y, si
+hace falta, en un radio de 2 bloques alrededor. `through-blocks` decide si pueden cruzar
+bloques (por defecto `false`).
+
 ## Control de masas (PvP)
 
 `stun` es un aturdimiento completo: no se mueve, no ataca y no usa items. `amount` son
@@ -429,6 +446,20 @@ Que bloquea cada uno:
 golpe que **aplica** el control no cuenta: una flecha que aturde y hace dano en el mismo
 impacto no se cancela a si misma; el siguiente golpe si. Sirve para un control de apertura
 que no debe encadenarse. Por defecto es `false`.
+
+`reveal-on-attack: true` es el equivalente para el sigilo: si la skill aplica
+`potion: sigilo` a un jugador, en cuanto ese jugador hace daño (cuerpo a cuerpo o con un
+proyectil) se le quita el sigilo y vuelve a ser visible. Por defecto es `false`, así que el
+sigilo aguanta hasta caducar.
+
+```yaml
+- id: sombra_ataque
+  effect: potion
+  target: self
+  potion: sigilo
+  potion-duration-seconds: 30
+  reveal-on-attack: true
+```
 
 Cada control dura exactamente lo que diga `amount`; el equilibrio se ajusta por skill con
 `amount` y `cooldown-seconds`. La inmunidad al salir es global por jugador y se configura
@@ -521,9 +552,15 @@ las ignora aunque un mob las referencie.
   target-type: RADIUS
   target: SELF
   distance: 8
+  through-blocks: false
 ```
 
-Busca un punto libre detrás del objetivo y deja al lanzador mirándolo. Con
+Busca un punto libre detrás del objetivo y deja al lanzador mirándolo. `distance` va de
+0.5 a 20 bloques; lo que pidas por encima se recorta a 20. El destino se busca a distintas
+alturas (±4 bloques) y, si no hay hueco,
+en un radio de 2 bloques alrededor; también se prueban distancias más cortas. Con
+`through-blocks: false` (por defecto) el trayecto no puede cruzar bloques: el jugador
+no aparecerá al otro lado de una pared. Pon `true` para permitirlo. Con
 `teleports.respect-protections: true` consulta las protecciones; por defecto es `false`.
 
 ## Detalles que importan

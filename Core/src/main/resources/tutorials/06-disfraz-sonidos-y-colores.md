@@ -20,6 +20,36 @@ disguise:
 El disfraz se aplica **antes** de crear la entidad, asi que el mob nunca se ve un instante
 con su forma base.
 
+## 1b. Modelo 3D (BetterModel)
+
+La otra forma de darle cuerpo a un mob: un modelo de **BetterModel** encima de la entidad.
+
+```yaml
+model:
+  enabled: true
+  name: demon_knight
+  hide-body: true
+  hide-equipment: true
+  animations:
+    idle: idle
+    walk: walk
+    attack: { name: hammer_attack_1, once: true }
+    death:  { name: death, once: true }
+```
+
+- `name` es el del modelo en `plugins/BetterModel/models/`. Los ves con
+  `/customcore model list`.
+- `hide-body` oculta el cuerpo vanilla: solo se ve el modelo.
+- `animations` mapea eventos del mob (`idle`, `walk`, `attack`, `hurt`, `death`, `spawn`)
+  a animaciones **del modelo**. Un evento sin clave no anima nada.
+- El modelo necesita un hueso con el tag `hitbox` (o `seat`) en Blockbench. Sin hitbox se
+  deja el cuerpo vanilla visible, para que el mob siga recibiendo dano.
+
+**Disfraz y modelo no se mezclan**: si el mob tiene las dos cosas, gana el disfraz y el
+modelo se ignora (el log lo avisa una vez).
+
+Sin BetterModel instalado, la seccion se ignora sin errores.
+
 ## 2. Sonidos
 
 ```yaml
@@ -36,6 +66,10 @@ sounds:
 
 - `ambient` se repite cada `interval-seconds`.
 - Los ids de sonido son los de Minecraft (`entity.zombie.hurt`, `block.anvil.land`…).
+- Si configuras **al menos uno**, el mob deja de sonar por su cuenta: se oye **solo** lo del
+  yml. El costo es que pierde su sonido de pasos y el de su muerte vanilla.
+- Se oyen a **32 bloques**; mas lejos, no.
+- Un mob sin `sounds:` suena como cualquier bicho vanilla.
 
 ## 3. Color y brillo de tus mobs
 

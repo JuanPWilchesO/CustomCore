@@ -76,6 +76,8 @@ usar:
 - `usar.inicio` es del item; el cooldown es visual. El `fin` de un item con
   `usar.skills` no se usa: pon el `fin` en cada skill.
 - `{jugador}` se sustituye por el nombre de quien usa el objeto.
+- Si una skill aplica `potion: sigilo`, `reveal-on-attack: true` va en la **skill**, no en
+  el item. Se explica en `03-skills.md`.
 
 Las skills compartidas viven en `plugins/CustomCore/skills/<id>.yml` y se referencian
 por su id. Para probar sin depender del clic: `/customcore testcast <skill>`.
@@ -106,3 +108,8 @@ usar:
 Con `target: impacto` cura a quien golpee, si es aliado. Para un area, `target-type: radius`
 con `target: allies` y `range`. La municion tambien puede llevar las skills: una flecha
 custom funciona con cualquier arco.
+
+Lo mismo vale para un **tridente** o una **bola de nieve** custom: se arman al lanzarlos y
+resuelven al tocar. El tridente se lanza siempre, aunque su cooldown este activo; en ese
+caso el lanzamiento es normal y solo se salta el efecto. `consume` no aplica a proyectiles:
+la flecha y la bola de nieve se gastan al lanzarse y el tridente no se destruye.

@@ -1,27 +1,5 @@
 package com.juanp.custommobs.effect;
 
-import com.juanp.custommobs.CustomMobsPlugin;
-import com.juanp.custommobs.mob.Texts;
-import org.bukkit.Bukkit;
-import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
-import org.bukkit.Registry;
-import org.bukkit.attribute.Attribute;
-import org.bukkit.attribute.AttributeInstance;
-import org.bukkit.attribute.AttributeModifier;
-import org.bukkit.configuration.ConfigurationSection;
-import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.inventory.meta.PotionMeta;
-import org.bukkit.persistence.PersistentDataType;
-import org.bukkit.boss.BarColor;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
-import org.bukkit.potion.PotionEffectTypeCategory;
-
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -34,6 +12,30 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.juanp.custommobs.CustomMobsPlugin;
+import com.juanp.custommobs.mob.Texts;
+
+import org.bukkit.Bukkit;
+import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Registry;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.attribute.AttributeInstance;
+import org.bukkit.attribute.AttributeModifier;
+import org.bukkit.boss.BarColor;
+import org.bukkit.boss.BarStyle;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.PotionMeta;
+import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
+import org.bukkit.potion.PotionEffectTypeCategory;
+
 /**
  * Efectos y pociones: se cargan de {@code effects.yml} y {@code potions.yml}.
  *
@@ -44,6 +46,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class EffectService {
 
     private final CustomMobsPlugin plugin;
+    private final SigiloService sigilo;
     private final NamespacedKey potionKey;
     private final Map<String, EffectSpec> effects = new LinkedHashMap<>();
     private final Map<String, PotionSpec> potions = new LinkedHashMap<>();
@@ -62,8 +65,9 @@ public final class EffectService {
             "armor", "armor_toughness", "knockback_resistance", "attack_knockback",
             "max_absorption", "safe_fall_distance");
 
-    public EffectService(CustomMobsPlugin plugin) {
+    public EffectService(CustomMobsPlugin plugin, SigiloService sigilo) {
         this.plugin = plugin;
+        this.sigilo = sigilo;
         this.potionKey = new NamespacedKey(plugin, "potion");
     }
 
@@ -91,7 +95,8 @@ public final class EffectService {
                             .replace('-', '_'),
                     section.getStringList("vanilla"),
                     typeOf(section.getString("tipo")),
-                    this.attributesOf(section.getConfigurationSection("atributos"))));
+                    this.attributesOf(section.getConfigurationSection("atributos")),
+                    this.parseHit(section.getConfigurationSection("golpe"))));
         }
 
         YamlConfiguration potionYaml = this.load("potions.yml");
@@ -169,7 +174,7 @@ public final class EffectService {
 
     /** Aplica un efecto a un jugador. {@code seconds <= 0} usa la duracion del efecto. */
     public void apply(LivingEntity player, EffectSpec spec, int seconds) {
-        this.apply(player, spec, seconds, null, null);
+        this.apply(player, spec, seconds, null, null, false);
     }
 
     /**
@@ -180,6 +185,16 @@ public final class EffectService {
      */
     public void apply(LivingEntity player, EffectSpec spec, int seconds,
                       UUID notify, String endMessage) {
+        this.apply(player, spec, seconds, notify, endMessage, false);
+    }
+
+    /**
+     * Aplica un efecto con aviso opcional y la opcion de revelar el sigilo al atacar.
+     *
+     * @param revealOnAttack solo para {@code sigilo}: si el jugador se muestra al hacer dano
+     */
+    public void apply(LivingEntity player, EffectSpec spec, int seconds,
+                      UUID notify, String endMessage, boolean revealOnAttack) {
         // Las purgas son instantaneas: no se quedan en la lista de efectos activos.
         if ("quitar_positivos".equals(spec.mechanic())) {
             this.clearByType(player, true);
@@ -204,6 +219,35 @@ public final class EffectService {
             int level = parts.length > 1 ? Math.max(1, parseInt(parts[1], 1)) : 1;
             player.addPotionEffect(new PotionEffect(type, duration * 20, level - 1, true, true, true));
         }
+        if ("sigilo".equals(spec.mechanic()) && player instanceof Player target) {
+            this.sigilo.hide(target, spec.id(), duration, revealOnAttack);
+        }
+        // La barra se crea aqui, punto unico: vale igual para pocion, objeto, skill y splash.
+        if (player instanceof Player online) {
+            this.showBar(online, spec, duration);
+        }
+    }
+
+    /**
+     * Boss bar con la cuenta atras del efecto. Da igual el tipo: positivos, negativos y
+     * neutros se muestran para quien los tiene. No se envia a nadie mas.
+     */
+    private void showBar(Player player, EffectSpec spec, int duration) {
+        var status = this.plugin.status();
+        if (status == null || duration <= 0) {
+            return;
+        }
+        status.show(player, "effect:" + spec.id(), spec.name(), duration,
+                barColor(spec), BarStyle.SOLID, 60, true);
+    }
+
+    private static BarColor barColor(EffectSpec spec) {
+        String type = spec.type() == null ? "" : spec.type().toLowerCase(Locale.ROOT);
+        return switch (type) {
+            case "negativo", "negative", "malo" -> BarColor.RED;
+            case "neutro", "neutral" -> BarColor.WHITE;
+            default -> BarColor.BLUE;
+        };
     }
 
     /**
@@ -233,11 +277,16 @@ public final class EffectService {
                 if (match) {
                     this.removeAttributes(player, spec);
                     this.forgetNotice(player.getUniqueId(), entry.getKey());
+                    iterator.remove();
+                    removed++;
+                    // Primero devolver la visibilidad: un fallo de la UI no debe dejar a nadie invisible.
+                    if ("sigilo".equals(spec.mechanic()) && player instanceof Player online
+                            && !this.hasMechanic(online, "sigilo")) {
+                        this.sigilo.show(online);
+                    }
                     if (player instanceof Player online) {
                         this.plugin.status().clear(online, "effect:" + entry.getKey());
                     }
-                    iterator.remove();
-                    removed++;
                 }
             }
             if (mine.isEmpty()) {
@@ -277,6 +326,21 @@ public final class EffectService {
             attributes.put(attribute, section.getDouble(raw));
         }
         return Map.copyOf(attributes);
+    }
+
+    private EffectSpec.HitEffect parseHit(ConfigurationSection section) {
+        if (section == null) {
+            return null;
+        }
+        String potion = section.getString("efecto");
+        if (potion == null || potion.isBlank()) {
+            this.plugin.getLogger().warning("El bloque 'golpe:' necesita 'efecto'; se ignora");
+            return null;
+        }
+        return new EffectSpec.HitEffect(
+                potion.toLowerCase(Locale.ROOT).trim(),
+                Math.max(1, section.getInt("nivel", 1)),
+                Math.max(1, section.getInt("duracion", 3)));
     }
 
     /** Aplica o renueva los modificadores de atributo de un efecto. */
@@ -368,6 +432,25 @@ public final class EffectService {
         return 0.0D;
     }
 
+    public java.util.Optional<EffectSpec.HitEffect> hitOf(LivingEntity player) {
+        Map<String, Long> mine = this.active.get(player.getUniqueId());
+        if (mine == null) {
+            return java.util.Optional.empty();
+        }
+        long now = System.currentTimeMillis();
+        for (Map.Entry<String, Long> entry : mine.entrySet()) {
+            if (entry.getValue() <= now) {
+                continue;
+            }
+            EffectSpec spec = this.effects.get(entry.getKey());
+            if (spec != null && "golpe_efecto".equals(spec.mechanic()) && spec.hit() != null) {
+                return java.util.Optional.of(spec.hit());
+            }
+
+        }
+        return java.util.Optional.empty();
+    }
+
     /** Quita los efectos caducados y devuelve los ids que se han ido. */
     public List<String> expire(LivingEntity player) {
         List<String> gone = this.expire(player.getUniqueId());
@@ -375,6 +458,10 @@ public final class EffectService {
             EffectSpec spec = this.effects.get(id);
             if (spec != null) {
                 this.removeAttributes(player, spec);
+                if ("sigilo".equals(spec.mechanic()) && player instanceof Player online
+                        && !this.hasMechanic(online, "sigilo")) {
+                    this.sigilo.show(online);
+                }
             }
         }
         return gone;
@@ -401,6 +488,36 @@ public final class EffectService {
             this.active.remove(id);
         }
         return gone;
+    }
+
+    /**
+     * Quita un efecto concreto del jugador. Si era el sigilo, lo devuelve a la vista.
+     *
+     * @return {@code true} si estaba activo y se ha quitado
+     */
+    public boolean remove(LivingEntity player, String id) {
+        String key = id.toLowerCase(Locale.ROOT);
+        Map<String, Long> mine = this.active.get(player.getUniqueId());
+        if (mine == null || mine.remove(key) == null) {
+            return false;
+        }
+        if (mine.isEmpty()) {
+            this.active.remove(player.getUniqueId());
+        }
+        EffectSpec spec = this.effects.get(key);
+        if (spec == null) {
+            return true;
+        }
+        this.removeAttributes(player, spec);
+        this.forgetNotice(player.getUniqueId(), key);
+        if (player instanceof Player online) {
+            // Primero devolver la visibilidad: un fallo de la UI no debe dejar a nadie invisible.
+            if ("sigilo".equals(spec.mechanic()) && !this.hasMechanic(online, "sigilo")) {
+                this.sigilo.show(online);
+            }
+            this.plugin.status().clear(online, "effect:" + key);
+        }
+        return true;
     }
 
     /** Guarda (o borra, si no hay aviso) el aviso de fin de un efecto. */

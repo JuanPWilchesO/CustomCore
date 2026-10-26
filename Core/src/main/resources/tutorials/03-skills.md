@@ -74,6 +74,43 @@ skills:
 | `teleport_behind` | aparece detrás del objetivo, mirándolo |
 | `backstep` | retrocede y mira al punto de origen |
 
+## Retroceso y teletransporte
+
+`backstep` y `teleport_behind` buscan un hueco seguro sin depender del bloque exacto:
+prueban varias alturas y, si no hay sitio, un radio pequeño alrededor; también prueban
+distancias más cortas. `distance` va de 0.5 a 20 bloques.
+
+```yaml
+  - id: escapar
+    effect: backstep
+    target: self
+    distance: 8
+    through-blocks: false
+```
+
+- `through-blocks: false` (por defecto) no deja atravesar paredes: el trayecto tiene que
+  estar despejado.
+- `through-blocks: true` permite aparecer al otro lado de un bloque.
+
+## Sigilo desde una skill
+
+`potion: sigilo` aplica el efecto de `effects.yml` con `mecanica: sigilo`. Para que el
+jugador se muestre al atacar, añade `reveal-on-attack: true` a la **skill**:
+
+```yaml
+  - id: sombra
+    effect: potion
+    target: self
+    potion: sigilo
+    potion-duration-seconds: 30
+    reveal-on-attack: true
+```
+
+- `reveal-on-attack` es opcional; por defecto es `false` y el sigilo aguanta hasta caducar.
+- Si es `true`, cualquier daño que haga el jugador (cuerpo a cuerpo o proyectil) le quita
+  el sigilo y vuelve a ser visible.
+- El `potion` tiene que ser el id del efecto con `mecanica: sigilo` (por defecto, `sigilo`).
+
 ## Avisos de la skill
 
 Una skill casteada por un jugador avisa en pantalla, no por chat:
@@ -89,6 +126,8 @@ Una skill casteada por un jugador avisa en pantalla, no por chat:
 ```
 
 - `inicio` se muestra al lanzarla; `fin`, cuando caduca el efecto del plugin.
+- Si la skill aplica un efecto del plugin (`potion:`), `inicio` no se muestra: la boss bar
+  del efecto ya lo representa. `fin` sí sigue saliendo al caducar.
 - `fin` no vale para efectos instantáneos como `damage` o `heal`.
 - `message-display` decide: `auto`, `chat` o `screen`.
 - El cooldown es visual; `cooldown-aviso` ya no se usa.

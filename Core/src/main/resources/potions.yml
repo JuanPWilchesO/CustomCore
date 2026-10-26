@@ -50,3 +50,9 @@ escarcha:
   color: LIGHT_BLUE
   efecto: paso_helado
   duracion: 120
+
+veneno_de_golpes:
+  nombre: '&2Veneno de golpes'
+  material: POTION
+  color: GREEN
+  efecto: armas_venenosas

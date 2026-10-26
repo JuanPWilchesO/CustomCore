@@ -12,3 +12,10 @@ AGENTS.md
 memory/
 IDENTITY.md
 MEMORY.md
+
+# Guia local de trabajo: no forma parte del plugin ni se sube a git.
+flujo-feature-customcore.md
+
+# Jars de plugins opcionales contra los que se compila pero que no se publican
+# (BetterModel no tiene API en un repo Maven publico). Se bajan con scripts/install-libs.sh.
+libs/*.jar

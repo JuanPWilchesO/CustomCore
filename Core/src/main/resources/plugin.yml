@@ -9,8 +9,12 @@ website: https://github.com/JuanPWilchesO/CustomCore
 softdepend:
   - Teams
   - LibsDisguises
+  # Modelos 3D (modo Bedrock) para los mobs. Sin el, los mobs se ven con su forma vanilla.
+  - BetterModel
   - LuckPerms
   - WorldGuard
+  # Necesario para el filtro de metadatos/equipo del sigilo (y para el brillo de facciones).
+  - packetevents
 
 commands:
   customcore:

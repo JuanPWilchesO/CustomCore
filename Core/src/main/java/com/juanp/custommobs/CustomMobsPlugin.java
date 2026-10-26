@@ -21,6 +21,9 @@ import com.juanp.custommobs.craft.CraftService;
 import com.juanp.custommobs.craft.EggListener;
 import com.juanp.custommobs.disguise.DisguiseLink;
 import com.juanp.custommobs.disguise.DisguiseLinkResolver;
+import com.juanp.custommobs.model.ModelLink;
+import com.juanp.custommobs.model.ModelLinkResolver;
+import com.juanp.custommobs.model.ModelStateTask;
 import com.juanp.custommobs.docs.DocsInstaller;
 import com.juanp.custommobs.drop.DropListener;
 import com.juanp.custommobs.drop.DropService;
@@ -96,6 +99,8 @@ public final class CustomMobsPlugin extends JavaPlugin {
     private SkillCatalog skillCatalog;
     private MobRegistry registry;
     private MobService mobService;
+    private com.juanp.custommobs.effect.SigiloService sigiloService;
+    private com.juanp.custommobs.effect.SigiloPacketListener sigiloPacketListener;
     private com.juanp.custommobs.effect.EffectService effectService;
     private TeamLink teamLink;
     private GroupLink groupLink;
@@ -108,6 +113,8 @@ public final class CustomMobsPlugin extends JavaPlugin {
     private FactionGlowService glow;
     private FactionTeams factionTeams;
     private DisguiseLink disguiseLink;
+    private ModelLink modelLink;
+    private ModelStateTask modelStateTask;
     private DropService dropService;
     private ItemFactionLock itemFactionLock;
     private StyleService styleService;
@@ -176,8 +183,8 @@ public final class CustomMobsPlugin extends JavaPlugin {
         // disco para que un admin pueda leerlos sin descomprimir nada.
         int docs = new DocsInstaller(this).install();
         if (docs > 0) {
-            this.getLogger().info("Documentacion y tutoriales instalados: " + docs
-                    + " archivo(s) en docs/ y tutorials/.");
+            this.getLogger().info("Documentacion y tutoriales restaurados: " + docs
+                    + " archivo(s). No guardes archivos propios en docs/ ni tutorials/.");
         }
 
         // La firma va lo primero que escribe el plugin, para que se vea al arrancar.
@@ -206,10 +213,11 @@ public final class CustomMobsPlugin extends JavaPlugin {
         this.teamLink = TeamLinkResolver.resolve(this);
         this.groupLink = GroupLinkResolver.resolve(this);
         this.disguiseLink = DisguiseLinkResolver.resolve(this);
+        this.modelLink = ModelLinkResolver.resolve(this, this.config.modelsRequireHitBox());
         this.spawners = new SpawnerRegistry(this);
         this.spawners.load();
         this.mobService = new MobService(this, this.config, this.registry, this.teamLink, this.factions,
-                this.disguiseLink, this.groupLink, this.spawners);
+                this.disguiseLink, this.modelLink, this.groupLink, this.spawners);
         this.mobService.probeGoals();
 
         this.soundService = new SoundService(this.mobService);
@@ -222,7 +230,8 @@ public final class CustomMobsPlugin extends JavaPlugin {
 
         // Efectos y pociones antes de las recetas: el bloque 'receta:' de potions.yml se
         // lee del catalogo de pociones. Sin esto se registraba en silencio como inexistente.
-        this.effectService = new com.juanp.custommobs.effect.EffectService(this);
+        this.sigiloService = new com.juanp.custommobs.effect.SigiloService(this);
+        this.effectService = new com.juanp.custommobs.effect.EffectService(this, this.sigiloService);
         this.effectService.reload();
 
         this.craftService = new CraftService(this, this.registry, this.mobService.keys());
@@ -257,6 +266,12 @@ public final class CustomMobsPlugin extends JavaPlugin {
         pluginManager.registerEvents(new VillagePeaceListener(this.mobService), this);
         pluginManager.registerEvents(new DamageImmunityListener(this.mobService), this);
         pluginManager.registerEvents(new SoundListener(this.mobService, this.soundService), this);
+        // El sonido vanilla no se calla por paquete: se enmudece la entidad al nacer (ver
+        // MobService.configure) y los del yml los manda SoundService a cada jugador. El
+        // intento de filtrar paquetes y el de cancelar el evento de dano quedaron fuera: el
+        // segundo dejaba a los mobs invulnerables.
+        // Suelta el modelo de un mob que desaparece sin morir (recogido, retirado, portal).
+        pluginManager.registerEvents(new com.juanp.custommobs.model.ModelCleanupListener(this.mobService), this);
         pluginManager.registerEvents(new DaylightListener(this.mobService), this);
         pluginManager.registerEvents(new TransformBlockListener(this.mobService), this);
         pluginManager.registerEvents(new SpawnerListener(this.mobService), this);
@@ -278,6 +293,16 @@ public final class CustomMobsPlugin extends JavaPlugin {
         // cargo antes de registrar las recetas.
         this.effectListener = new com.juanp.custommobs.effect.EffectListener(this, this.effectService);
         pluginManager.registerEvents(this.effectListener, this);
+        pluginManager.registerEvents(this.sigiloService, this);
+        // Limpia el flag de sprint de los ocultos: sin el, el cliente dibuja particulas.
+        try {
+            this.sigiloPacketListener =
+                    new com.juanp.custommobs.effect.SigiloPacketListener(this.sigiloService);
+            com.github.retrooper.packetevents.PacketEvents.getAPI().getEventManager()
+                    .registerListener(this.sigiloPacketListener);
+        } catch (Throwable ignored) {
+            // Sin PacketEvents el sigilo sigue funcionando; solo se pierde el filtro.
+        }
         // Cada tick: la congelacion y el paso helado necesitan ir al dia.
         this.getServer().getScheduler().runTaskTimer(this, this.effectListener::tick, 1L, 1L);
         // Skills al impactar: se arman al disparar y se resuelven al tocar.
@@ -322,9 +347,20 @@ public final class CustomMobsPlugin extends JavaPlugin {
                 RegionGate.create(this));
         long spawnInterval = this.config.spawnIntervalSeconds() * 20L;
         this.naturalSpawn.runTaskTimer(this, spawnInterval, spawnInterval);
+        if (this.config.debug()) {
+            this.getLogger().info("[spawn] tarea de aparicion natural arrancada cada "
+                    + spawnInterval / 20L + "s ("
+                    + (this.config.spawnEnabled() ? "activa" : "DESACTIVADA") + ", "
+                    + this.config.spawnAttempts() + " intentos por jugador, tope "
+                    + this.config.spawnGlobalCap() + ")");
+        }
 
         this.ambientTask = new AmbientTask(this.soundService);
         this.ambientTask.runTaskTimer(this, 20L, 20L);
+
+        // Animaciones de marcha y reposo de los modelos: cada 5 ticks sobra y alcanza.
+        this.modelStateTask = new ModelStateTask(this.mobService);
+        this.modelStateTask.runTaskTimer(this, 5L, 5L);
 
         // Brillo de facciones por espectador: cada segundo basta, y solo manda lo que cambia.
         this.glow = new FactionGlowService(this, this.mobService);
@@ -367,6 +403,7 @@ public final class CustomMobsPlugin extends JavaPlugin {
         this.getLogger().info("CustomCore habilitado. Definiciones: " + this.registry.size()
                 + " | facciones: " + this.factions.size()
                 + " | disfraces: " + this.disguiseLink.name()
+                + " | modelos: " + this.modelLink.name()
                 + " | teams: " + this.teamLink.name()
                 + " | IA MobGoals: " + this.mobService.usesGoals()
                 + " | jugadores: " + this.config.playerTargetMode()
@@ -385,6 +422,17 @@ public final class CustomMobsPlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
+        if (this.sigiloService != null) {
+            this.sigiloService.showAll();
+        }
+        if (this.sigiloPacketListener != null) {
+            try {
+                com.github.retrooper.packetevents.PacketEvents.getAPI().getEventManager()
+                        .unregisterListener(this.sigiloPacketListener);
+            } catch (Throwable ignored) {
+                // PacketEvents puede haber desaparecido antes que este plugin.
+            }
+        }
         if (this.mobService != null) {
             this.mobService.playerMobs().save();
         }
@@ -415,6 +463,12 @@ public final class CustomMobsPlugin extends JavaPlugin {
         if (this.ambientTask != null) {
             this.ambientTask.cancel();
         }
+        if (this.modelStateTask != null) {
+            this.modelStateTask.cancel();
+        }
+        if (this.modelLink != null) {
+            this.modelLink.releaseAll();
+        }
         if (this.status != null) {
             this.status.shutdown();
         }
@@ -441,6 +495,11 @@ public final class CustomMobsPlugin extends JavaPlugin {
             this.skillCatalog.reload();
         }
         this.registry.reload();
+        // Los modelos cuelgan de la definicion: al recargar el catalogo se sueltan los
+        // trackers viejos y se vuelven a aplicar con lo que diga el yml nuevo.
+        if (this.modelLink != null) {
+            this.modelLink.reload();
+        }
         this.factions.reload(this);
         // Primero efectos y pociones: las recetas de potions.yml salen de ese catalogo.
         if (this.effectService != null) {
@@ -453,6 +512,11 @@ public final class CustomMobsPlugin extends JavaPlugin {
         }
         if (this.mobService != null) {
             this.mobService.playerMobs().load();
+        }
+        // Al final, con el catalogo y las recetas ya al dia: cada mob vivo vuelve a pedir su
+        // modelo segun la definicion recargada.
+        if (this.mobService != null) {
+            this.mobService.reapplyModels();
         }
     }
 
@@ -516,6 +580,11 @@ public final class CustomMobsPlugin extends JavaPlugin {
         return this.effectService;
     }
 
+    /** Sigilo: invisibilidad sin sacar la entidad del cliente (conserva colision). */
+    public com.juanp.custommobs.effect.SigiloService sigilo() {
+        return this.sigiloService;
+    }
+
     public DropService drops() {
         return this.dropService;
     }
@@ -572,6 +641,10 @@ public final class CustomMobsPlugin extends JavaPlugin {
 
     public DisguiseLink disguiseLink() {
         return this.disguiseLink;
+    }
+
+    public ModelLink modelLink() {
+        return this.modelLink;
     }
 
     public SpawnerRegistry spawners() {

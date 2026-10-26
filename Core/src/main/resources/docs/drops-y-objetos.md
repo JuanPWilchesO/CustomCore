@@ -116,11 +116,14 @@ usar:
 ```
 
 - `usar.skills` es una lista, en orden; `usar.skill` sirve para una sola.
+- Si una skill aplica `potion: sigilo`, `reveal-on-attack: true` va en la skill, no en el
+  item. Mira `skills.md`.
 - `usar.efecto` sigue existiendo para un efecto de `effects.yml`. Si un item define
   `usar.skills` y `usar.efecto`, se ejecutan las skills y el efecto se ignora.
 - El **cooldown efectivo** es el mayor entre `usar.cooldown` y el
   `cooldown-seconds` de las skills. No se suman.
-- `consume` decide si se gasta una unidad.
+- `consume` decide si se gasta una unidad. No aplica a objetos cuyas skills son todas
+  `mode: impacto`: esos no se usan, se disparan, y la municion la gasta el juego.
 - `usar.inicio` y `usar.fin`: avisos en pantalla al usarlo y al caducar el efecto.
   `usar.fin` solo aplica cuando el item usa `usar.efecto`; con `usar.skills`, el fin lo
   pone el `fin` de cada skill.
@@ -175,10 +178,15 @@ Vale en el **arma** (arco o ballesta) o en la **municion**. Si la municion trae 
 las de la municion; si no, las del arma. Una flecha custom sirve con cualquier arco.
 
 Si todas las skills del objeto son de impacto, el clic derecho no dispara nada: el objeto no
-se "usa", se dispara. `consume` tampoco aplica, porque el juego ya gasta la flecha, la bola
-de nieve o el tridente.
+se "usa", se dispara. `consume` no aplica a los proyectiles: el juego gasta su propia
+municion. La flecha y la bola de nieve se gastan al lanzarse; el tridente no se destruye al
+lanzarse.
 
 Cubiertos: flecha, ballesta, municion, tridente, bola de nieve y huevo.
+
+En el **tridente** el cooldown no bloquea el lanzamiento: se lanza siempre y el efecto se
+comprueba al impactar. Si el tridente esta en espera, el golpe sigue siendo vanilla y no se
+aplica la skill. El aviso de cooldown va en boss bar, nunca en el barrido vanilla.
 
 ### Flechas cargadas
 

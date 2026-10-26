@@ -1,6 +1,7 @@
 package com.juanp.custommobs.mob;
 
 import com.juanp.custommobs.item.EquipItem;
+import com.juanp.custommobs.model.ModelSpec;
 import com.juanp.custommobs.combat.PlayerTargetMode;
 import com.juanp.custommobs.item.RecipeSpec;
 import com.juanp.custommobs.drop.DropSpec;
@@ -36,6 +37,7 @@ import java.util.Set;
  * @param faction          faccion (solo mobs de servidor); {@code null} si no tiene
  * @param attitude         actitud frente a los jugadores (solo mobs de servidor)
  * @param disguise         apariencia opcional via LibsDisguises
+ * @param model            modelo opcional de BetterModel (si hay disfraz, el disfraz manda)
  * @param sounds           sonidos opcionales del mob
  * @param burnsInDaylight  si se incendia con el sol (por defecto, solo los mobs de jugador)
  * @param usesAi           si conserva la IA de vanilla; {@code false} lo deja quieto en su puesto
@@ -66,6 +68,7 @@ public record MobDefinition(
         String faction,
         Attitude attitude,
         DisguiseSpec disguise,
+        ModelSpec model,
         MobSounds sounds,
         boolean burnsInDaylight,
         boolean usesAi,

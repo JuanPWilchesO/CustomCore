@@ -4,6 +4,9 @@ import com.juanp.custommobs.combat.PlayerTargetMode;
 import com.juanp.custommobs.item.EquipItem;
 import com.juanp.custommobs.item.RecipeSpec;
 import com.juanp.custommobs.drop.DropSpec;
+import com.juanp.custommobs.model.AnimationSpec;
+import com.juanp.custommobs.model.ModelAnimation;
+import com.juanp.custommobs.model.ModelSpec;
 import com.juanp.custommobs.skill.ChainOption;
 import com.juanp.custommobs.skill.ChainSpec;
 import com.juanp.custommobs.skill.ChainStep;
@@ -112,6 +115,7 @@ public final class MobLoader {
         }
 
         DisguiseSpec disguise = parseDisguise(cfg.getConfigurationSection("disguise"));
+        ModelSpec model = parseModel(cfg.getConfigurationSection("model"));
         MobSounds sounds = parseSounds(cfg.getConfigurationSection("sounds"));
         List<SkillSpec> skills = parseSkills(cfg, catalog);
         List<DropSpec> drops = parseDrops(cfg);
@@ -143,6 +147,7 @@ public final class MobLoader {
                 faction,
                 attitude,
                 disguise,
+                model,
                 sounds,
                 burnsInDaylight,
                 usesAi,
@@ -530,10 +535,16 @@ public final class MobLoader {
                 Math.round(asNumber(entry.get("block-depth"), 1.0D))));
         boolean breakBlocks = asBoolean(entry.get("break-blocks"))
                 || asBoolean(entry.get("romper-bloques"));
-        double distance = Math.min(5.0D, Math.max(0.5D,
-                asNumber(entry.get("distance"), 1.0D)));
+        boolean throughBlocks = asBoolean(entry.get("through-blocks"))
+                || asBoolean(entry.get("through_blocks"))
+                || asBoolean(entry.get("atravesar-bloques"))
+                || asBoolean(entry.get("atravesar_bloques"));
+        double distance = Math.min(SkillSpec.MAX_DISTANCE,
+                Math.max(SkillSpec.MIN_DISTANCE, asNumber(entry.get("distance"), 1.0D)));
         boolean cancelOnHit = asBoolean(entry.get("cancel-on-hit"))
                 || asBoolean(entry.get("cancel_on_hit"));
+        boolean revealOnAttack = asBoolean(entry.get("reveal-on-attack"))
+                || asBoolean(entry.get("reveal_on_attack"));
         String displayRaw = asString(entry.get("message-display"));
         if (displayRaw == null) {
             displayRaw = asString(entry.get("message_display"));
@@ -564,11 +575,13 @@ public final class MobLoader {
                 blockRadius,
                 blockDepth,
                 breakBlocks,
+                throughBlocks,
                 distance,
                 startMessage,
                 endMessage,
                 cooldownMessage,
                 cancelOnHit,
+                revealOnAttack,
                 messageDisplay
         );
     }
@@ -709,8 +722,19 @@ public final class MobLoader {
         return value != null && "true".equalsIgnoreCase(String.valueOf(value).trim());
     }
 
-    private static double asNumber(Object value, double fallback) {
-        if (value instanceof Number number) {
+    /** Numero opcional: {@code null} si la clave no existe o no es numerica. */
+    private static Double number(Object value) {
+        if (value == null) {
+            return null;
+        }
+        try {
+            return Double.parseDouble(String.valueOf(value).trim());
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    private static double asNumber(Object value, double fallback) {        if (value instanceof Number number) {
             return number.doubleValue();
         }
         if (value == null) {
@@ -721,6 +745,79 @@ public final class MobLoader {
         } catch (NumberFormatException ex) {
             return fallback;
         }
+    }
+
+    /**
+     * Lee la seccion {@code model:} (BetterModel).
+     *
+     * <p>Sin seccion, o con {@code enabled: false}, el mob se ve como siempre. Un bloque
+     * presente pero sin {@code name} tampoco engancha nada: el nombre es lo unico que no se
+     * puede adivinar.
+     */
+    private static ModelSpec parseModel(ConfigurationSection section) {
+        if (section == null || !section.getBoolean("enabled", true)) {
+            return ModelSpec.NONE;
+        }
+        String name = normalize(section.getString("name"));
+        if (name == null) {
+            return ModelSpec.NONE;
+        }
+        Map<ModelAnimation, AnimationSpec> animations = new LinkedHashMap<>();
+        ConfigurationSection animationsSection = section.getConfigurationSection("animations");
+        if (animationsSection != null) {
+            for (String rawKey : animationsSection.getKeys(false)) {
+                ModelAnimation event = ModelAnimation.parse(rawKey);
+                if (event == null) {
+                    continue;
+                }
+                ConfigurationSection entry = animationsSection.getConfigurationSection(rawKey);
+                String animation;
+                AnimationSpec spec;
+                if (entry != null) {
+                    animation = normalize(entry.getString("name"));
+                    Double speed = number(entry.get("speed"));
+                    spec = animation == null ? null : new AnimationSpec(
+                            animation,
+                            entry.getBoolean("once", event == ModelAnimation.DEATH),
+                            speed == null ? null : speed.floatValue(),
+                            Math.max(0, entry.getInt("start", 0)),
+                            Math.max(0, entry.getInt("end", 0)),
+                            // 0 = la prioridad la pone el evento (muerte > golpe > dano > resto).
+                            Math.max(0, entry.getInt("priority", 0)));
+                } else {
+                    animation = normalize(animationsSection.getString(rawKey));
+                    spec = animation == null ? null : AnimationSpec.of(animation);
+                }
+                if (spec != null) {
+                    animations.put(event, spec);
+                }
+            }
+        }
+        Double scale = number(section.get("scale"));
+        Boolean sightTrace = section.isSet("sight-trace") ? section.getBoolean("sight-trace") : null;
+        // 'auto' (o sin clave) deja que mande el modelo: si trae hueso 'mtag', pinta su placa.
+        Boolean showName = null;
+        if (section.isSet("show-name")) {
+            String raw = String.valueOf(section.get("show-name")).trim().toLowerCase(Locale.ROOT);
+            if ("auto".equals(raw)) {
+                showName = null;
+            } else {
+                showName = Boolean.parseBoolean(raw);
+            }
+        }
+        return new ModelSpec(
+                true,
+                name,
+                section.getBoolean("hide-body", true),
+                section.getBoolean("hide-equipment", true),
+                section.getBoolean("hide-glow", false),
+                scale,
+                section.getBoolean("damage-animation", true),
+                section.getBoolean("damage-tint", true),
+                sightTrace,
+                showName,
+                section.getBoolean("seat", true),
+                Map.copyOf(animations));
     }
 
     private static DisguiseSpec parseDisguise(ConfigurationSection section) {

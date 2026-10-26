@@ -7,11 +7,12 @@ import com.juanp.custommobs.mob.Texts;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Registry;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.block.Block;
 import org.bukkit.boss.BarColor;
-import org.bukkit.boss.BarStyle;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
@@ -26,14 +27,13 @@ import org.bukkit.event.entity.PotionSplashEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemConsumeEvent;
-import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -41,8 +41,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * Las mecanicas de los efectos: dano (congelacion, caida, robo de vida), beber una pocion,
  * usar un objeto del catalogo, sigilo y paso helado.
  *
- * <p>El sigilo oculta al jugador del resto (armadura y equipo incluidos) y ademas corta
- * la deteccion de los mobs: no pueden fijarlo como objetivo ni mantenerlo.
+ * <p>El sigilo corta la deteccion de los mobs: no pueden fijarlo como objetivo ni
+ * mantenerlo. La parte visual (invisibilidad y equipo) vive en {@link SigiloService}.
  *
  * <p>La tarea corre <b>cada tick</b>: la congelacion hay que limpiarla todo el rato (si no,
  * entre un reseteo y el siguiente el hielo agarra) y el paso helado tiene que ir por delante
@@ -56,8 +56,6 @@ public final class EffectListener implements Listener {
     private final EffectService service;
     /** Bloques que hemos helado nosotros: clave mundo:x:y:z -> cuando descongelar. */
     private final Map<String, Long> frost = new ConcurrentHashMap<>();
-    /** Jugadores en sigilo: ocultos para los demas y sin objetivo para los mobs. */
-    private final Set<UUID> vanished = ConcurrentHashMap.newKeySet();
     /** Enfriamiento de los objetos con {@code usar:}: jugador:objeto -> cuando se puede usar. */
     private final Map<String, Long> cooldowns = new ConcurrentHashMap<>();
     private int ticks;
@@ -214,15 +212,6 @@ public final class EffectListener implements Listener {
             return false;
         }
         return !this.plugin.drops().catalog().stunFree(item);
-    }
-
-    private BarColor colorFor(EffectSpec effect) {
-        String type = effect.type() == null ? "" : effect.type();
-        return switch (type) {
-            case "negativo" -> BarColor.RED;
-            case "neutro" -> BarColor.WHITE;
-            default -> BarColor.BLUE;
-        };
     }
 
     /** {@code true} si el objeto no tiene restriccion o el jugador la cumple. */
@@ -443,18 +432,8 @@ public final class EffectListener implements Listener {
         return any;
     }
 
-    /**
-     * Aplica el cooldown del objeto: el mayor entre el suyo y el de sus skills.
-     *
-     * @return {@code false} si todavia esta en espera; ya dejo el aviso
-     */
-    /** {@code true} si el objeto sigue en espera; no aplica ni avisa nada. */
-    public boolean onCooldown(Player player, String name) {
-        Long until = this.cooldowns.get(player.getUniqueId() + ":" + name);
-        return until != null && until > System.currentTimeMillis();
-    }
-
-    public boolean tryCooldown(Player player, String name, UseSpec use, ItemStack item) {
+    /** Cooldown efectivo del objeto: el mayor entre el suyo y el de sus skills. */
+    private int effectiveCooldown(UseSpec use) {
         int cooldown = use.cooldownSeconds();
         if (use.hasSkills() && this.plugin.skillCatalog() != null) {
             for (String id : use.skillIds()) {
@@ -464,6 +443,55 @@ public final class EffectListener implements Listener {
                 }
             }
         }
+        return cooldown;
+    }
+
+    /** {@code true} si el objeto sigue en espera; no aplica ni avisa nada. */
+    public boolean onCooldown(Player player, String name) {
+        Long until = this.cooldowns.get(player.getUniqueId() + ":" + name);
+        return until != null && until > System.currentTimeMillis();
+    }
+
+    /**
+     * Cooldown para objetos cuyo uso no puede bloquearse, como el tridente: se lanza
+     * siempre y lo que espera es el efecto. Se guarda en el mismo mapa que
+     * {@link #tryCooldown} y se avisa solo en boss bar, nunca con el barrido vanilla,
+     * que impediria volver a lanzarlo.
+     *
+     * @return {@code false} si todavia esta en espera; ya dejo el aviso
+     */
+    public boolean tryImpactCooldown(Player player, String name, UseSpec use) {
+        int cooldown = this.effectiveCooldown(use);
+        String key = player.getUniqueId() + ":" + name;
+        long now = System.currentTimeMillis();
+        Long until = this.cooldowns.get(key);
+        if (until != null && until > now) {
+            this.showImpactCooldown(player, name, (until - now + 999L) / 1000L);
+            return false;
+        }
+        if (cooldown > 0) {
+            this.cooldowns.put(key, now + cooldown * 1000L);
+            this.showImpactCooldown(player, name, cooldown);
+        }
+        return true;
+    }
+
+    /** Aviso de cooldown sin barrido vanilla: solo boss bar. */
+    private void showImpactCooldown(Player player, String name, long seconds) {
+        if (seconds <= 0L) {
+            return;
+        }
+        String label = name;
+        ItemStack template = this.plugin.drops().catalog().get(name).orElse(null);
+        if (template != null && template.hasItemMeta()
+                && template.getItemMeta().hasDisplayName()) {
+            label = org.bukkit.ChatColor.stripColor(template.getItemMeta().getDisplayName());
+        }
+        this.plugin.status().cooldown(player, name, "&8" + label + " &7(" + seconds + "s)");
+    }
+
+    public boolean tryCooldown(Player player, String name, UseSpec use, ItemStack item) {
+        int cooldown = this.effectiveCooldown(use);
         String key = player.getUniqueId() + ":" + name;
         long now = System.currentTimeMillis();
         Long until = this.cooldowns.get(key);
@@ -511,11 +539,7 @@ public final class EffectListener implements Listener {
      */
     private boolean applyEffect(Player player, EffectSpec effect, int seconds,
                                 String startMessage, String endMessage) {
-        // La purga puede llevarse el sigilo; el estado de invisibilidad vive aqui, no en
-        // EffectService, asi que hay que devolver la visibilidad a mano.
-        boolean hadSigilo = this.service.hasMechanic(player, "sigilo");
         this.service.apply(player, effect, seconds, player.getUniqueId(), endMessage);
-        int effectSeconds = seconds > 0 ? seconds : effect.duration();
         String label = startMessage == null || startMessage.isBlank()
                 ? effect.name()
                 : startMessage.replace("{jugador}", player.getName());
@@ -523,21 +547,6 @@ public final class EffectListener implements Listener {
                 || "quitar_negativos".equals(effect.mechanic())) {
             // Purga instantanea: aviso puntual, no barra con duracion.
             this.plugin.status().notice(player, label, BarColor.WHITE);
-        } else {
-            this.plugin.status().show(player, "effect:" + effect.id(), label, effectSeconds,
-                    this.colorFor(effect), BarStyle.SOLID, 60, true);
-        }
-        String mechanic = effect.mechanic();
-        if (("quitar_positivos".equals(mechanic) || "quitar_negativos".equals(mechanic))
-                && hadSigilo && !this.service.hasMechanic(player, "sigilo")) {
-            this.vanish(player, false);
-            return true;
-        }
-        if ("sigilo".equals(mechanic)) {
-            this.vanish(player, true);
-            int duration = seconds > 0 ? seconds : effect.duration();
-            player.addPotionEffect(new org.bukkit.potion.PotionEffect(
-                    PotionEffectType.INVISIBILITY, duration * 20, 0, false, false, false));
         }
         return true;
     }
@@ -590,6 +599,28 @@ public final class EffectListener implements Listener {
         attacker.setHealth(Math.min(max, attacker.getHealth() + event.getFinalDamage() * power));
     }
 
+    /** Golpes con efecto: mientras dure, cada golpe aplica una pocion al objetivo. */
+    @EventHandler(ignoreCancelled = true)
+    public void onHitApplyEffect(EntityDamageByEntityEvent event) {
+        if (!(event.getDamager() instanceof LivingEntity attacker)
+                || !(event.getEntity() instanceof LivingEntity target)) {
+            return;
+        }
+        var hit = this.service.hitOf(attacker);
+        if (hit.isEmpty()) {
+            return;
+        }
+        PotionEffectType type = Registry.EFFECT.get(
+                NamespacedKey.minecraft(hit.get().potion()));
+        if (type == null) {
+            return;
+        }
+        target.addPotionEffect(new PotionEffect(type,
+                Math.max(1, hit.get().durationSeconds()) * 20,
+                Math.max(0, hit.get().level() - 1),
+                false, true, true));
+    }
+
     // ------------------------------------------------------------------ tarea
 
     /** Corre cada tick: congelacion y paso helado. Lo caro, cada 20. */
@@ -609,6 +640,9 @@ public final class EffectListener implements Listener {
         if (this.ticks % 10 == 0) {
             this.clearSigiloTargets();
         }
+        if (this.ticks % 5 == 0) {
+            this.plugin.sigilo().refresh();
+        }
         if (this.ticks % 20 != 0) {
             return;
         }
@@ -619,14 +653,7 @@ public final class EffectListener implements Listener {
             }
         }
         for (Player player : Bukkit.getOnlinePlayers()) {
-            for (String id : this.service.expire(player)) {
-                this.service.effect(id).ifPresent(spec -> {
-                    if ("sigilo".equals(spec.mechanic())
-                            && !this.service.hasMechanic(player, "sigilo")) {
-                        this.vanish(player, false);
-                    }
-                });
-            }
+            this.service.expire(player);
         }
         this.thaw();
         this.cooldowns.entrySet().removeIf(entry -> entry.getValue() < System.currentTimeMillis());
@@ -693,26 +720,9 @@ public final class EffectListener implements Listener {
         }
     }
 
-    /**
-     * Oculta al jugador para los demas (armadura y equipo incluidos). Al activarlo,
-     * suelta a los mobs que ya lo tuvieran como objetivo; el evento de objetivo y el
-     * barrido periodico impiden que vuelvan a fijarlo.
-     */
-    private void vanish(Player player, boolean on) {
-        if (on) {
-            this.vanished.add(player.getUniqueId());
-            for (Player other : Bukkit.getOnlinePlayers()) {
-                if (!other.equals(player)) {
-                    other.hidePlayer(this.plugin, player);
-                }
-            }
-            this.clearTargets(player);
-        } else {
-            this.vanished.remove(player.getUniqueId());
-            for (Player other : Bukkit.getOnlinePlayers()) {
-                other.showPlayer(this.plugin, player);
-            }
-        }
+    /** Suelta a los mobs que ya tuvieran a ese jugador como objetivo (al entrar en sigilo). */
+    public void releaseMobs(Player player) {
+        this.clearTargets(player);
     }
 
     /**
@@ -747,25 +757,6 @@ public final class EffectListener implements Listener {
             if (entity instanceof Mob mob && mob.getTarget() != null
                     && mob.getTarget().getUniqueId().equals(player.getUniqueId())) {
                 mob.setTarget(null);
-            }
-        }
-    }
-
-    /** El sigilo aguanta las reconexiones en los dos sentidos. */
-    @EventHandler
-    public void onJoin(PlayerJoinEvent event) {
-        Player joined = event.getPlayer();
-        if (this.vanished.contains(joined.getUniqueId())) {
-            for (Player other : Bukkit.getOnlinePlayers()) {
-                if (!other.equals(joined)) {
-                    other.hidePlayer(this.plugin, joined);
-                }
-            }
-        }
-        for (UUID id : this.vanished) {
-            Player hidden = Bukkit.getPlayer(id);
-            if (hidden != null && !hidden.equals(joined)) {
-                joined.hidePlayer(this.plugin, hidden);
             }
         }
     }

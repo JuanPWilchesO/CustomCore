@@ -13,6 +13,17 @@ faction-info:
   range: 8
 
 # ---------------------------------------------------------------------------
+# Modelos 3D (BetterModel). Se configuran mob a mob en su yml, con el bloque 'model:'.
+# Sin BetterModel instalado, todo esto se ignora y los mobs se ven como siempre.
+# ---------------------------------------------------------------------------
+models:
+  # Si un modelo tiene que declarar hitbox propia (tag 'hitbox' o 'seat') para que se
+  # oculte el cuerpo vanilla del mob. Con 'true', un modelo sin hitbox deja el cuerpo
+  # visible: un mob invisible sin hitbox NO recibiria dano. Ponlo en false solo si tus
+  # modelos ya estan bien montados y prefieres ocultar siempre.
+  require-hitbox: true
+
+# ---------------------------------------------------------------------------
 # Firma y mensaje de bienvenida.
 # ---------------------------------------------------------------------------
 branding:

@@ -180,11 +180,233 @@ ai: true
 respawn-seconds: 30
 ```
 
+Si el mob define **al menos un** sonido, su cuerpo vanilla queda **enmudo**: ya no suelta los
+suyos (grito, ambiente, pasos). Los que suenan son los del yml, y **solo** esos.
+
+Consecuencias que conviene saber:
+
+- El mob **no tiene sonido de pasos** salvo que lo pongas: no hay `step` en el yml.
+- Los sonidos que otros plugins hagan con la entidad (o su muerte vanilla) tampoco se oyen.
+- Los del yml se mandan a cada jugador a **32 bloques**; mas lejos no se oyen.
+- Un mob que **no** defina `sounds:` suena como cualquier bicho vanilla.
+
 - `disguise.type`: `player` usa `skin` (nombre de jugador) o `skin-url`.
 - `burn-in-daylight`: por defecto `false` en mobs de servidor y `true` en los de jugador.
 - `ai: false`: el mob se queda quieto en su puesto. Util para figurantes.
 - `respawn-seconds`: solo mobs de servidor. `0` = una sola vida. Con un valor mayor,
   el punto funciona como **spawner** de ese mob.
+
+## Modelo 3D (`model`, BetterModel)
+
+Un mob puede llevar un modelo de [BetterModel](https://modrinth.com/plugin/bettermodel)
+encima: el mob sigue siendo el mismo (misma vida, mismo dano, mismos objetivos), pero el
+cliente ve el modelo en vez del cuerpo vanilla.
+
+```yaml
+model:
+  enabled: true
+  name: guardia_espada
+  hide-body: true
+  hide-equipment: true
+  hide-glow: false
+  scale: 1.0
+  damage-animation: true
+  damage-tint: true
+  seat: true
+  animations:
+    idle: idle
+    walk: { name: walk, speed: 1.0 }
+    attack: { name: attack, once: true }
+    hurt:   { name: hurt,   once: true }
+    death:  { name: death,  once: true, end: 5 }
+    spawn:  spawn
+```
+
+| Clave | Valores | Por defecto | Notas |
+|---|---|---|---|
+| `enabled` | `true` \| `false` | `true` | `false`: el mob se ve vanilla |
+| `name` | texto | — | nombre del modelo en `plugins/BetterModel/models/`; **obligatorio** |
+| `hide-body` | `true` \| `false` | `true` | oculta el cuerpo de la entidad |
+| `hide-equipment` | `true` \| `false` | `true` | oculta el equipo que lleva |
+| `hide-glow` | `true` \| `false` | `false` | deja ver el brillo (por ejemplo, el de faccion) |
+| `scale` | numero | el del modelo | escala del modelo |
+| `damage-animation` | `true` \| `false` | `true` | animacion de dano del propio modelo |
+| `damage-tint` | `true` \| `false` | `true` | tinte rojo al recibir dano |
+| `sight-trace` | `true` \| `false` | el de BetterModel | solo se dibuja con linea de vision |
+| `show-name` | `true` \| `false` \| `auto` | `auto` | quien pinta el nombre, ver abajo |
+| `seat` | `true` \| `false` | `true` | usar el hueso `p_...` del modelo como asiento (`category: mount`) |
+| `animations` | mapa | vacio | animaciones por evento, ver abajo |
+
+**Si el mob tambien tiene `disguise:` activo, gana el disfraz** y el modelo se ignora (se
+avisa una vez en el log). Es a proposito: un disfraz y un modelo encima se pelean por el
+mismo cliente.
+
+**Sin BetterModel instalado** la seccion no hace nada: el mob se ve como siempre y el
+plugin sigue funcionando. Si el plugin esta pero el modelo no existe, pasa lo mismo y el
+log avisa (y `/customcore model validate` los lista).
+
+**El modelo tiene que estar cargado** en `plugins/BetterModel/models/`. CustomCore no anade
+ni quita modelos: solo los usa por nombre. Anadir un `.bbmodel` cambia el pack de BetterModel,
+asi que si lo sirves con AutoPack hay que regenerarlo y recargarlo.
+
+**El cuerpo solo se oculta si el modelo tiene hitbox.** Y aqui esta el detalle que se pierde
+en casi todas las guias: BetterModel **no lee el tag de bloque de Blockbench**, lo deduce del
+**nombre del hueso**. El nombre se parte por `_` y cada palabra se busca en esta tabla:
+
+| Lo que hace | Abreviatura en el nombre |
+|---|---|
+| Hitbox | `b` u `ob` |
+| Asiento | `p` |
+| Cabeza | `h` (o `hi`, con los hijos) |
+| Placa con el nombre | `mtag` (sigue al mob), `tag`, `ptag` |
+
+Reglas:
+
+- Un hueso **llamado `hitbox` no lleva tag**: se trata como un hueso normal. Renombralo a
+  `b_hitbox` (o `ob_hitbox`) para que BetterModel le cree la caja de colision.
+- El nombre necesita **al menos dos palabras**: `b` a secas tampoco vale. Escribe `b_body`.
+- Las palabras de tag se **consumen**: el hueso `b_body` se llama internamente `body`.
+
+Sin hitbox, el cuerpo vanilla sigue visible a proposito: un mob invisible sin caja de
+colision no recibe dano. Este comportamiento se desactiva con
+`models.require-hitbox: false` en el config.
+
+> **Los modelos con mesh no sirven.** BetterModel no renderiza geometria de mesh: hay que
+> convertirla a cubos en Blockbench antes de exportar, o el modelo sale negro.
+
+### Nombre del mob: `mtag`, `ptag` y `tag` son cosas distintas
+
+| Tag en un hueso | Que pasa con la placa |
+|---|---|
+| `mtag` (`mtag_head`) | la pinta **el modelo**, pegada al hueso; se oculta si no hay linea de vision |
+| `ptag` | la pinta **el modelo**, siempre visible |
+| `tag` (`tag_name`) | **el modelo NO pinta placa**: manda el nombre vanilla de la entidad |
+
+En los tres casos el texto es el `customName` del mob, asi que un `display-name` con color
+se respeta igual.
+
+**El caso que da problemas es `tag` + `hide-body: true`.** Con el cuerpo oculto y la placa
+vanilla, el cliente la vuelve a colocar con cada paquete de la entidad invisible y la placa
+**parpadea**. La solucion es renombrar ese hueso a `mtag_...` (o `ptag_...`), que pasa la
+placa al modelo, y dejar `show-name` sin tocar.
+
+| `show-name` | Efecto |
+|---|---|
+| sin la clave (por defecto) | automatico: vanilla apagado si el modelo trae `mtag`/`ptag` |
+| `true` | el nombre vanilla siempre visible |
+| `false` | nunca el nombre vanilla |
+
+`/customcore model validate` avisa del caso `tag` + `hide-body: true`.
+
+**CustomCore arranca antes que BetterModel** (los plugins se habilitan por orden alfabetico,
+y `BetterModel` va despues de `CustomCore`). Durante los primeros segundos los modelos de
+BetterModel **aun no estan cargados**. CustomCore lo detecta: los mobs que aparezcan en ese
+hueco se completan solos en cuanto BetterModel termina. En el log se ve:
+
+```
+[CustomCore] BetterModel enlazado; sus modelos aun se estan cargando. ...
+[CustomCore] BetterModel termino de cargar: 14 modelo(s). Se revisan los mobs con modelo.
+```
+
+### Animaciones por evento
+
+| Clave | Cuando se reproduce |
+|---|---|
+| `idle` | en reposo (es el estado inicial del mob) |
+| `walk` | al empezar a andar |
+| `attack` | al golpear a alguien |
+| `hurt` | al recibir dano |
+| `death` | al morir, antes de desaparecer |
+| `spawn` | al aparecer |
+
+Los valores son **los nombres que las animaciones tienen dentro del modelo**, no los de
+esta tabla. Cada entrada admite la forma corta (`idle: reposo`) o la larga:
+
+```yaml
+animations:
+  walk:
+    name: walk        # nombre dentro del modelo
+    once: false       # una sola vez, en vez de en bucle (death lo es por defecto)
+    speed: 1.2        # velocidad de reproduccion
+    start: 0          # ticks de entrada (lerp)
+    end: 5            # ticks de salida (lerp)
+    priority: 30      # opcional; por defecto la del evento, ver la tabla
+```
+
+Un evento sin clave **no anima nada y no se avisa**: es opcional. Un modelo con solo
+`attack` es valido, y `hurt` casi nunca existe.
+
+**Reposo y marcha se alternan solos.** El mob arranca en `idle` y pasa a `walk` cuando se
+mueve. Si la animacion es `once` (lo normal al exportar de Blockbench), se repite mientras
+el mob siga en ese estado: sin eso el modelo se queda congelado al andar.
+
+**Prioridades por defecto:**
+
+| Animacion | Prioridad | Se dispara |
+|---|---|---|
+| `death` | 100 | el mob muere. Terminal: no vuelve al estado |
+| `spawn` | 40 | el mob aparece |
+| `attack` | 30 | el mob golpea a alguien |
+| `hurt` | 20 | el mob **recibe** dano |
+| `walk` | 10 | el mob se mueve |
+| `idle` | 0 | el mob esta quieto |
+
+`attack` y `hurt` **no son lo mismo**: uno es el mob pegando y el otro el mob siendo
+golpeado.
+
+**El dano gana al golpe**, pero solo si el modelo tiene `hurt`. Si no lo tiene, el golpe
+sigue su curso sin cortarse: no se para la animacion para luego no mostrar nada. Lo mismo
+vale para cualquier evento: si el yml declara una animacion con un nombre que el `.bbmodel`
+no trae, el evento se ignora (y se avisa una vez en el log).
+
+Para invertir el orden, pon `priority` a mano.
+
+**Con `debug: true` en el config** se traza cada cambio de animacion en el log:
+`[modelo] reactiva attack (attack) en <uuid>`, `[modelo] estado WALK en <uuid>`,
+`[modelo] golpe encadenado: se deja terminar attack`. Sirve para ver el orden real entre
+un golpe y la tarea de estado.
+
+**Un golpe encadenado no reinicia la animacion** si aun no ha pasado la mitad: un mob que
+pega cada segundo con una animacion de un segundo se veria temblando y nunca completa.
+
+**La duracion se lee del `.bbmodel`.** Al terminar la animacion de un golpe o del dano, el
+mob vuelve a su estado; con `death` el tracker se cierra. Nada de tiempos fijos: si tu
+animacion dura 1 s, ese es el tiempo que se respeta.
+
+### Asiento de montura (`seat`, solo `category: mount`)
+
+Con `seat: true`, el jugador se sube al hueso marcado como `seat` del modelo: el caballo
+vanilla se oculta y se ve solo el modelo montable.
+
+```yaml
+category: mount
+type: HORSE
+model:
+  name: caballo_guerra
+  seat: true
+```
+
+El hueso del asiento debe llamarse **`p_algo`** (tag `p`). No confundir con la hitbox
+(`b_`/`ob_`): si no hay hueso `seat`, **no se monta en el modelo** y el log lo dice con la
+lista de huesos que encontró.
+
+## Modelos y monturas: por ahora, no
+
+**Un mob `category: mount` NO recibe modelo.** Si su yml trae un bloque `model:`, se
+ignora y el log lo avisa una vez.
+
+El motivo, probado en servidor: BetterModel monta al jugador en una **entidad de
+interacción** propia y mueve esa entidad, no la montura vanilla. Con el asiento del modelo
+el caballo se quedaba quieto y solo se podía girar la vista. Queda pendiente para otra
+versión; el código del asiento está escrito por si se retoma.
+
+Consecuencia práctica: una montura se ve como siempre (el caballo vanilla) y se monta a la
+manera de Minecraft, que funciona.
+
+**Sin jinete la montura no deambula**: se le apaga la IA mientras nadie la lleva, y se le
+vuelve a encender al subirse.
+
+**Los efectos del `mount:`** (`rider`) se aplican al jinete que lleva la montura.
 
 ## Un mob custom no se modifica a mano
 
@@ -268,6 +490,19 @@ funciona exactamente igual. Los nombres de region son los de WorldGuard (`/rg li
 
 El ritmo y el tope global salen del config (`spawning`). Un mob natural es de **una sola
 vida** y **no deja spawner**.
+
+**Para depurar por que no aparece ninguno**, pon `debug: true` en el `config.yml` del
+plugin. El log dirá entonces, una vez por motivo, que esta fallando:
+
+```
+[spawn] 'perro_demoniaco' no aparece cerca de Juan: fuera de la region (allowed='mishkre' …)
+[spawn] 'perro_demoniaco' no aparece cerca de Juan: luz 12 fuera de [0,8]
+[spawn] 2x 'perro_demoniaco' cerca de Juan en -36500 70 -10500 (world)
+```
+
+Mira también que el jugador este de verdad **dentro** de la region: `allowed-region` se
+compara con el punto donde va a nacer el mob (entre `distance.min` y `distance.max`
+bloques del jugador), no con su posicion.
 
 ## Convivencia y dano
 

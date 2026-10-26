@@ -42,6 +42,9 @@ Todos bajo `/customcore` (alias `cmobs`, `cm`).
 | `upgrade list` | lista los items de mejora cargados |
 | `upgrade give <id> [jugador]` | reparte un item de mejora (alias `mejora`) |
 | `upgrade reload` | relee `upgrades/` y rehace las recetas |
+| `model list` | lista los modelos de BetterModel cargados (alias `modelo`) |
+| `model list <mob>` | modelo, ocultaciones y animaciones de un mob |
+| `model validate` | revisa todo el catalogo y avisa de modelos que no existen en BetterModel |
 | `testcast <skill>` | lanza una skill desde tu mirada, sin depender del clic de un item (solo admin) |
 
 Un jugador tiene **una sola clase**: `class set` **reemplaza** la anterior, no la suma.

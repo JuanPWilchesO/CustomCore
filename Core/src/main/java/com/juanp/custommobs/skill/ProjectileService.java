@@ -1,10 +1,13 @@
 package com.juanp.custommobs.skill;
 
 import com.juanp.custommobs.CustomMobsPlugin;
+import com.juanp.custommobs.item.UseSpec;
 import org.bukkit.Location;
+import org.bukkit.boss.BarColor;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
+import org.bukkit.entity.Trident;
 
 import java.util.List;
 import java.util.Map;
@@ -21,6 +24,9 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <p>Un proyectil que nunca impacta (despawn, chunk descargado, jugador que se va) se
  * limpia por tiempo, para que el mapa no crezca sin techo.
+ *
+ * <p>El tridente es la excepcion al cooldown: se lanza siempre y el cooldown del objeto
+ * se comprueba al impactar, para no bloquear su uso vanilla.
  */
 public final class ProjectileService {
 
@@ -30,8 +36,8 @@ public final class ProjectileService {
     /** Ventana para agrupar las flechas de un mismo disparo (multishot). */
     private static final long SHOT_WINDOW_MILLIS = 250L;
 
-    private record Pending(UUID shooterId, List<SkillSpec> skills, String shotKey,
-                           long expiresAt) {
+    private record Pending(UUID shooterId, List<SkillSpec> skills, String itemName,
+                           String shotKey, long expiresAt, boolean cooldownAtHit) {
     }
 
     private final CustomMobsPlugin plugin;
@@ -56,13 +62,15 @@ public final class ProjectileService {
             arrow.setPickupStatus(org.bukkit.entity.AbstractArrow.PickupStatus.DISALLOWED);
         }
         this.pending.put(projectile.getUniqueId(), new Pending(shooter.getUniqueId(),
-                List.copyOf(skills), shotKey, now + LIFETIME_MILLIS));
+                List.copyOf(skills), itemName, shotKey, now + LIFETIME_MILLIS,
+                projectile instanceof Trident));
     }
 
     /**
      * Resuelve el impacto.
      *
-     * @return {@code true} si el proyectil llevaba skills y se ejecutaron
+     * @return {@code true} si el proyectil llevaba skills de impacto (aunque el cooldown
+     *         del tridente saltara el efecto)
      */
     public boolean hit(Projectile projectile, Location where, LivingEntity hit) {
         Pending shot = this.pending.remove(projectile.getUniqueId());
@@ -86,9 +94,39 @@ public final class ProjectileService {
         if (skills == null) {
             return false;
         }
+        // El tridente se lanza siempre; su cooldown se decide aqui, al resolver el efecto.
+        if (shot.cooldownAtHit() && !this.startImpactCooldown(shooter, shot.itemName())) {
+            return true;
+        }
         Location origin = where != null ? where : projectile.getLocation();
         for (SkillSpec skill : shot.skills()) {
             skills.castImpact(shooter, skill, origin, hit);
+        }
+        return true;
+    }
+
+    /**
+     * Cooldown del objeto al impactar, para proyectiles cuyo lanzamiento no puede
+     * bloquearse (tridente). Muestra el aviso de inicio solo si el efecto va a salir.
+     *
+     * @return {@code false} si el objeto sigue en espera
+     */
+    private boolean startImpactCooldown(Player shooter, String itemName) {
+        var effects = this.plugin.effectListener();
+        if (effects == null || itemName == null || itemName.isBlank()) {
+            return true;
+        }
+        var catalog = this.plugin.drops().catalog();
+        UseSpec use = catalog.useOf(itemName).orElse(null);
+        if (use == null) {
+            return true;
+        }
+        if (!effects.tryImpactCooldown(shooter, itemName, use)) {
+            return false;
+        }
+        if (use.hasStartMessage()) {
+            this.plugin.status().notice(shooter, use.startMessage()
+                    .replace("{jugador}", shooter.getName()), BarColor.WHITE);
         }
         return true;
     }

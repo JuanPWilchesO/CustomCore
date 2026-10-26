@@ -1,5 +1,9 @@
 # CustomCore — documentacion
 
+> ⚠️ **Esta carpeta se restaura desde el jar en cada arranque.** No guardes aquí archivos
+> propios ni edites estos: se sobrescriben en la siguiente actualización. Para tus notas,
+> usa otra carpeta.
+
 Mobs definidos por YAML, invocados con huevos crafteados, con facciones, disfraces,
 equipamiento, encantamientos custom, skills y un cupo de mobs por jugador que sale del
 grupo de LuckPerms.

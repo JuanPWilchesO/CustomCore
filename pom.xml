@@ -6,7 +6,7 @@
 
     <groupId>com.juanp.custommobs</groupId>
     <artifactId>CustomMobs</artifactId>
-    <version>1.0.5</version>
+    <version>1.0.6</version>
     <packaging>pom</packaging>
     <name>CustomMobs</name>
     <description>Mobs custom definidos por YAML, invocables por crafteo, con vinculo a Teams.</description>
@@ -30,6 +30,11 @@
         <paper.version>26.3.build.49-alpha</paper.version>
         <teams.version>1.0.2</teams.version>
         <libsdisguises.version>26.9.24</libsdisguises.version>
+        <!-- BetterModel no publica su API en un repositorio Maven publico: el jar vive en
+             libs/ y se instala con scripts/install-libs.sh. La clase de la API es la misma
+             que trae el plugin en tiempo de ejecucion. -->
+        <bettermodel.version>3.5.1</bettermodel.version>
+        <kotlin.version>2.4.21</kotlin.version>
         <packetevents.version>2.14.0</packetevents.version>
         <luckperms.version>5.5</luckperms.version>
         <worldguard.version>7.0.19</worldguard.version>

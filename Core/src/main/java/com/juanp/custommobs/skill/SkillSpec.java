@@ -29,11 +29,13 @@ package com.juanp.custommobs.skill;
  * @param blockRadius           radio en bloques de BLOCK_BELOW (0 = solo el de abajo)
  * @param blockDepth            profundidad hacia abajo de BLOCK_BELOW
  * @param breakBlocks           si EXPLOSION rompe bloques
- * @param distance              distancia detras del objetivo para TELEPORT_BEHIND
+ * @param throughBlocks         si TELEPORT_BEHIND/BACKSTEP pueden atravesar bloques
+ * @param distance              distancia detras del objetivo para TELEPORT_BEHIND/BACKSTEP
  * @param startMessage          aviso al lanzar la skill; {@code null} si no hay
  * @param endMessage            aviso cuando caduca el efecto que aplica; {@code null} si no hay
  * @param cooldownMessage       aviso al intentar usarla en espera; admite {@code {segundos}}
  * @param cancelOnHit           si el control se rompe cuando el objetivo recibe dano
+ * @param revealOnAttack        si el sigilo se rompe cuando el jugador hace dano
  * @param messageDisplay        donde se muestra el mensaje: auto, chat o pantalla
  */
 public record SkillSpec(
@@ -58,13 +60,19 @@ public record SkillSpec(
         int blockRadius,
         int blockDepth,
         boolean breakBlocks,
+        boolean throughBlocks,
         double distance,
         String startMessage,
         String endMessage,
         String cooldownMessage,
         boolean cancelOnHit,
+        boolean revealOnAttack,
         MessageDisplay messageDisplay
 ) {
+
+    /** Distancia minima y maxima para {@code backstep}/{@code teleport_behind}, en bloques. */
+    public static final double MIN_DISTANCE = 0.5D;
+    public static final double MAX_DISTANCE = 20.0D;
 
     public boolean hasMessage() {
         return this.message != null && !this.message.isBlank();

@@ -10,14 +10,29 @@ de mob o el uso de un objeto del catálogo.
 | `congelamiento` | No sufres daño por congelación, el hielo no te agarra y se te quita la lentitud del frío. |
 | `caida` | No sufres daño al caer. |
 | `robo_vida` | Te curas un 25% del daño que haces (en cada golpe, no al matar). |
-| `sigilo` | Desapareces para los demás jugadores, armadura y equipo incluidos; los mobs también pierden tu objetivo y no pueden fijarte mientras dure. |
+| `sigilo` | Desapareces para los demás jugadores (cuerpo, armadura y objetos) sin perder colisión ni la tab list; los mobs pierden tu objetivo y no pueden fijarte. |
 | `paso_helado` | Congelas el agua bajo tus pies y por delante. Se descongela a los 5 s. |
 | `quitar_positivos` | Quita todos los efectos positivos, del plugin y de Minecraft. |
 | `quitar_negativos` | Quita todos los efectos negativos, del plugin y de Minecraft. |
 | `invulnerabilidad` | No recibe ningún daño mientras dure. |
 | `furia` | Aplica modificadores temporales de atributos (ejemplo). |
+| `golpe_efecto` | Mientras dure, cada golpe cuerpo a cuerpo aplica un efecto vanilla al objetivo. |
 
 En el juego: `/customcore effects list` y `/customcore effects info <id>`.
+
+### Sigilo
+
+`sigilo` oculta el cuerpo, la armadura y los objetos en mano a los demás jugadores. No saca
+la entidad del cliente, así que **conservas la colisión, la tab list y el daño normal**. La
+placa de nombre la oculta la invisibilidad y las partículas de sprint se limpian. **No toca
+los equipos de scoreboard**, así que no choca con TAB ni con otros plugins de equipos.
+
+Los mobs no pueden fijarte como objetivo mientras dure. Si el efecto se aplica desde una
+skill con `potion: sigilo`, la clave `reveal-on-attack: true` hace que te muestres al hacer
+daño (cuerpo a cuerpo o proyectil) y que se te quite el sigilo.
+
+Cada efecto con duración muestra su propia **boss bar** mientras está activo, venga de una
+poción, un objeto, una skill o una poción arrojadiza. Solo la ve quien tiene el efecto.
 
 ## Definir un efecto (`effects.yml`)
 
@@ -32,7 +47,8 @@ congelamiento:
 ```
 
 `mecanica` es lo que hace CustomCore: `congelamiento`, `caida`, `robo_vida`, `sigilo`,
-`paso_helado`, `quitar_positivos`, `quitar_negativos`, `invulnerabilidad` o `atributos`.
+`paso_helado`, `quitar_positivos`, `quitar_negativos`, `invulnerabilidad`,
+`atributos` o `golpe_efecto`.
 `potencia` la usan las mecánicas que la necesitan (robo de vida).
 
 `tipo` clasifica el efecto del plugin como `positivo`, `negativo` o `neutro`. Lo usan las
@@ -192,6 +208,27 @@ efecto se vuelve a lanzar, **se renueva**: se quita el modificador anterior y se
 poner con la misma clave, sin acumular. Atributos admitidos: `max_health`,
 `attack_damage`, `attack_speed`, `movement_speed`, `armor`, `armor_toughness`,
 `knockback_resistance`, `attack_knockback`, `max_absorption` y `safe_fall_distance`.
+
+## Golpes con efecto (`mecanica: golpe_efecto`)
+
+```yaml
+armas_venenosas:
+  nombre: 'Armas envenenadas'
+  duracion: 30
+  mecanica: golpe_efecto
+  tipo: positivo
+  golpe:
+    efecto: poison
+    nivel: 2
+    duracion: 5
+```
+
+- `duracion` = cuánto dura el modo de golpes (segundos).
+- `golpe.efecto` = efecto vanilla (POISON, SLOWNESS, WITHER, WEAKNESS...).
+- `golpe.nivel` = nivel del efecto (1 = nivel I, 2 = nivel II...).
+- `golpe.duracion` = segundos que dura sobre quien recibe el golpe.
+
+Solo cuenta el daño **cuerpo a cuerpo** (no flechas ni proyectiles), igual que `robo_vida`.
 
 ## Aviso
 

@@ -9,8 +9,13 @@ Cada estado activo tiene su boss bar, con nombre y cuenta atras:
 
 - Controles: aturdimiento, raiz, silencio, desarme.
 - Escudo de inmunidad.
-- Efectos del plugin con duracion: invulnerabilidad, congelamiento, caida, robo de vida,
-  atributos, sigilo, paso helado.
+- **Todos** los efectos del plugin con duracion: invulnerabilidad, congelamiento, caida,
+  robo de vida, atributos, sigilo, paso helado, etc.
+
+La barra sale igual si el efecto viene de una poción, un objeto, una skill (`potion:`) o una
+poción arrojadiza. Da igual el tipo: los positivos, los negativos y los neutros tambien la
+muestran, cada uno con su color. **Solo la ve quien tiene el efecto**; no se envia a nadie
+más.
 
 Se muestran hasta `ui.max-bars` a la vez (3 por defecto). Si hay mas, esperan.
 
