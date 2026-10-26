@@ -580,6 +580,9 @@ public final class BetterModelLink implements ModelLink {
         }
         this.trace("estado " + state + " en " + id + " (busy=" + this.busy.contains(id) + ")");
         this.states.put(id, state);
+        // Las reactivas se paran SIEMPRE: si no, la de prioridad alta sigue mandando aunque se
+        // pida walk/idle, y el mob se queda repitiendo el golpe.
+        this.stopReactive(tracker, definition);
         ModelState other = state == ModelState.WALK ? ModelState.IDLE : ModelState.WALK;
         this.stopState(tracker, definition, other);
         this.startStateLoop(id, definition, tracker, state);
@@ -627,6 +630,32 @@ public final class BetterModelLink implements ModelLink {
         }
     }
 
+    /**
+     * Para todas las animaciones reactivas configuradas (golpe, dano, aparicion, muerte).
+     *
+     * <p>Es imprescindible: una animacion {@code once} de BetterModel NO se retira al terminar,
+     * se queda puesta mandando por prioridad. Sin pararla, la de andar o el reposo nunca ganan y
+     * el mob se queda repitiendo el ultimo golpe para siempre.
+     */
+    private void stopReactive(EntityTracker tracker, MobDefinition definition) {
+        if (definition.model() == null || tracker == null || tracker.isClosed()) {
+            return;
+        }
+        for (ModelAnimation event : ModelAnimation.values()) {
+            if (event == ModelAnimation.WALK || event == ModelAnimation.IDLE) {
+                continue;
+            }
+            AnimationSpec spec = definition.model().animation(event);
+            if (spec != null && !spec.name().isBlank()) {
+                try {
+                    tracker.stopAnimation(spec.name());
+                } catch (Throwable throwable) {
+                    // Parar algo que no estaba no es un problema.
+                }
+            }
+        }
+    }
+
     /** Para la animacion del estado indicado, si el mob la declara. */
     private void stopState(EntityTracker tracker, MobDefinition definition, ModelState state) {
         ModelAnimation event = state == ModelState.WALK ? ModelAnimation.WALK : ModelAnimation.IDLE;
@@ -665,6 +694,10 @@ public final class BetterModelLink implements ModelLink {
         this.cancelStateLoop(id);
         this.stopState(tracker, definition, ModelState.WALK);
         this.stopState(tracker, definition, ModelState.IDLE);
+        // La muerte para TODO lo anterior: si el golpe seguia puesto, tapaba a la muerte.
+        if (event.terminal()) {
+            this.stopReactive(tracker, definition);
+        }
         this.play(tracker, spec, event);
         // SIEMPRE se programa el final. Sin esto, un camino que salga antes deja 'busy' puesto y
         // el mob se queda para siempre en la animacion del golpe.
@@ -692,6 +725,8 @@ public final class BetterModelLink implements ModelLink {
                         return;
                     }
                     this.busy.remove(id);
+                    // Se retira la reactiva explicitamente: BetterModel no la quita sola.
+                    this.stopReactive(tracker, definition);
                     ModelState state = this.states.get(id);
                     this.trace("fin de " + event.key() + ", se reanuda " + state + " en " + id);
                     if (state == null || tracker.isClosed()) {
@@ -735,6 +770,7 @@ public final class BetterModelLink implements ModelLink {
      */
     /** Cierra el tracker de un mob muerto: sin el, el modelo se queda flotando. */
     private void closeTracker(java.util.UUID id, EntityTracker tracker) {
+        this.trace("cierre del tracker en " + id);
         this.busy.remove(id);
         this.lastReactive.remove(id);
         this.cancelStateLoop(id);
