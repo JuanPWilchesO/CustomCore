@@ -472,6 +472,15 @@ public final class BetterModelLink implements ModelLink {
         if (tracker == null || tracker.isClosed()) {
             return;
         }
+        // La clave en el yml no basta: el modelo tiene que traer esa animacion. Si no, el
+        // evento se ignora entero (no se corta el golpe para dejar la pantalla vacia).
+        if (!this.exists(tracker, spec)) {
+            String model = definition.model() == null ? "?" : definition.model().name();
+            this.warnOnce("missing:" + definition.id() + ":" + spec.name(),
+                    "El modelo '" + model + "' de '" + definition.id() + "' no tiene la animacion '"
+                            + spec.name() + "' (" + event.key() + "); el evento se ignora.");
+            return;
+        }
         try {
             if (event == ModelAnimation.WALK || event == ModelAnimation.IDLE) {
                 this.playState(entity, definition, tracker,
@@ -748,6 +757,24 @@ public final class BetterModelLink implements ModelLink {
      *
      * <p>Antes era un valor fijo de 15 ticks: las animaciones de 1 s se cortaban a la mitad.
      */
+    /**
+     * {@code true} si el modelo TRAE esa animacion con ese nombre.
+     *
+     * <p>Un yml puede declarar 'hurt: algo' y el modelo no tener 'algo'. En ese caso hay que
+     * tratarlo como si no hubiera animacion: no cortar el golpe para luego no mostrar nada.
+     */
+    private boolean exists(EntityTracker tracker, AnimationSpec spec) {
+        if (tracker == null || tracker.isClosed()) {
+            return false;
+        }
+        try {
+            return tracker.renderer().animation(spec.name()).isPresent();
+        } catch (Throwable throwable) {
+            // Sin poder comprobarlo se asume que si, que es lo conservador para el que la tiene.
+            return true;
+        }
+    }
+
     private long ticksOf(AnimationSpec spec) {
         try {
             EntityTracker any = this.trackers.values().stream()

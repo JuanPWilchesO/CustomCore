@@ -342,8 +342,14 @@ el mob siga en ese estado: sin eso el modelo se queda congelado al andar.
 | `idle` | 0 | el mob esta quieto |
 
 `attack` y `hurt` **no son lo mismo**: uno es el mob pegando y el otro el mob siendo
-golpeado. Por eso tienen prioridades distintas: si pegan al mob mientras golpea, el golpe
-manda. Para invertirlo, pon `priority` a mano.
+golpeado.
+
+**El dano gana al golpe**, pero solo si el modelo tiene `hurt`. Si no lo tiene, el golpe
+sigue su curso sin cortarse: no se para la animacion para luego no mostrar nada. Lo mismo
+vale para cualquier evento: si el yml declara una animacion con un nombre que el `.bbmodel`
+no trae, el evento se ignora (y se avisa una vez en el log).
+
+Para invertir el orden, pon `priority` a mano.
 
 **Con `debug: true` en el config** se traza cada cambio de animacion en el log:
 `[modelo] reactiva attack (attack) en <uuid>`, `[modelo] estado WALK en <uuid>`,
