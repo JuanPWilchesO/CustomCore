@@ -86,6 +86,15 @@ public interface ModelLink {
     default void seat(LivingEntity entity, MobDefinition definition, org.bukkit.entity.Player player) {
     }
 
+    /**
+     * El jugador se bajo del asiento del modelo.
+     *
+     * <p>Hay que devolver el controlador a {@code NONE}: si se queda en {@code WALK}, la entidad
+     * sigue esperando un jinete que ya no esta.
+     */
+    default void unseat(LivingEntity entity, MobDefinition definition) {
+    }
+
     /** Cierra el tracker de todos los mobs vivos: recarga del catalogo o del propio modelo. */
     default void reload() {
     }

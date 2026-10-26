@@ -347,22 +347,67 @@ public final class BetterModelLink implements ModelLink {
             if (registry == null) {
                 return;
             }
-            PlatformEntity passenger = BukkitAdapter.adapt((org.bukkit.entity.Entity) player);
+            HitBox seat = null;
+            java.util.List<String> seen = new java.util.ArrayList<>();
             for (HitBox box : registry.hitBoxes()) {
-                if (box.positionSource() != null && box.positionSource().name().tagged(BoneTags.SEAT)) {
-                    box.mount(passenger);
-                    return;
+                if (box.positionSource() == null) {
+                    continue;
+                }
+                String bone = box.positionSource().name().rawName();
+                seen.add(bone);
+                // SOLO el hueso con tag SEAT ('p_...'). Antes se montaba en la primera hitbox que
+                // hubiera, que suele ser la de golpe ('ob_...'): el jugador quedaba sentado dentro
+                // del cuerpo en vez de en el asiento.
+                if (box.positionSource().name().tagged(BoneTags.SEAT)) {
+                    seat = box;
+                    break;
                 }
             }
-            // Sin hueso SEAT no hay asiento; la columna vertebral sigue quieta.
-            this.warnOnce("seat:" + definition.id(),
-                    "La montura '" + definition.id() + "' usa 'model.seat' pero el modelo '"
-                            + definition.model().name() + "' no tiene ningun hueso con el tag"
-                            + " 'seat': el jugador se monta al asiento vanilla del caballo.");
+            if (seat == null) {
+                this.warnOnce("seat:" + definition.id(),
+                        "La montura '" + definition.id() + "' usa 'model.seat' pero el modelo '"
+                                + definition.model().name() + "' no tiene ningun hueso con el tag"
+                                + " 'seat' (huesos con hitbox: " + seen + "). Renombra el hueso del"
+                                + " asiento a 'p_algo'.");
+                return;
+            }
+            PlatformEntity passenger = BukkitAdapter.adapt((org.bukkit.entity.Entity) player);
+            // Sin controlador el caballo no recibe el movimiento del jinete: el jugador esta
+            // sentado en el asiento del modelo, no sobre la entidad, y se queda quieto.
+            try {
+                seat.mountController(kr.toxicity.model.api.mount.MountControllers.WALK);
+            } catch (Throwable throwable) {
+                this.plugin.getLogger().warning("No se pudo activar el controlador de la montura '"
+                        + definition.id() + "': " + throwable.getMessage());
+            }
+            seat.mount(passenger);
+            this.trace("asiento de " + definition.id() + " en el hueso '"
+                    + seat.positionSource().name().rawName() + "'");
         } catch (Throwable throwable) {
             this.warnOnce("seat:" + definition.id() + ":" + throwable.getMessage(),
                     "No se pudo subir al jugador al asiento de '" + definition.id() + "': "
                             + throwable.getMessage());
+        }
+    }
+
+    @Override
+    public void unseat(LivingEntity entity, MobDefinition definition) {
+        EntityTracker tracker = this.trackers.get(entity.getUniqueId());
+        if (tracker == null || tracker.isClosed()) {
+            return;
+        }
+        try {
+            EntityTrackerRegistry registry = tracker.registry();
+            if (registry == null) {
+                return;
+            }
+            for (HitBox box : registry.hitBoxes()) {
+                if (box.positionSource() != null && box.positionSource().name().tagged(BoneTags.SEAT)) {
+                    box.mountController(kr.toxicity.model.api.mount.MountControllers.NONE);
+                }
+            }
+        } catch (Throwable throwable) {
+            // Si no se puede devolver, el controlador queda inerte: el asiento ya no tiene jinete.
         }
     }
 

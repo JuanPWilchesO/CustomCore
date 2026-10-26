@@ -376,9 +376,19 @@ model:
   seat: true
 ```
 
-Si el modelo no tiene hueso `seat`, el jugador se monta al asiento vanilla del caballo y
-el log avisa. El modelo se marca como montable en Blockbench con el tag `seat` en el
-hueso donde se sienta el jinete.
+El hueso del asiento debe llamarse **`p_algo`** (tag `p`). No confundir con la hitbox
+(`b_`/`ob_`): si no hay hueso `seat`, **no se monta en el modelo** y el log lo dice con la
+lista de huesos que encontró.
+
+**La montura se mueve con el jinete** gracias al controlador (`MountControllers.WALK`)
+que se activa al montarse. Sin él, el jugador está sentado en el asiento del modelo y el
+caballo no recibe el movimiento: se queda quieto y solo se gira la vista.
+
+**Sin jinete la montura no deambula**: se le apaga la IA mientras nadie la lleva, y se le
+vuelve a encender al subirse.
+
+**Los efectos del `mount:`** (`rider`) se aplican igual al jinete del asiento del modelo,
+aunque el caballo no lo tenga como pasajero.
 
 ## Un mob custom no se modifica a mano
 

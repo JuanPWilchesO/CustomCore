@@ -7,6 +7,7 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDismountEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.inventory.EquipmentSlot;
 
@@ -49,5 +50,23 @@ public final class ModelSeatListener implements Listener {
             return;
         }
         link.seat(target, customMob.definition(), player);
+    }
+
+    /**
+     * El jugador se ha bajado: se devuelve el controlador del asiento a {@code NONE}.
+     *
+     * <p>El asiento es el hitbox del modelo, asi que quien se desmonta es el pasajero de ESA
+     * entidad, no del caballo: por eso se mira la entidad que se abandona y no la montura.
+     */
+    @EventHandler
+    public void onDismount(EntityDismountEvent event) {
+        if (!(event.getDismounted() instanceof LivingEntity seat)) {
+            return;
+        }
+        CustomMob customMob = this.service.find(seat.getUniqueId()).orElse(null);
+        if (customMob == null || !customMob.definition().mountable()) {
+            return;
+        }
+        this.service.modelLink().unseat(seat, customMob.definition());
     }
 }
