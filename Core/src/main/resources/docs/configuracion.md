@@ -61,6 +61,9 @@ spawning:
   attempts: 2
   global-cap: 80
 
+models:
+  require-hitbox: true
+
 book:
   material: WRITTEN_BOOK
   display-name: '&6Inventario de fuerzas'
@@ -108,6 +111,33 @@ book:
 | `book.material` | material del libro de inspeccion |
 | `book.display-name` | nombre del libro |
 | `book.lore` | descripcion del libro |
+| `models.require-hitbox` | si un modelo de BetterModel necesita hitbox propia para ocultar el cuerpo vanilla |
+
+## Modelos 3D (`models`)
+
+Los modelos de **BetterModel** se piden mob a mob, con el bloque `model:` de su yml
+(ver `el-archivo-de-un-mob.md`). Lo unico global es la red de seguridad:
+
+```yaml
+models:
+  require-hitbox: true
+```
+
+Con `require-hitbox: true` (por defecto), un modelo que **no declara hitbox propia** (un
+hueso con el tag `hitbox` o `seat`) deja el cuerpo vanilla visible. El motivo es concreto:
+si se oculta el cuerpo y no hay otra caja de colision, el mob **no recibe dano** ni se
+puede golpear. En el log aparece un aviso con el mob y el modelo afectados.
+
+Ponlo en `false` solo si sabes que todos tus modelos ya estan bien montados y prefieres
+ocultar siempre.
+
+Sin BetterModel instalado este bloque no hace nada: los mobs se ven como siempre.
+
+**CustomCore no genera ni modifica el resource pack de BetterModel.** Solo pide modelos por
+nombre; los `.bbmodel` siguen en `plugins/BetterModel/models/` y el pack lo genera
+BetterModel con su propio criterio. Si lo sirves con AutoPack, recuerda regenerar el pack
+con tu script y volver a `/autopack reload` cuando cambien los modelos: el SHA1 del config
+tiene que coincidir con el archivo, o los clientes rechazan la descarga.
 
 ## Tres cuentas de mobs
 
@@ -189,6 +219,9 @@ spawning:
 
 En el mob se pide con su propia seccion `spawn:` (probabilidad, tamano de grupo, hora, luz,
 altura, distancia al jugador y tope propio). Ver `el-archivo-de-un-mob.md`.
+
+Si un mob natural no aparece, `debug: true` hace que el log diga el motivo (region, luz,
+hora, altura, suelo…) y avise cuando aparece uno.
 
 ## Brillo de facciones (`faction-glow`)
 

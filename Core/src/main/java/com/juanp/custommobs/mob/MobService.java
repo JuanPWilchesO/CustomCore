@@ -6,6 +6,7 @@ import com.juanp.custommobs.combat.TargetPolicy;
 import com.juanp.custommobs.combat.VillageFolk;
 import com.juanp.custommobs.config.PluginConfig;
 import com.juanp.custommobs.disguise.DisguiseLink;
+import com.juanp.custommobs.model.ModelLink;
 import com.juanp.custommobs.faction.FactionBook;
 import com.juanp.custommobs.group.GroupLink;
 import com.juanp.custommobs.item.Attributes;
@@ -68,6 +69,7 @@ public final class MobService implements Listener {
     private final AggroRegistry aggro;
     private final FactionBook factions;
     private final DisguiseLink disguiseLink;
+    private final ModelLink modelLink;
     private final GroupLink groupLink;
     private final SpawnerRegistry spawners;
     private final Map<UUID, CustomMob> active = new ConcurrentHashMap<>();
@@ -79,14 +81,15 @@ public final class MobService implements Listener {
     private boolean paperGoals = true;
 
     public MobService(CustomMobsPlugin plugin, PluginConfig config, MobRegistry registry, TeamLink teamLink,
-                      FactionBook factions, DisguiseLink disguiseLink, GroupLink groupLink,
-                      SpawnerRegistry spawners) {
+                      FactionBook factions, DisguiseLink disguiseLink, ModelLink modelLink,
+                      GroupLink groupLink, SpawnerRegistry spawners) {
         this.plugin = plugin;
         this.config = config;
         this.registry = registry;
         this.teamLink = teamLink;
         this.factions = factions;
         this.disguiseLink = disguiseLink;
+        this.modelLink = modelLink;
         this.groupLink = groupLink;
         this.spawners = spawners;
         this.playerMobs = new PlayerMobRegistry(plugin);
@@ -123,6 +126,11 @@ public final class MobService implements Listener {
 
     public DisguiseLink disguiseLink() {
         return this.disguiseLink;
+    }
+
+    /** Modelos de BetterModel: apariencia 3D sobre la entidad. */
+    public ModelLink modelLink() {
+        return this.modelLink;
     }
 
     public SpawnerRegistry spawners() {
@@ -679,6 +687,13 @@ public final class MobService implements Listener {
             mob.setGlowing(true);
         }
 
+        // Enmudece la entidad vanilla cuando el yml trae sonidos. Vanilla suelta los suyos por
+        // una ruta que no se puede interceptar (ni ENTITY_SOUND_EFFECT ni SoundEvent llegan), y
+        // el resultado era oir siempre el doble. Silenciando el cuerpo, el mob solo suena con
+        // los del yml, que SoundService manda a los jugadores de alrededor.
+        if (definition.sounds().hasAny()) {
+            mob.setSilent(true);
+        }
         this.applyAttributes(mob, definition);
         if (definition.mount() != null) {
             // Una montura no lleva el equipo normal: lo suyo es la silla y la armadura.
@@ -859,6 +874,10 @@ public final class MobService implements Listener {
                 entity.setCustomNameVisible(true);
             }
             this.disguiseLink.apply(entity, customMob.definition());
+            // El modelo de BetterModel va despues del disfraz: si hay disfraz, el enlace lo
+            // detecta y no aplica nada.
+            this.modelLink.apply(entity, customMob.definition(),
+                    this.disguiseLink.isDisguised(entity));
             // Un mob de rol con 'ai: false' se queda quieto en su puesto.
             if (!customMob.definition().usesAi() && entity instanceof Mob mob) {
                 mob.setAI(false);
@@ -939,10 +958,21 @@ public final class MobService implements Listener {
 
     public void prune() {
         // Un natural que ya no existe deja de ocupar tope.
+        if (this.config.debug()) {
+            this.traceNaturalDeaths();
+        }
         this.natural.removeIf(id -> !this.active.containsKey(id));
         this.active.values().removeIf(customMob -> {
             LivingEntity entity = customMob.entity();
-            return !entity.isValid() || entity.isDead();
+            if (!entity.isValid()) {
+                return true;
+            }
+            // Un cadaver con modelo sigue en el registro mientras dura su animacion de muerte: el
+            // modelo necesita la entidad para verse. Se cierra solo y ahi se retira.
+            if (entity.isDead()) {
+                return !this.modelLink.isBusy(entity);
+            }
+            return false;
         });
         // El cupo se toca al invocar y al morir: se guarda al vuelo, no en cada cambio.
         if (this.playerMobs.isDirty()) {
@@ -950,6 +980,37 @@ public final class MobService implements Listener {
         }
         if (this.styles != null && this.styles.registry().isDirty()) {
             this.styles.registry().save();
+        }
+    }
+
+    /**
+     * Con {@code debug: true}, dice por que desaparece un mob natural.
+     *
+     * <p>Sin esto, un natural que muere o que el servidor retira solo deja de contar, y desde
+     * fuera parece que nunca aparecio. Aqui se distingue: entidad recogida por el servidor,
+     * muerta (y si esta el cadáver esperando la animacion de muerte) o fuera del registro.
+     */
+    private void traceNaturalDeaths() {
+        for (UUID id : new java.util.ArrayList<>(this.natural)) {
+            CustomMob customMob = this.active.get(id);
+            if (customMob == null) {
+                this.plugin.getLogger().info("[spawn] natural " + id + " fuera del registro");
+                continue;
+            }
+            LivingEntity entity = customMob.entity();
+            if (!entity.isValid()) {
+                this.plugin.getLogger().info("[spawn] natural '" + customMob.definition().id()
+                        + "' recogido por el servidor en " + entity.getLocation().getBlockX()
+                        + " " + entity.getLocation().getBlockY() + " "
+                        + entity.getLocation().getBlockZ());
+            } else if (entity.isDead() && !this.modelLink.isBusy(entity)) {
+                // La muerte del natural ya deja su rastro en el log de Bukkit (died/matado);
+                // aqui se deja la posicion, que es lo que falta para ir a mirar.
+                this.plugin.getLogger().info("[spawn] natural '" + customMob.definition().id()
+                        + "' murio en " + entity.getLocation().getBlockX() + " "
+                        + entity.getLocation().getBlockY() + " "
+                        + entity.getLocation().getBlockZ());
+            }
         }
     }
 
@@ -1097,6 +1158,7 @@ public final class MobService implements Listener {
             this.styles.applyGlow(mob, customMob.definition(), customMob.ownerId(), customMob.teamId());
         }
         this.disguiseLink.refresh(mob, customMob.definition());
+        this.modelLink.refresh(mob, customMob.definition());
     }
 
     /** Un mob de jugador que muere deja libre su cupo y limpia su brillo. */
@@ -1105,6 +1167,10 @@ public final class MobService implements Listener {
         if (this.styles != null) {
             this.styles.clear(event.getEntity());
         }
+        // La animacion de muerte manda: el enlace se queda con el tracker un momento y lo
+        // cierra despues. Sin animacion configurada, se suelta aqui mismo.
+        this.read(event.getEntity()).ifPresent(customMob ->
+                this.modelLink.ended(event.getEntity(), customMob.definition()));
         // El mob murio: se borra su vinculo, asi que el huevo que lo llevaba queda inerte.
         this.playerMobs.byEntity(event.getEntity().getUniqueId())
                 .ifPresent(link -> this.playerMobs.removeLink(link.linkId()));
@@ -1179,6 +1245,13 @@ public final class MobService implements Listener {
         }
         if (this.styles != null && entity instanceof LivingEntity living) {
             this.styles.clear(living);
+        }
+        // El modelo muere con la entidad: dejar el tracker abierto deja un modelo flotando
+        // en el aire, porque su entidad ya no existe. Salvo que este en su animacion de muerte:
+        // entonces la entidad se retira igual y el tracker se cierra con ella desde el enlace.
+        if (entity instanceof LivingEntity living && living.isDead()
+                && !this.modelLink.isBusy(living)) {
+            this.modelLink.release(living);
         }
         // Se retira YA (diferirlo un tick lo empeoraba), y un segundo despues se le re-manda el
         // "borrar entidad" a quien pudiera verlo: al cliente terco se le cae asi la placa
@@ -1385,6 +1458,17 @@ public final class MobService implements Listener {
 
     public void clear() {
         this.active.clear();
+    }
+
+    /** Vuelve a pedir el modelo de cada mob vivo (tras recargar el catalogo). */
+    public void reapplyModels() {
+        for (CustomMob customMob : this.active.values()) {
+            if (!(customMob.entity() instanceof LivingEntity living) || !living.isValid()) {
+                continue;
+            }
+            this.modelLink.apply(living, customMob.definition(),
+                    this.disguiseLink.isDisguised(living));
+        }
     }
 
     private static UUID parseUuid(String raw) {

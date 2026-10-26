@@ -41,6 +41,28 @@ mount:
 `color` y `style` solo existen en caballos. `armor` vale para cualquier montura que la
 admita.
 
+### Montura con modelo 3D
+
+Si el modelo trae un hueso marcado como `seat` en Blockbench, el caballo vanilla se oculta
+y el jugador se sube al asiento del modelo:
+
+```yaml
+category: mount
+type: HORSE
+model:
+  name: caballo_guerra
+  seat: true
+  animations:
+    idle: idle
+    walk: walk
+```
+
+- `seat: true` (por defecto si declaras `model`) usa el hueso `seat` como asiento.
+- Sin hueso `seat`, el jugador se monta al asiento vanilla y el log avisa.
+- `mount.saddled` y `mount.tamed` siguen haciendo falta: el mob tiene que dejarse montar.
+
+Necesita el plugin **BetterModel**. Sin el, la montura se ve y se comporta como siempre.
+
 ## 3. Efectos
 
 ```yaml

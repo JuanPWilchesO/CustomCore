@@ -1,0 +1,82 @@
+# =============================================================================
+# 07 - Modelo 3D (BetterModel)
+# -----------------------------------------------------------------------------
+# Lo que se aprende aqui: darle cuerpo a un mob con un modelo de BetterModel,
+# ocultar el cuerpo vanilla y enganchar animaciones a sus eventos.
+#
+# Necesita el plugin BetterModel. Sin el, esta seccion se ignora y el mob se ve
+# con su forma vanilla, sin errores.
+#
+# OJO: esta seccion viene COMENTADA a proposito. Un 'model:' activo apunta a un
+# modelo concreto, que puede no existir en tu servidor. Descomentala cuando
+# tengas el modelo cargado y pon su nombre real.
+#
+# Los nombres de arriba salen de:
+#   /customcore model list          modelos cargados en ESTE servidor
+#   /customcore model validate      avisa de los que el yml pide y no existen
+#
+# Las animaciones ('idle', 'walk', 'attack'...) son las que trae el modelo, con
+# el nombre que tengan dentro del .bbmodel. Mira las tuyas en Blockbench.
+#
+# Se invoca con:   /customcore spawn tutorial_modelo
+# =============================================================================
+
+id: tutorial_modelo
+category: server
+display-name: '&4Caballero'
+type: ZOMBIE
+
+attitude: hostile
+burn-in-daylight: false
+
+attributes:
+  health: 40.0
+  damage: 6.0
+  speed: 0.24
+
+# Modelo de BetterModel: el nombre es el archivo sin extension dentro de
+# plugins/BetterModel/models/. Quita el '#' de cada linea para activarlo.
+#
+# model:
+#   enabled: true
+#   name: demon_knight
+#
+#   # Ocultar el cuerpo vanilla: solo se ve el modelo. Necesita que el modelo
+#   # declare hitbox (un hueso con el tag 'hitbox' o 'seat' en Blockbench); si
+#   # no la declara, el cuerpo se queda visible para que el mob reciba dano.
+#   hide-body: true
+#   hide-equipment: true
+#   # El brillo (por ejemplo, el de su faccion) se deja visible por defecto.
+#   hide-glow: false
+#
+#   # Escala del modelo. Quitalo para dejar la del propio modelo.
+#   scale: 1.0
+#
+#   # Rasgos propios de BetterModel.
+#   damage-animation: true
+#   damage-tint: true
+#
+#   # Animaciones por evento, con el nombre que tienen dentro del modelo.
+#   # Se admite la forma corta ('idle: reposo') o la larga, con ajustes.
+#   # Un evento sin clave no anima nada.
+#   animations:
+#     idle: idle
+#     walk:
+#       name: walk
+#       speed: 1.0
+#     attack:
+#       name: hammer_attack_1
+#       once: true
+#     death:
+#       name: death
+#       once: true
+#       # Ticks de desvanecido: la animacion termina de verse antes de que
+#       # desaparezca el cadaver.
+#       end: 5
+
+leash:
+  max-distance: 0.0
+
+lore:
+  - '&7Un caballero listo para recibir un modelo 3D.'
+  - '&7Descomenta el bloque model: de su yml.'

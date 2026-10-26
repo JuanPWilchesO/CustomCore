@@ -72,6 +72,25 @@
             <version>${packetevents.version}</version>
             <scope>provided</scope>
         </dependency>
+
+        <!-- BetterModel 3.5.1 (kr.toxicity): modelos Bedrock opcionales para dar cuerpo a
+             los mobs. El jar de release entero como provided: las clases de la API son las
+             mismas que carga el plugin en tiempo de ejecucion. Ver scripts/install-libs.sh. -->
+        <dependency>
+            <groupId>kr.toxicity</groupId>
+            <artifactId>bettermodel</artifactId>
+            <version>${bettermodel.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- La API de BetterModel expone firmas en Kotlin en bastantes metodos; el compilador
+             de Java necesita ver los metadatos y las anotaciones que viajan en el stdlib. -->
+        <dependency>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-stdlib</artifactId>
+            <version>${kotlin.version}</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -90,6 +109,15 @@
                 <filtering>false</filtering>
                 <excludes>
                     <exclude>plugin.yml</exclude>
+                    <!-- NUNCA empaquetar modelos ni packs de recursos. BetterModel genera su
+                         propio pack (plugins/BetterModel/build.zip) a partir de los .bbmodel
+                         de su carpeta; si uno de estos archivos entrara en el jar y acabara
+                         en data/, el hash del pack cambiaria y AutoPack seguiria anunciando
+                         el SHA1 viejo, con lo que los clientes rechazarian el pack. -->
+                    <exclude>**/*.bbmodel</exclude>
+                    <exclude>**/*.zip</exclude>
+                    <exclude>**/pack.mcmeta</exclude>
+                    <exclude>**/assets/**</exclude>
                 </excludes>
             </resource>
         </resources>

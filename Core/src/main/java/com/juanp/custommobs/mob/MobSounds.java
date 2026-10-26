@@ -19,6 +19,11 @@ public record MobSounds(
 
     public static final MobSounds NONE = new MobSounds(null, 0, null, null, null);
 
+    /** {@code true} si el yml define al menos un sonido. */
+    public boolean hasAny() {
+        return !this.isEmpty();
+    }
+
     public boolean hasAmbient() {
         return this.ambient != null && this.ambientIntervalSeconds > 0;
     }
