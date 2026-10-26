@@ -320,18 +320,34 @@ animations:
     speed: 1.2        # velocidad de reproduccion
     start: 0          # ticks de entrada (lerp)
     end: 5            # ticks de salida (lerp)
-    priority: 10      # frente a otras animaciones; gana la mas alta
+    priority: 30      # opcional; por defecto la del evento, ver la tabla
 ```
 
-Un evento sin clave no anima nada. `death` se reproduce y el modelo aguanta 2 segundos
-extra sobre el cadaver antes de cerrarse.
+Un evento sin clave **no anima nada y no se avisa**: es opcional. Un modelo con solo
+`attack` es valido, y `hurt` casi nunca existe.
 
-**Reposo y marcha se alternan solos**: el mob arranca en `idle` y pasa a `walk` cuando se
-mueve. Un nombre de animacion que el modelo no tenga se avisa una vez en el log.
+**Reposo y marcha se alternan solos.** El mob arranca en `idle` y pasa a `walk` cuando se
+mueve. Si la animacion es `once` (lo normal al exportar de Blockbench), se repite mientras
+el mob siga en ese estado: sin eso el modelo se queda congelado al andar.
 
-**`attack`, `hurt` y `death` van por encima**: se lanzan con prioridad alta (10 por
-defecto) y paran `idle`/`walk` antes, porque la de andar se reinserta en cada ciclo y si no
-las taparia.
+**Prioridades por defecto:**
+
+| Animacion | Prioridad | Se dispara |
+|---|---|---|
+| `death` | 100 | el mob muere. Terminal: no vuelve al estado |
+| `spawn` | 40 | el mob aparece |
+| `attack` | 30 | el mob golpea a alguien |
+| `hurt` | 20 | el mob **recibe** dano |
+| `walk` | 10 | el mob se mueve |
+| `idle` | 0 | el mob esta quieto |
+
+`attack` y `hurt` **no son lo mismo**: uno es el mob pegando y el otro el mob siendo
+golpeado. Por eso tienen prioridades distintas: si pegan al mob mientras golpea, el golpe
+manda. Para invertirlo, pon `priority` a mano.
+
+**La duracion se lee del `.bbmodel`.** Al terminar la animacion de un golpe o del dano, el
+mob vuelve a su estado; con `death` el tracker se cierra. Nada de tiempos fijos: si tu
+animacion dura 1 s, ese es el tiempo que se respeta.
 
 ### Asiento de montura (`seat`, solo `category: mount`)
 

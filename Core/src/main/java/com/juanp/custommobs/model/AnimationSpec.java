@@ -12,18 +12,17 @@ package com.juanp.custommobs.model;
  */
 public record AnimationSpec(String name, boolean once, Float speed, int start, int end, int priority) {
 
-    /** Prioridad de las animaciones de golpe, dano y muerte: no deben taparse. */
-    public static final int ONE_SHOT_PRIORITY = 10;
-
     public static AnimationSpec of(String name) {
         return new AnimationSpec(name, false, null, 0, 0, 0);
     }
 
     /**
-     * Prioridad efectiva: las de un solo golpe suben solas para que la de andar, que se
-     * reinserta en cada ciclo, no las tape.
+     * Prioridad efectiva.
+     *
+     * <p>El yml manda si la define; si no, el evento aporta la suya (muerte > golpe > dano >
+     * marcha > reposo).
      */
-    public int effectivePriority() {
-        return this.once ? Math.max(this.priority, ONE_SHOT_PRIORITY) : this.priority;
+    public int priorityOr(int fallback) {
+        return this.priority > 0 ? this.priority : fallback;
     }
 }

@@ -28,6 +28,8 @@ public final class SoundListener implements Listener {
         if (event.getEntity() instanceof LivingEntity victim) {
             this.service.find(victim.getUniqueId()).ifPresent(customMob -> {
                 this.sounds.playHurt(customMob);
+                // Dano recibido: es 'hurt', no 'attack'. Cada uno tiene su animacion; si el
+                // modelo no define 'hurt', no se anima nada (no es un error).
                 this.service.modelLink().animate(victim, customMob.definition(), ModelAnimation.HURT);
             });
         }
@@ -35,6 +37,8 @@ public final class SoundListener implements Listener {
         if (attacker != null) {
             this.service.find(attacker.getUniqueId()).ifPresent(customMob -> {
                 this.sounds.playAttack(customMob);
+                // El mob golpea: 'attack'. Con un arma/proyectil, el que ataca puede no ser el
+                // mob; en ese caso attackerOf devuelve a quien disparo.
                 this.service.modelLink().animate(attacker, customMob.definition(), ModelAnimation.ATTACK);
             });
         }

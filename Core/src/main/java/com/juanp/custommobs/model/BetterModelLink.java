@@ -38,16 +38,8 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class BetterModelLink implements ModelLink {
 
-    /** Margen tras el que se cierra el tracker de un mob muerto. */
-    private static final long DEATH_KEEP_TICKS = 40L;
-
-    /**
-     * Ticks que se espera antes de devolver el mob a su estado tras un golpe.
-     *
-     * <p>Es un margen fijo, no la duracion real (que BetterModel no expone en la API publica):
-     * si sobra, el estado se reanuda igual; si faltara, se cortaria el golpe.
-     */
-    private static final long ONE_SHOT_BACK_TICKS = 15L;
+    /** Margen que se suma a la duracion de la muerte antes de cerrar el tracker. */
+    private static final long DEATH_MARGIN_TICKS = 10L;
 
     /** Ticks antes de reintentar completar un modelo cuyos huesos aun no estaban cargados. */
     private static final long COMPLETE_RETRY_TICKS = 20L;
@@ -207,10 +199,7 @@ public final class BetterModelLink implements ModelLink {
         // El reposo se pone solo la PRIMERA vez: si se repitiera en cada refresh, cortaria la
         // animacion que el mob tuviera (un golpe, por ejemplo).
         if (this.states.putIfAbsent(entity.getUniqueId(), ModelState.IDLE) == null) {
-            AnimationSpec idle = spec.animation(ModelAnimation.IDLE);
-            if (idle != null && !idle.name().isBlank()) {
-                this.play(tracker, idle);
-            }
+            this.startStateLoop(entity.getUniqueId(), definition, tracker, ModelState.IDLE);
             this.animate(entity, definition, ModelAnimation.SPAWN);
         }
     }
@@ -397,6 +386,8 @@ public final class BetterModelLink implements ModelLink {
     @Override
     public void animate(LivingEntity entity, MobDefinition definition, ModelAnimation event) {
         AnimationSpec spec = definition.model() == null ? null : definition.model().animation(event);
+        // Sin animacion para ese evento no se hace NADA y no se avisa: es opcional. Un modelo
+        // con solo 'attack' es perfectamente valido, y 'hurt' no suele existir.
         if (spec == null || spec.name().isBlank()) {
             return;
         }
@@ -405,21 +396,14 @@ public final class BetterModelLink implements ModelLink {
             return;
         }
         try {
-            // Los estados (reposo / andar) se cambian SOLO si de verdad cambian: repetirlos en
-            // cada ciclo de la tarea reiniciaria la animacion sin parar.
-            if (event == ModelAnimation.WALK) {
-                this.playState(entity, definition, tracker, ModelState.WALK);
+            if (event == ModelAnimation.WALK || event == ModelAnimation.IDLE) {
+                this.playState(entity, definition, tracker,
+                        event == ModelAnimation.WALK ? ModelState.WALK : ModelState.IDLE);
                 return;
             }
-            if (event == ModelAnimation.IDLE) {
-                this.playState(entity, definition, tracker, ModelState.IDLE);
-                return;
-            }
-            // Ataque, dano y muerte van con prioridad alta y paran lo que hubiera: sin esto la
-            // animacion de andar, que se reinserta cada ciclo, las tapaba.
-            this.playOneShot(entity, definition, tracker, spec, event);
-            if (event == ModelAnimation.DEATH) {
-                this.closeAfterDeath(entity.getUniqueId(), tracker);
+            this.playReactive(entity, definition, tracker, spec, event);
+            if (event.terminal()) {
+                this.closeAfterDeath(entity.getUniqueId(), tracker, definition);
             }
         } catch (Throwable throwable) {
             this.warnOnce("anim:" + definition.id() + ":" + event.key(),
@@ -495,37 +479,61 @@ public final class BetterModelLink implements ModelLink {
         }
     }
 
-    /** Cambia entre reposo y andar, y solo cuando el estado cambia de verdad. */
+    /**
+     * Cambia entre reposo y andar. Solo actua si el estado CAMBIA: repetirlo en cada ciclo de la
+     * tarea reiniciaria la animacion sin parar.
+     */
+    private boolean play(EntityTracker tracker, AnimationSpec spec, ModelAnimation event) {
+        if (tracker == null || tracker.isClosed()) {
+            return false;
+        }
+        int priority = spec.priorityOr(event == null ? 0 : event.defaultPriority());
+        return tracker.animate(spec.name(), modifier(spec, priority));
+    }
+
     private void playState(LivingEntity entity, MobDefinition definition, EntityTracker tracker,
                            ModelState state) {
         this.playState(entity.getUniqueId(), definition, tracker, state);
     }
 
-    /** Igual que el anterior, por UUID: la tarea diferida ya no tiene la entidad a mano. */
     private void playState(java.util.UUID id, MobDefinition definition, EntityTracker tracker,
                            ModelState state) {
         if (tracker == null || tracker.isClosed()) {
             return;
         }
-        ModelState previous = this.states.get(id);
-        if (previous == state) {
-            return;
-        }
-        ModelAnimation event = state == ModelState.WALK ? ModelAnimation.WALK : ModelAnimation.IDLE;
-        AnimationSpec spec = definition.model() == null ? null : definition.model().animation(event);
-        if (spec == null || spec.name().isBlank()) {
-            // Sin animacion para ese estado: se recuerda igual, para no reintentarlo cada ciclo.
-            this.states.put(id, state);
+        if (this.states.get(id) == state) {
             return;
         }
         this.states.put(id, state);
         ModelState other = state == ModelState.WALK ? ModelState.IDLE : ModelState.WALK;
         this.stopState(tracker, definition, other);
-        if (!this.play(tracker, spec)) {
-            this.warnOnce("animmissing:" + definition.id() + ":" + spec.name(),
-                    "El modelo de '" + definition.id() + "' no tiene la animacion '" + spec.name()
-                            + "': ese estado se queda sin animar.");
+        this.startStateLoop(id, definition, tracker, state);
+    }
+
+    /**
+     * Lanza la animacion del estado y la mantiene viva mientras el estado no cambie.
+     *
+     * <p>Hace falta porque casi todos los modelos exportan las animaciones como {@code once}:
+     * sin repetirla al terminar, el mob se queda congelado al andar. La duracion sale del propio
+     * .bbmodel; si no se puede leer, se reintenta a los 20 ticks.
+     */
+    private void startStateLoop(java.util.UUID id, MobDefinition definition, EntityTracker tracker,
+                                ModelState state) {
+        ModelAnimation event = state == ModelState.WALK ? ModelAnimation.WALK : ModelAnimation.IDLE;
+        AnimationSpec spec = definition.model() == null ? null : definition.model().animation(event);
+        if (spec == null || spec.name().isBlank()) {
+            return;
         }
+        this.play(tracker, spec, event);
+        long period = this.ticksOf(spec);
+        this.plugin.getServer().getScheduler().runTaskLater(this.plugin, () -> {
+            // Solo se repite si el mob sigue en ese estado y nadie lanzo un golpe encima.
+            if (this.states.get(id) != state || tracker.isClosed() || !tracker.isScheduled()) {
+                return;
+            }
+            this.play(tracker, spec, event);
+            this.startStateLoop(id, definition, tracker, state);
+        }, period);
     }
 
     /** Para la animacion del estado indicado, si el mob la declara. */
@@ -535,41 +543,6 @@ public final class BetterModelLink implements ModelLink {
         if (spec != null && !spec.name().isBlank()) {
             tracker.stopAnimation(spec.name());
         }
-    }
-
-    /**
-     * Animacion de un golpe, del dano o de la muerte.
-     *
-     * <p>Se para antes lo que estuviera sonando (reposo y andar) y se lanza con prioridad alta:
-     * si no, la de andar la tapa porque se reinserta en cada ciclo.
-     */
-    private void playOneShot(LivingEntity entity, MobDefinition definition, EntityTracker tracker,
-                             AnimationSpec spec, ModelAnimation event) {
-        this.stopState(tracker, definition, ModelState.WALK);
-        this.stopState(tracker, definition, ModelState.IDLE);
-        if (!this.play(tracker, spec)) {
-            this.warnOnce("animmissing:" + definition.id() + ":" + spec.name(),
-                    "El modelo de '" + definition.id() + "' no tiene la animacion '" + spec.name()
-                            + "' (" + event.key() + ").");
-            return;
-        }
-        // El estado NO se olvida a proposito: si se olvidara, la tarea de estado volveria a
-        // poner reposo o andar en el siguiente ciclo y cortaria el golpe a la mitad. La animacion
-        // del golpe termina sola (PLAY_ONCE) y entonces se reactiva el estado.
-        this.playStateAfter(entity.getUniqueId(), definition, tracker);
-    }
-
-    /** Reactiva el estado (reposo o andar) cuando la animacion puntual termina. */
-    private void playStateAfter(java.util.UUID id, MobDefinition definition, EntityTracker tracker) {
-        this.plugin.getServer().getScheduler().runTaskLater(this.plugin, () -> {
-            ModelState state = this.states.get(id);
-            if (state == null || tracker.isClosed()) {
-                return;
-            }
-            // Se fuerza el cambio quitando la marca: playState solo actua si el estado difiere.
-            this.states.remove(id);
-            this.playState(id, definition, tracker, state);
-        }, ONE_SHOT_BACK_TICKS);
     }
 
     /** Anima el estado en reposo tras dejar de andar. */
@@ -583,19 +556,69 @@ public final class BetterModelLink implements ModelLink {
     }
 
     /**
-     * Lanza una animacion. Devuelve {@code false} si el modelo no la tiene.
+     * Animacion puntual: golpe, dano, aparicion o muerte.
      *
-     * <p>Las de golpe, dano y muerte llevan prioridad alta y {@code override} para que no las
-     * tape otra: BetterModel apila animaciones en un mapa por prioridad.
+     * <p>Se para lo que estuviera en curso y se lanza con la prioridad del evento. Pasada su
+     * duracion REAL (la del .bbmodel) el mob vuelve a su estado, salvo en la muerte, que es
+     * terminal.
      */
-    private boolean play(EntityTracker tracker, AnimationSpec spec) {
-        if (tracker == null || tracker.isClosed()) {
-            return false;
+    private void playReactive(LivingEntity entity, MobDefinition definition, EntityTracker tracker,
+                              AnimationSpec spec, ModelAnimation event) {
+        this.stopState(tracker, definition, ModelState.WALK);
+        this.stopState(tracker, definition, ModelState.IDLE);
+        this.play(tracker, spec, event);
+        if (event.terminal()) {
+            return;
         }
-        return tracker.animate(spec.name(), modifier(spec));
+        java.util.UUID id = entity.getUniqueId();
+        long delay = this.ticksOf(spec);
+        this.plugin.getServer().getScheduler().runTaskLater(this.plugin, () -> {
+            ModelState state = this.states.get(id);
+            if (state == null || tracker.isClosed()) {
+                return;
+            }
+            // Se reanuda el estado donde se quedo el mob, con la animacion correcta.
+            this.states.remove(id);
+            this.playState(id, definition, tracker, state);
+        }, delay);
     }
 
-    private void closeAfterDeath(java.util.UUID id, EntityTracker tracker) {
+    /**
+     * Duracion real de la animacion en ticks, leida del modelo.
+     *
+     * <p>Antes era un valor fijo de 15 ticks: las animaciones de 1 s se cortaban a la mitad.
+     */
+    private long ticksOf(AnimationSpec spec) {
+        try {
+            EntityTracker any = this.trackers.values().stream()
+                    .filter(t -> t != null && !t.isClosed()).findFirst().orElse(null);
+            if (any != null) {
+                var animation = any.renderer().animation(spec.name());
+                if (animation.isPresent()) {
+                    float seconds = animation.get().length();
+                    if (seconds > 0.0F) {
+                        return Math.max(2L, Math.round(seconds * 20.0F));
+                    }
+                }
+            }
+        } catch (Throwable throwable) {
+            // Sin duracion se cae al valor por defecto.
+        }
+        return 20L;
+    }
+
+    /**
+     * Cierra el tracker de un mob muerto tras su animacion de muerte.
+     *
+     * <p>Con la duracion real del .bbmodel mas un margen: antes eran 40 ticks fijos y una muerte
+     * de 1 s se quedaba con el cadaver quieto y una de 3 s se cortaba.
+     */
+    private void closeAfterDeath(java.util.UUID id, EntityTracker tracker,
+                                 MobDefinition definition) {
+        AnimationSpec death = definition.model() == null
+                ? null
+                : definition.model().animation(ModelAnimation.DEATH);
+        long delay = (death == null ? 20L : this.ticksOf(death)) + DEATH_MARGIN_TICKS;
         this.plugin.getServer().getScheduler().runTaskLater(this.plugin, () -> {
             this.trackers.remove(id);
             try {
@@ -603,14 +626,14 @@ public final class BetterModelLink implements ModelLink {
             } catch (Throwable throwable) {
                 // Ya estaba cerrado.
             }
-        }, DEATH_KEEP_TICKS);
+        }, delay);
     }
 
-    private static AnimationModifier modifier(AnimationSpec spec) {
+    private static AnimationModifier modifier(AnimationSpec spec, int priority) {
         AnimationModifier.Builder builder = AnimationModifier.builder()
                 .start(spec.start())
                 .end(spec.end())
-                .priority(spec.effectivePriority())
+                .priority(priority)
                 .type(spec.once()
                         ? AnimationIterator.Type.PLAY_ONCE
                         : AnimationIterator.Type.LOOP);

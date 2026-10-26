@@ -6,22 +6,26 @@ import java.util.Locale;
 public enum ModelAnimation {
 
     /** En reposo: la que mas tiempo se ve. */
-    IDLE("idle"),
+    IDLE("idle", 0, false),
     /** Al caminar. */
-    WALK("walk"),
-    /** Al golpear a alguien. */
-    ATTACK("attack"),
+    WALK("walk", 10, false),
     /** Al recibir dano. */
-    HURT("hurt"),
-    /** Al morir, antes de desaparecer. */
-    DEATH("death"),
+    HURT("hurt", 20, false),
+    /** Al golpear a alguien. */
+    ATTACK("attack", 30, false),
+    /** Al morir. Terminal: no se vuelve al estado despues. */
+    DEATH("death", 100, true),
     /** Al aparecer. */
-    SPAWN("spawn");
+    SPAWN("spawn", 40, false);
 
     private final String key;
+    private final int priority;
+    private final boolean terminal;
 
-    ModelAnimation(String key) {
+    ModelAnimation(String key, int priority, boolean terminal) {
         this.key = key;
+        this.priority = priority;
+        this.terminal = terminal;
     }
 
     /** Clave del yml. */
@@ -30,11 +34,28 @@ public enum ModelAnimation {
     }
 
     /**
-     * {@code true} si la animacion responde a un evento puntual (golpe, dano, muerte) y debe
-     * llevar prioridad alta: si no, la de andar la tapa porque se reinserta en cada ciclo.
+     * Prioridad por defecto frente a otras animaciones; gana la mas alta.
+     *
+     * <p>No todas valen lo mismo: la muerte no debe pisarse nunca, el golpe manda sobre el
+     * dano, y el dano sobre lo que estaba en curso (reposo o marcha).
      */
-    public boolean oneShot() {
-        return this == ATTACK || this == HURT || this == DEATH;
+    public int defaultPriority() {
+        return this.priority;
+    }
+
+    /** {@code true} si es la ultima animacion del mob: despues no se vuelve al estado. */
+    public boolean terminal() {
+        return this.terminal;
+    }
+
+    /**
+     * {@code true} si responde a un golpe o al dano, que son eventos puntuales.
+     *
+     * <p>{@code attack} y {@code hurt} NO son lo mismo: uno es el mob pegando y el otro el mob
+     * siendo golpeado. Solo comparten que duran un momento.
+     */
+    public boolean reactive() {
+        return this == ATTACK || this == HURT;
     }
 
     /** Clave del yml a evento, o {@code null} si no existe. */

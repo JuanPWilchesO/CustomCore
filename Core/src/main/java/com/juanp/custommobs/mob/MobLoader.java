@@ -782,8 +782,8 @@ public final class MobLoader {
                             speed == null ? null : speed.floatValue(),
                             Math.max(0, entry.getInt("start", 0)),
                             Math.max(0, entry.getInt("end", 0)),
-                            entry.getInt("priority",
-                                    event.oneShot() ? AnimationSpec.ONE_SHOT_PRIORITY : 0));
+                            // 0 = la prioridad la pone el evento (muerte > golpe > dano > resto).
+                            Math.max(0, entry.getInt("priority", 0)));
                 } else {
                     animation = normalize(animationsSection.getString(rawKey));
                     spec = animation == null ? null : AnimationSpec.of(animation);
