@@ -72,29 +72,6 @@ public interface ModelLink {
     /** Suelta todos los modelos: al desactivar el plugin. */
     void releaseAll();
 
-    /**
-     * {@code true} si el modelos ya pone el asiento de la montura (hueso con tag {@code seat}).
-     *
-     * <p>Cuando es asi, el mob vanilla se oculta y el jugador se sube al asiento a mano:
-     * BetterModel no deja montar en el hueso de una entidad que ya lleva pasajero.
-     */
-    default boolean seatEnabled(LivingEntity entity, MobDefinition definition) {
-        return false;
-    }
-
-    /** Sube al jugador al asiento del modelo. */
-    default void seat(LivingEntity entity, MobDefinition definition, org.bukkit.entity.Player player) {
-    }
-
-    /**
-     * El jugador se bajo del asiento del modelo.
-     *
-     * <p>Hay que devolver el controlador a {@code NONE}: si se queda en {@code WALK}, la entidad
-     * sigue esperando un jinete que ya no esta.
-     */
-    default void unseat(LivingEntity entity, MobDefinition definition, org.bukkit.entity.Player player) {
-    }
-
     /** Cierra el tracker de todos los mobs vivos: recarga del catalogo o del propio modelo. */
     default void reload() {
     }

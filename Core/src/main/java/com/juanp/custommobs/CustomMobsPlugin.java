@@ -266,8 +266,6 @@ public final class CustomMobsPlugin extends JavaPlugin {
         pluginManager.registerEvents(new VillagePeaceListener(this.mobService), this);
         pluginManager.registerEvents(new DamageImmunityListener(this.mobService), this);
         pluginManager.registerEvents(new SoundListener(this.mobService, this.soundService), this);
-        // Asiento de las monturas cuyo modelo trae un hueso SEAT.
-        pluginManager.registerEvents(new com.juanp.custommobs.model.ModelSeatListener(this.mobService), this);
         // Suelta el modelo de un mob que desaparece sin morir (recogido, retirado, portal).
         pluginManager.registerEvents(new com.juanp.custommobs.model.ModelCleanupListener(this.mobService), this);
         pluginManager.registerEvents(new DaylightListener(this.mobService), this);

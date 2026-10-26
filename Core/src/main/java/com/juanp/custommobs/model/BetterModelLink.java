@@ -38,15 +38,6 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class BetterModelLink implements ModelLink {
 
-    /**
-     * Asiento propio del modelo DESACTIVADO temporalmente.
-     *
-     * <p>BetterModel monta al jugador en una entidad de interaccion y mueve esa, no la montura
-     * vanilla: el caballo se quedaba quieto. Hasta resolverlo, la montura se monta a la manera
-     * de siempre y el modelo se sigue viendo encima.
-     */
-    private static final boolean SEAT_DESACTIVADO = true;
-
     /** Margen que se suma a la duracion de la muerte antes de cerrar el tracker. */
     private static final long DEATH_MARGIN_TICKS = 10L;
 
@@ -147,6 +138,16 @@ public final class BetterModelLink implements ModelLink {
     public void apply(LivingEntity entity, MobDefinition definition, boolean disguised) {
         ModelSpec spec = definition.model();
         if (spec == null || !spec.active()) {
+            return;
+        }
+        if (definition.mountable()) {
+            // Las monturas con modelo quedan para mas adelante: el asiento del modelo no mueve
+            // la montura vanilla (BetterModel mueve su entidad de interaccion) y el resultado no
+            // sirve. Un mob de categoria 'mount' se queda sin modelo, con o sin 'model:' en su yml.
+            this.warnOnce("mount-model:" + definition.id(),
+                    "El mob '" + definition.id() + "' es una montura: los modelos de BetterModel no"
+                            + " se aplican a 'category: mount' por ahora. Se ignora su bloque"
+                            + " 'model:'.");
             return;
         }
         if (disguised) {
@@ -332,103 +333,6 @@ public final class BetterModelLink implements ModelLink {
         /** {@code true} si ya se pueden sacar conclusiones (hay huesos que mirar). */
         boolean ready() {
             return this.boneCount > 0;
-        }
-    }
-
-    @Override
-    public boolean seatEnabled(LivingEntity entity, MobDefinition definition) {
-        ModelSpec spec = definition.model();
-        if (spec == null || !spec.active() || !spec.seat() || !definition.mountable()) {
-            return false;
-        }
-        if (SEAT_DESACTIVADO) {
-            // Montar en el asiento del modelo deja la montura sin movimiento: BetterModel mueve
-            // su entidad de interaccion, no el caballo. Se deja el montaje vanilla, que si anda.
-            return false;
-        }
-        // El asiento es un hueso con tag 'p': si el modelo no lo trae, no hay donde sentarse.
-        return this.readBones(this.trackers.get(entity.getUniqueId())).seat();
-    }
-
-    @Override
-    public void seat(LivingEntity entity, MobDefinition definition, org.bukkit.entity.Player player) {
-        EntityTracker tracker = this.trackers.get(entity.getUniqueId());
-        if (tracker == null || tracker.isClosed()) {
-            return;
-        }
-        try {
-            // tracker.hitbox(predicado) CREA el hitbox del hueso si no existia. Es la diferencia
-            // clave: el predicado por defecto de BetterModel crea hitboxes solo en huesos SIN
-            // tag, asi que un 'p_asiento' nunca aparece en registry.hitBoxes() y buscar ahi no
-            // encontraba nada (la montura se quedaba en el asiento vanilla del caballo).
-            HitBox seat = tracker.hitbox(null, bone -> bone.name().tagged(BoneTags.SEAT));
-            if (seat == null) {
-                this.warnOnce("seat:" + definition.id(),
-                        "La montura '" + definition.id() + "' usa 'model.seat' pero el modelo '"
-                                + definition.model().name() + "' no tiene ningun hueso con el tag"
-                                + " 'seat'. Renombra el hueso del asiento a 'p_algo' (dos palabras,"
-                                + " con el prefijo 'p_').");
-                return;
-            }
-            PlatformEntity passenger = BukkitAdapter.adapt((org.bukkit.entity.Entity) player);
-            // El controlador ya lo pone BetterModel al cargar el modelo (lee el tag 'p_' y usa
-            // 'default-mount-controller' de su config), asi que NO se toca aqui.
-            // Con jinete la montura necesita su IA: sin ella no obedece al jugador.
-            if (entity instanceof org.bukkit.entity.AbstractHorse horse) {
-                horse.setAI(true);
-            }
-            seat.mount(passenger);
-            this.trace("asiento de " + definition.id() + " en el hueso '"
-                    + seat.positionSource().name().rawName() + "'"
-                    + " controlador=" + seat.mountController());
-        } catch (Throwable throwable) {
-            this.warnOnce("seat:" + definition.id() + ":" + throwable.getMessage(),
-                    "No se pudo subir al jugador al asiento de '" + definition.id() + "': "
-                            + throwable.getMessage());
-        }
-    }
-
-    /**
-     * La montura lleva un jinete vanilla (montado en el caballo, no en el modelo).
-     *
-     * <p>Con el cuerpo oculto el jinete se veria sentado en el aire, asi que se deja visible el
-     * caballo mientras alguien lo monte.
-     */
-    public void riderMounted(LivingEntity entity, boolean mounted) {
-        EntityTracker tracker = this.trackers.get(entity.getUniqueId());
-        if (tracker == null || tracker.isClosed()) {
-            return;
-        }
-        try {
-            tracker.hideOption(mounted ? EntityHideOption.FALSE
-                    : EntityHideOption.builder()
-                            .or(EntityHideOption.DEFAULT)
-                            .or(EntityHideOption.FALSE)
-                            .build());
-            this.trace((mounted ? "jinete montado: cuerpo visible" : "jinete bajado: cuerpo oculto")
-                    + " en " + entity.getUniqueId());
-        } catch (Throwable throwable) {
-            // Cosmetico: si falla, se queda como estaba.
-        }
-    }
-
-    @Override
-    public void unseat(LivingEntity entity, MobDefinition definition, org.bukkit.entity.Player player) {
-        EntityTracker tracker = this.trackers.get(entity.getUniqueId());
-        if (tracker == null || tracker.isClosed()) {
-            return;
-        }
-        try {
-            HitBox seat = tracker.hitbox(null, bone -> bone.name().tagged(BoneTags.SEAT));
-            if (seat == null) {
-                return;
-            }
-            // Se desmonta al jugador del asiento. El controlador no se toca: es del modelo.
-            seat.dismount(BukkitAdapter.adapt((org.bukkit.entity.Entity) player));
-            // Sin jinete vuelve a quedarse quieta (la IA se apaga en MountEffectTask).
-            this.trace("desmontado del asiento de " + definition.id());
-        } catch (Throwable throwable) {
-            // Si ya no estaba montado, no hay nada que hacer.
         }
     }
 

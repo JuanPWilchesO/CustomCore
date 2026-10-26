@@ -380,19 +380,23 @@ El hueso del asiento debe llamarse **`p_algo`** (tag `p`). No confundir con la h
 (`b_`/`ob_`): si no hay hueso `seat`, **no se monta en el modelo** y el log lo dice con la
 lista de huesos que encontró.
 
-**El asiento propio del modelo está desactivado por ahora** (`model.seat` se ignora). El
-motivo: BetterModel monta al jugador en una entidad de interacción y mueve esa, no el
-caballo, así que la montura se quedaba quieta. Mientras eso se resuelve, la montura se
-monta a la manera de siempre y el modelo se sigue viendo encima.
+## Modelos y monturas: por ahora, no
 
-**Con jinete se ve el caballo** (el cuerpo deja de ocultarse): si no, el jugador saldría
-sentado en el aire, porque `hide-body` esconde la entidad sobre la que va montado.
+**Un mob `category: mount` NO recibe modelo.** Si su yml trae un bloque `model:`, se
+ignora y el log lo avisa una vez.
+
+El motivo, probado en servidor: BetterModel monta al jugador en una **entidad de
+interacción** propia y mueve esa entidad, no la montura vanilla. Con el asiento del modelo
+el caballo se quedaba quieto y solo se podía girar la vista. Queda pendiente para otra
+versión; el código del asiento está escrito por si se retoma.
+
+Consecuencia práctica: una montura se ve como siempre (el caballo vanilla) y se monta a la
+manera de Minecraft, que funciona.
 
 **Sin jinete la montura no deambula**: se le apaga la IA mientras nadie la lleva, y se le
 vuelve a encender al subirse.
 
-**Los efectos del `mount:`** (`rider`) se aplican igual al jinete del asiento del modelo,
-aunque el caballo no lo tenga como pasajero.
+**Los efectos del `mount:`** (`rider`) se aplican al jinete que lleva la montura.
 
 ## Un mob custom no se modifica a mano
 
