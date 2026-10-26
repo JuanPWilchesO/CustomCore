@@ -266,6 +266,9 @@ public final class CustomMobsPlugin extends JavaPlugin {
         pluginManager.registerEvents(new VillagePeaceListener(this.mobService), this);
         pluginManager.registerEvents(new DamageImmunityListener(this.mobService), this);
         pluginManager.registerEvents(new SoundListener(this.mobService, this.soundService), this);
+        // Calla el sonido vanilla de los tipos que el mob configura con el suyo.
+        pluginManager.registerEvents(
+                new com.juanp.custommobs.audio.VanillaSoundListener(this.mobService), this);
         // Suelta el modelo de un mob que desaparece sin morir (recogido, retirado, portal).
         pluginManager.registerEvents(new com.juanp.custommobs.model.ModelCleanupListener(this.mobService), this);
         pluginManager.registerEvents(new DaylightListener(this.mobService), this);

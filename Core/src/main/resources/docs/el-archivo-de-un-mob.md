@@ -180,6 +180,11 @@ ai: true
 respawn-seconds: 30
 ```
 
+Los sonidos **sustituyen** al de vanilla de ese tipo: un mob con `hurt` configurado no
+usa el grito vanilla al recibir dano. Hay dos excepciones porque Minecraft no deja
+separarlas: `death` **se suma** al de vanilla, y `ambient` convive con el vanilla. Un tipo
+sin configurar suena como siempre.
+
 - `disguise.type`: `player` usa `skin` (nombre de jugador) o `skin-url`.
 - `burn-in-daylight`: por defecto `false` en mobs de servidor y `true` en los de jugador.
 - `ai: false`: el mob se queda quieto en su puesto. Util para figurantes.
@@ -480,6 +485,19 @@ funciona exactamente igual. Los nombres de region son los de WorldGuard (`/rg li
 
 El ritmo y el tope global salen del config (`spawning`). Un mob natural es de **una sola
 vida** y **no deja spawner**.
+
+**Para depurar por que no aparece ninguno**, pon `debug: true` en el `config.yml` del
+plugin. El log dirá entonces, una vez por motivo, que esta fallando:
+
+```
+[spawn] 'perro_demoniaco' no aparece cerca de Juan: fuera de la region (allowed='mishkre' …)
+[spawn] 'perro_demoniaco' no aparece cerca de Juan: luz 12 fuera de [0,8]
+[spawn] 2x 'perro_demoniaco' cerca de Juan en -36500 70 -10500 (world)
+```
+
+Mira también que el jugador este de verdad **dentro** de la region: `allowed-region` se
+compara con el punto donde va a nacer el mob (entre `distance.min` y `distance.max`
+bloques del jugador), no con su posicion.
 
 ## Convivencia y dano
 

@@ -220,6 +220,9 @@ spawning:
 En el mob se pide con su propia seccion `spawn:` (probabilidad, tamano de grupo, hora, luz,
 altura, distancia al jugador y tope propio). Ver `el-archivo-de-un-mob.md`.
 
+Si un mob natural no aparece, `debug: true` hace que el log diga el motivo (region, luz,
+hora, altura, suelo…) y avise cuando aparece uno.
+
 ## Brillo de facciones (`faction-glow`)
 
 Pinta el brillo de cada jugador segun su faccion, **para cada quien**: enemigos en rojo,
