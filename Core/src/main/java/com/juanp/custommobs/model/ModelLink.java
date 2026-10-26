@@ -57,6 +57,15 @@ public interface ModelLink {
         return false;
     }
 
+    /**
+     * {@code true} si el mob golpeo o recibio dano hace menos de {@code ticks}.
+     *
+     * <p>La tarea de estado lo consulta para no pisar un {@code attack} pedido en el mismo tick.
+     */
+    default boolean reactedRecently(LivingEntity entity, long ticks) {
+        return false;
+    }
+
     /** Suelta el modelo de una entidad que murio o desaparecio. */
     void release(LivingEntity entity);
 

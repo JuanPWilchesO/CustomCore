@@ -345,6 +345,14 @@ el mob siga en ese estado: sin eso el modelo se queda congelado al andar.
 golpeado. Por eso tienen prioridades distintas: si pegan al mob mientras golpea, el golpe
 manda. Para invertirlo, pon `priority` a mano.
 
+**Con `debug: true` en el config** se traza cada cambio de animacion en el log:
+`[modelo] reactiva attack (attack) en <uuid>`, `[modelo] estado WALK en <uuid>`,
+`[modelo] golpe encadenado: se deja terminar attack`. Sirve para ver el orden real entre
+un golpe y la tarea de estado.
+
+**Un golpe encadenado no reinicia la animacion** si aun no ha pasado la mitad: un mob que
+pega cada segundo con una animacion de un segundo se veria temblando y nunca completa.
+
 **La duracion se lee del `.bbmodel`.** Al terminar la animacion de un golpe o del dano, el
 mob vuelve a su estado; con `death` el tracker se cierra. Nada de tiempos fijos: si tu
 animacion dura 1 s, ese es el tiempo que se respeta.

@@ -35,6 +35,13 @@ public final class ModelStateTask extends BukkitRunnable {
     /** Muestras que abarca la ventana: 4 x 5 ticks = 20 ticks (un segundo). */
     private static final int WINDOW = 4;
 
+    /**
+     * Ticks durante los que esta tarea no toca un mob que acaba de golpear o recibir dano.
+     *
+     * <p>Mas que un ciclo de la tarea (5 t): el evento puede llegar justo despues de una muestra.
+     */
+    private static final long REACTIVE_GRACE_TICKS = 3L;
+
     private final MobService service;
     /** Ultimas posiciones por mob, de la mas nueva a la mas vieja. */
     private final Map<UUID, Vector[]> history = new ConcurrentHashMap<>();
@@ -68,9 +75,12 @@ public final class ModelStateTask extends BukkitRunnable {
 
             // Una animacion puntual (golpe, dano, muerte) manda: se reinicia la ventana para no
             // contar como marcha el rato que no se le ha mirado.
-            if (link.isBusy(entity)) {
+            if (link.isBusy(entity) || link.reactedRecently(entity, REACTIVE_GRACE_TICKS)) {
                 // Golpe, dano o muerte en curso: el estado se pausa. Se olvida lo que habia
                 // puesto para reevaluarlo al terminar (si sigue andando, vuelve walk).
+                //
+                // 'reactedRecently' cubre el mismo tick: el mob se para a atacar, esta tarea pide
+                // idle y el golpe llega acto seguido. Sin la gracia, idle le ganaba la partida.
                 this.history.remove(id);
                 this.shown.remove(id);
                 continue;

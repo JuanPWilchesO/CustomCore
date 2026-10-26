@@ -73,6 +73,21 @@ public final class BetterModelLink implements ModelLink {
      * marcha encima y cortaria el golpe.
      */
     private final Set<java.util.UUID> busy = ConcurrentHashMap.newKeySet();
+    /**
+     * Tick de servidor del ultimo evento reactivo de cada mob.
+     *
+     * <p>La tarea de estado corre cada 5 ticks y el golpe llega por evento: sin esto, en el
+     * mismo tick en que el mob se para a atacar, la tarea pide {@code idle} y le gana la partida
+     * al {@code attack} que llega justo despues.
+     */
+    private final Map<java.util.UUID, Long> lastReactive = new ConcurrentHashMap<>();
+    /**
+     * Animacion reactiva en curso por mob, con el tick en que empezo.
+     *
+     * <p>Sirve para NO reiniciar el golpe en cada golpe seguido: antes, un mob que pega cada
+     * ~20 ticks con una animacion de 20 ticks la reiniciaba sin parar y no se veia nunca.
+     */
+    private final Map<java.util.UUID, Running> running = new ConcurrentHashMap<>();
     /** Tarea de repeticion de cada estado, para cancelarla antes de programar otra. */
     private final Map<java.util.UUID, org.bukkit.scheduler.BukkitTask> stateLoops =
             new ConcurrentHashMap<>();
@@ -395,9 +410,45 @@ public final class BetterModelLink implements ModelLink {
         }
     }
 
+    /**
+     * Traza de animaciones, solo con {@code debug: true} en el config.
+     *
+     * <p>Existe porque el orden entre el evento de golpe y la tarea de estado no se puede
+     * deducir mirando el modelo: hay que ver quien pide que y cuando.
+     */
+    private void trace(String message) {
+        if (this.plugin instanceof com.juanp.custommobs.CustomMobsPlugin owner
+                && owner.config() != null && owner.config().debug()) {
+            this.plugin.getLogger().info("[modelo] " + message);
+        }
+    }
+
     /** {@code true} si el mob esta en una animacion puntual y no debe tocarse. */
     public boolean isBusy(LivingEntity entity) {
         return this.busy.contains(entity.getUniqueId());
+    }
+
+    /**
+     * {@code true} si el mob acaba de recibir un evento reactivo (golpe o dano).
+     *
+     * <p>La tarea de estado lo consulta para no pisar el {@code attack} con un {@code idle}
+     * pedido en el mismo tick.
+     */
+    public boolean reactedRecently(LivingEntity entity, long ticks) {
+        Long at = this.lastReactive.get(entity.getUniqueId());
+        if (at == null) {
+            return false;
+        }
+        return this.currentTick() - at <= ticks;
+    }
+
+    /** Tick de servidor actual (Paper lo expone en el Server; es lo que se usa). */
+    private long currentTick() {
+        return this.plugin.getServer().getCurrentTick();
+    }
+
+    /** Animacion reactiva en curso de un mob, para no reiniciarla a cada golpe. */
+    private record Running(ModelAnimation event, String name, long startedAt) {
     }
 
     @Override
@@ -524,6 +575,7 @@ public final class BetterModelLink implements ModelLink {
         if (this.states.get(id) == state) {
             return;
         }
+        this.trace("estado " + state + " en " + id + " (busy=" + this.busy.contains(id) + ")");
         this.states.put(id, state);
         ModelState other = state == ModelState.WALK ? ModelState.IDLE : ModelState.WALK;
         this.stopState(tracker, definition, other);
@@ -601,25 +653,59 @@ public final class BetterModelLink implements ModelLink {
     private void playReactive(LivingEntity entity, MobDefinition definition, EntityTracker tracker,
                               AnimationSpec spec, ModelAnimation event) {
         java.util.UUID id = entity.getUniqueId();
+        long now = this.currentTick();
+        this.lastReactive.put(id, now);
+
+        // Golpe encadenado sobre la MISMA animacion: si aun no ha llegado a la mitad, se deja
+        // terminar. Reiniciarla en cada golpe hacia que no se viera nunca.
+        Running current = this.running.get(id);
+        if (event.reactive() && current != null && current.event() == event
+                && current.name().equalsIgnoreCase(spec.name())
+                && now - current.startedAt() < this.ticksOf(spec) / 2) {
+            this.states.remove(id);
+            this.busy.add(id);
+            // Se empalma con el mismo temporizador de fin: si no, el del golpe anterior cierra
+            // 'busy' antes de tiempo y el golpe actual se queda sin retorno.
+            this.rescheduleReactiveEnd(entity, definition, tracker, spec, event);
+            this.trace("golpe encadenado: se deja terminar " + spec.name() + " en " + id);
+            return;
+        }
+
+        this.trace("reactiva " + event.key() + " (" + spec.name() + ") en " + id);
         this.cancelStateLoop(id);
+        if (event.reactive()) {
+            this.running.put(id, new Running(event, spec.name(), now));
+        }
         // Mientras dure, la tarea de estado no toca a este mob: si lo hiciera, pondria reposo o
         // marcha encima y cortaria el golpe.
         this.busy.add(id);
         this.stopState(tracker, definition, ModelState.WALK);
         this.stopState(tracker, definition, ModelState.IDLE);
         this.play(tracker, spec, event);
-        long delay = this.ticksOf(spec);
         if (event.terminal()) {
+            long delay = this.ticksOf(spec);
             // El mob esta muerto: no vuelve a ningun estado. Al acabar la animacion se cierra el
             // tracker, que es lo que hace desaparecer el modelo.
             this.stateLoops.put(id, this.plugin.getServer().getScheduler().runTaskLater(
                     this.plugin, () -> this.closeTracker(id, tracker), delay + DEATH_MARGIN_TICKS));
             return;
         }
+        this.rescheduleReactiveEnd(entity, definition, tracker, spec, event);
+    }
+
+    /** Programa el final de la animacion reactiva, cancelando el temporizador anterior. */
+    private void rescheduleReactiveEnd(LivingEntity entity, MobDefinition definition,
+                                       EntityTracker tracker, AnimationSpec spec,
+                                       ModelAnimation event) {
+        java.util.UUID id = entity.getUniqueId();
+        long delay = this.ticksOf(spec);
+        this.cancelStateLoop(id);
         this.stateLoops.put(id, this.plugin.getServer().getScheduler().runTaskLater(
                 this.plugin, () -> {
                     this.busy.remove(id);
+                    this.running.remove(id);
                     ModelState state = this.states.get(id);
+                    this.trace("fin de " + event.key() + ", se reanuda " + state + " en " + id);
                     if (state == null || tracker.isClosed()) {
                         return;
                     }
@@ -662,6 +748,8 @@ public final class BetterModelLink implements ModelLink {
     /** Cierra el tracker de un mob muerto: sin el, el modelo se queda flotando. */
     private void closeTracker(java.util.UUID id, EntityTracker tracker) {
         this.busy.remove(id);
+        this.running.remove(id);
+        this.lastReactive.remove(id);
         this.cancelStateLoop(id);
         this.states.remove(id);
         this.trackers.remove(id);
@@ -708,6 +796,8 @@ public final class BetterModelLink implements ModelLink {
         java.util.UUID id = entity.getUniqueId();
         this.states.remove(id);
         this.busy.remove(id);
+        this.running.remove(id);
+        this.lastReactive.remove(id);
         this.cancelStateLoop(id);
         this.restoreName(entity);
         EntityTracker tracker = this.trackers.remove(id);
@@ -736,6 +826,8 @@ public final class BetterModelLink implements ModelLink {
         this.trackers.clear();
         this.states.clear();
         this.busy.clear();
+        this.running.clear();
+        this.lastReactive.clear();
         this.hiddenNames.clear();
     }
 
