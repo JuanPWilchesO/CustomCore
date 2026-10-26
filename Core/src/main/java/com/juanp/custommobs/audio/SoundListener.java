@@ -25,6 +25,7 @@ public final class SoundListener implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onDamage(EntityDamageByEntityEvent event) {
+        this.trace(event);
         if (event.getEntity() instanceof LivingEntity victim) {
             this.service.find(victim.getUniqueId()).ifPresent(customMob -> {
                 this.sounds.playHurt(customMob);
@@ -47,6 +48,29 @@ public final class SoundListener implements Listener {
     @EventHandler
     public void onDeath(EntityDeathEvent event) {
         this.service.find(event.getEntity().getUniqueId()).ifPresent(this.sounds::playDeath);
+    }
+
+    /**
+     * Traza del golpe con {@code debug: true}.
+     *
+     * <p>Distingue las tres cosas que pueden pasar: que el mob no golpee, que otro plugin cancele
+     * el evento (con {@code ignoreCancelled} no se llega a animar) o que el atacante no sea el mob.
+     */
+    private void trace(EntityDamageByEntityEvent event) {
+        if (!this.service.config().debug()) {
+            return;
+        }
+        LivingEntity attacker = this.attackerOf(event);
+        boolean mobIsAttacker = attacker != null
+                && this.service.find(attacker.getUniqueId()).isPresent();
+        if (!mobIsAttacker && this.service.find(event.getEntity().getUniqueId()).isEmpty()) {
+            return;
+        }
+        this.service.plugin().getLogger().info("[modelo] golpe: atacante="
+                + (attacker == null ? "ninguno" : attacker.getType() + (mobIsAttacker ? " (mob)" : ""))
+                + " victima=" + event.getEntity().getType()
+                + " cancelado=" + event.isCancelled()
+                + " causa=" + event.getCause());
     }
 
     private LivingEntity attackerOf(EntityDamageByEntityEvent event) {
