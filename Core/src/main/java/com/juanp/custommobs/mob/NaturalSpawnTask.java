@@ -149,6 +149,10 @@ public final class NaturalSpawnTask extends BukkitRunnable {
         if (!air.isPassable()) {
             return "el hueco es " + air.getType() + " (no pasable)";
         }
+        if (!world.getBlockAt(x, y + 1, z).isPassable()) {
+            return "el segundo bloque es " + world.getBlockAt(x, y + 1, z).getType()
+                    + " (el mob no cabe)";
+        }
         if (!this.timeMatches(world, spawn.time())) {
             return "hora " + world.getTime() + " no cuadra con '" + spawn.time() + "'";
         }
@@ -244,6 +248,12 @@ public final class NaturalSpawnTask extends BukkitRunnable {
             Block ground = world.getBlockAt(x, y - 1, z);
             Block air = world.getBlockAt(x, y, z);
             if (!ground.getType().isSolid() || !air.isPassable()) {
+                continue;
+            }
+            // El mob es mas alto que un bloque: con el suelo libre pero el de arriba tapado
+            // (bajo un arbol, junto a una pared) nace dentro del bloque y asfixia o se queda
+            // empotrado. Se exige hueco para dos bloques.
+            if (!world.getBlockAt(x, y + 1, z).isPassable()) {
                 continue;
             }
             if (!this.timeMatches(world, spawn.time())) {

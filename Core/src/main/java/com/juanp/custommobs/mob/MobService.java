@@ -951,6 +951,9 @@ public final class MobService implements Listener {
 
     public void prune() {
         // Un natural que ya no existe deja de ocupar tope.
+        if (this.config.debug()) {
+            this.traceNaturalDeaths();
+        }
         this.natural.removeIf(id -> !this.active.containsKey(id));
         this.active.values().removeIf(customMob -> {
             LivingEntity entity = customMob.entity();
@@ -970,6 +973,37 @@ public final class MobService implements Listener {
         }
         if (this.styles != null && this.styles.registry().isDirty()) {
             this.styles.registry().save();
+        }
+    }
+
+    /**
+     * Con {@code debug: true}, dice por que desaparece un mob natural.
+     *
+     * <p>Sin esto, un natural que muere o que el servidor retira solo deja de contar, y desde
+     * fuera parece que nunca aparecio. Aqui se distingue: entidad recogida por el servidor,
+     * muerta (y si esta el cadáver esperando la animacion de muerte) o fuera del registro.
+     */
+    private void traceNaturalDeaths() {
+        for (UUID id : new java.util.ArrayList<>(this.natural)) {
+            CustomMob customMob = this.active.get(id);
+            if (customMob == null) {
+                this.plugin.getLogger().info("[spawn] natural " + id + " fuera del registro");
+                continue;
+            }
+            LivingEntity entity = customMob.entity();
+            if (!entity.isValid()) {
+                this.plugin.getLogger().info("[spawn] natural '" + customMob.definition().id()
+                        + "' recogido por el servidor en " + entity.getLocation().getBlockX()
+                        + " " + entity.getLocation().getBlockY() + " "
+                        + entity.getLocation().getBlockZ());
+            } else if (entity.isDead() && !this.modelLink.isBusy(entity)) {
+                // La muerte del natural ya deja su rastro en el log de Bukkit (died/matado);
+                // aqui se deja la posicion, que es lo que falta para ir a mirar.
+                this.plugin.getLogger().info("[spawn] natural '" + customMob.definition().id()
+                        + "' murio en " + entity.getLocation().getBlockX() + " "
+                        + entity.getLocation().getBlockY() + " "
+                        + entity.getLocation().getBlockZ());
+            }
         }
     }
 

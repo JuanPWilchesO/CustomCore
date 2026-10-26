@@ -67,7 +67,8 @@ sounds:
 - `ambient` se repite cada `interval-seconds`.
 - Los ids de sonido son los de Minecraft (`entity.zombie.hurt`, `block.anvil.land`…).
 - **El vanilla de ese tipo deja de sonar**: si configuras `hurt`, el mob ya no usa el
-  grito vanilla al recibir dano; suena el tuyo. Lo mismo con `attack`.
+  grito vanilla al recibir dano; suena el tuyo. Lo mismo con `attack`. Su dano y su vida
+  no cambian.
 - Dos excepciones, porque Minecraft no da forma de ya separarlo: `death` **suma** su sonido
   al de vanilla (no lo sustituye) y `ambient` convive con el vanilla. Los tipos que no
   configures siguen con su sonido de siempre.
