@@ -6,6 +6,7 @@ import kr.toxicity.model.api.animation.AnimationIterator;
 import kr.toxicity.model.api.animation.AnimationModifier;
 import kr.toxicity.model.api.bone.BoneTags;
 import kr.toxicity.model.api.bone.RenderedBone;
+import kr.toxicity.model.api.bukkit.BetterModelBukkit;
 import kr.toxicity.model.api.bukkit.platform.BukkitAdapter;
 import kr.toxicity.model.api.data.renderer.ModelRenderer;
 import kr.toxicity.model.api.nms.HitBox;
@@ -48,6 +49,12 @@ public final class BetterModelLink implements ModelLink {
      */
     private static final long ONE_SHOT_BACK_TICKS = 15L;
 
+    /** Ticks antes de reintentar completar un modelo cuyos huesos aun no estaban cargados. */
+    private static final long COMPLETE_RETRY_TICKS = 20L;
+
+    /** Intentos de "completar" antes de rendirse y dejar el aviso. */
+    private static final int COMPLETE_ATTEMPTS = 10;
+
     private final Plugin plugin;
     private final Map<java.util.UUID, EntityTracker> trackers = new ConcurrentHashMap<>();
     /**
@@ -69,8 +76,39 @@ public final class BetterModelLink implements ModelLink {
     public BetterModelLink(Plugin plugin, boolean requireHitBox) {
         this.plugin = plugin;
         this.requireHitBox = requireHitBox;
-        Set<String> keys = this.modelKeys();
-        this.plugin.getLogger().info("BetterModel enlazado: " + keys.size() + " modelo(s) cargado(s).");
+        this.hookReloadEnd();
+        int keys = this.modelKeys().size();
+        if (keys == 0) {
+            // CustomCore arranca ANTES que BetterModel: en este punto sus modelos aun no estan
+            // cargados. No es un error; se avisa para que no parezca que no hay modelos.
+            this.plugin.getLogger().info("BetterModel enlazado; sus modelos aun se estan"
+                    + " cargando. Los mobs que aparezcan mientras tanto se completan solos.");
+        } else {
+            this.plugin.getLogger().info("BetterModel enlazado: " + keys + " modelo(s) cargado(s).");
+        }
+    }
+
+    /**
+     * Se engancha al final de la carga/recarga de BetterModel.
+     *
+     * <p>Hace falta porque CustomCore habilita ANTES que BetterModel (orden alfabetico de
+     * plugins): cuando aparece el primer mob, {@code tracker.bones()} viene vacio y no se puede
+     * saber si el modelo trae hitbox ni placa. Al terminar la carga se revisan los mobs vivos.
+     */
+    private void hookReloadEnd() {
+        try {
+            BetterModelBukkit.platform().addReloadEndHandler(result -> {
+                int count = this.modelKeys().size();
+                this.plugin.getLogger().info("BetterModel termino de cargar: " + count
+                        + " modelo(s). Se revisan los mobs con modelo.");
+                this.completePending();
+            });
+        } catch (Throwable throwable) {
+            // Sin el enganche queda el reintento periodico de la tarea de estado.
+            this.plugin.getLogger().warning("No se pudo enganchar al final de la carga de"
+                    + " BetterModel (" + throwable.getClass().getSimpleName()
+                    + "); los modelos se completan por reintento.");
+        }
     }
 
     @Override
@@ -125,6 +163,23 @@ public final class BetterModelLink implements ModelLink {
         this.trackers.put(entity.getUniqueId(), tracker);
 
         BoneInfo bones = this.readBones(tracker);
+        if (!bones.ready()) {
+            // Huesos vacios = BetterModel aun cargando. No se decide nada: si se decidiera
+            // ahora, la placa y la hitbox quedarian mal para siempre. Se reintenta desde la
+            // tarea de estado y al terminar la carga.
+            this.plugin.getServer().getScheduler().runTaskLater(this.plugin,
+                    () -> this.completeLater(entity, definition, spec), COMPLETE_RETRY_TICKS);
+            return;
+        }
+    }
+
+    /**
+     * Aplica lo que decide el modelo cuando sus huesos ya se conocen: ocultar el cuerpo y
+     * quien pinta el nombre. Es la ultima parte de {@link #attach}, separada para poder
+     * reintentarla cuando BetterModel termina de cargar.
+     */
+    private void finish(LivingEntity entity, MobDefinition definition, ModelSpec spec,
+                        EntityTracker tracker, BoneInfo bones) {
         // Una montura con asiento tambien sirve de caja de colision.
         boolean hasBox = bones.hitBox() || (spec.seat() && bones.seat());
         boolean hitBox = !this.requireHitBox || hasBox;
@@ -149,10 +204,15 @@ public final class BetterModelLink implements ModelLink {
         }
 
         this.applyName(entity, definition, spec, bones);
-        // El reposo se pone SIEMPRE aqui, sin pasar por la guarda de transicion: es el estado
-        // inicial del mob y sin el no hay nada de lo que salir al empezar a andar.
-        this.playState(entity, definition, tracker, ModelState.IDLE);
-        this.animate(entity, definition, ModelAnimation.SPAWN);
+        // El reposo se pone solo la PRIMERA vez: si se repitiera en cada refresh, cortaria la
+        // animacion que el mob tuviera (un golpe, por ejemplo).
+        if (this.states.putIfAbsent(entity.getUniqueId(), ModelState.IDLE) == null) {
+            AnimationSpec idle = spec.animation(ModelAnimation.IDLE);
+            if (idle != null && !idle.name().isBlank()) {
+                this.play(tracker, idle);
+            }
+            this.animate(entity, definition, ModelAnimation.SPAWN);
+        }
     }
 
     /**
@@ -212,11 +272,13 @@ public final class BetterModelLink implements ModelLink {
         boolean hitBox = false;
         boolean seat = false;
         boolean nametag = false;
+        int count = 0;
         if (tracker == null || tracker.isClosed()) {
-            return new BoneInfo(hitBox, seat, nametag);
+            return new BoneInfo(hitBox, seat, nametag, 0);
         }
         try {
             for (RenderedBone bone : tracker.bones()) {
+                count++;
                 hitBox |= bone.name().tagged(BoneTags.HITBOX);
                 seat |= bone.name().tagged(BoneTags.SEAT);
                 // OJO: 'tag' NO es lo mismo que 'mtag'. BetterModel crea su placa en el hueso
@@ -227,7 +289,7 @@ public final class BetterModelLink implements ModelLink {
         } catch (Throwable throwable) {
             // Sin poder leer los huesos se asume lo conservador: no ocultar el cuerpo.
         }
-        return new BoneInfo(hitBox, seat, nametag);
+        return new BoneInfo(hitBox, seat, nametag, count);
     }
 
     /** Estado de animacion de un mob: el que alterna reposo y andar. */
@@ -236,8 +298,17 @@ public final class BetterModelLink implements ModelLink {
         WALK
     }
 
-    /** Lo que aporta el modelo a la entidad, leido de sus huesos. */
-    private record BoneInfo(boolean hitBox, boolean seat, boolean nametag) {
+    /**
+     * Lo que aporta el modelo a la entidad, leido de sus huesos.
+     *
+     * @param boneCount cuantos huesos se leyeron; {@code 0} = el modelo aun no esta cargado
+     */
+    private record BoneInfo(boolean hitBox, boolean seat, boolean nametag, int boneCount) {
+
+        /** {@code true} si ya se pueden sacar conclusiones (hay huesos que mirar). */
+        boolean ready() {
+            return this.boneCount > 0;
+        }
     }
 
     @Override
@@ -301,6 +372,16 @@ public final class BetterModelLink implements ModelLink {
             return;
         }
         try {
+            // Si el modelo estaba a medias (BetterModel aun cargando al invocar el mob), se
+            // termina ahora, que ya hay huesos que mirar.
+            BoneInfo bones = this.readBones(tracker);
+            if (!bones.ready()) {
+                this.completeLater(entity, definition, spec);
+                return;
+            }
+            // Se vuelven a aplicar cuerpo y placa: tras una recarga del catalogo la definicion
+            // puede haber cambiado, y el reenvio de mundo reafirma lo mismo.
+            this.finish(entity, definition, spec, tracker, bones);
             tracker.forceUpdate(true);
         } catch (Throwable throwable) {
             // Un tracker cerrado por el propio BetterModel no es un error del plugin.
@@ -344,6 +425,73 @@ public final class BetterModelLink implements ModelLink {
             this.warnOnce("anim:" + definition.id() + ":" + event.key(),
                     "No se pudo reproducir la animacion '" + spec.name() + "' (" + event.key()
                             + ") en '" + definition.id() + "'.");
+        }
+    }
+
+    /**
+     * Reintenta aplicar el modelo cuando sus huesos ya estan cargados.
+     *
+     * <p>Se llama al aparecer un mob mientras BetterModel aun carga. Si al reintentar sigue sin
+     * huesos, se vuelve a programar; al agotar los intentos se avisa y se deja el mob sin
+     * tocar, que es lo mas seguro.
+     */
+    private void completeLater(LivingEntity entity, MobDefinition definition, ModelSpec spec) {
+        this.completeLater(entity, definition, spec, 0);
+    }
+
+    private void completeLater(LivingEntity entity, MobDefinition definition, ModelSpec spec,
+                               int attempt) {
+        if (!entity.isValid()) {
+            return;
+        }
+        EntityTracker tracker = this.trackers.get(entity.getUniqueId());
+        if (tracker == null || tracker.isClosed()) {
+            return;
+        }
+        BoneInfo bones = this.readBones(tracker);
+        if (bones.ready()) {
+            this.finish(entity, definition, spec, tracker, bones);
+            return;
+        }
+        if (attempt >= COMPLETE_ATTEMPTS) {
+            this.warnOnce("pending:" + definition.id(),
+                    "El modelo '" + spec.name() + "' de '" + definition.id() + "' sigue sin"
+                            + " huesos: BetterModel no lo ha cargado. El mob se queda sin modelo.");
+            return;
+        }
+        this.plugin.getServer().getScheduler().runTaskLater(this.plugin,
+                () -> this.completeLater(entity, definition, spec, attempt + 1),
+                COMPLETE_RETRY_TICKS);
+    }
+
+    /**
+     * Termina los modelos que se aplicaron a medias por estar BetterModel cargando.
+     *
+     * <p>No se reaplica todo: solo se completan los que quedaron pendientes. Reaplicar los
+     * demas recrearia trackers sanos sin necesidad.
+     */
+    private void completePending() {
+        if (!(this.plugin instanceof com.juanp.custommobs.CustomMobsPlugin owner)
+                || owner.mobs() == null) {
+            return;
+        }
+        for (var customMob : owner.mobs().active()) {
+            if (!(customMob.entity() instanceof LivingEntity living) || !living.isValid()) {
+                continue;
+            }
+            EntityTracker tracker = this.trackers.get(living.getUniqueId());
+            if (tracker == null || tracker.isClosed()) {
+                continue;
+            }
+            if (this.readBones(tracker).ready() && this.states.containsKey(living.getUniqueId())) {
+                // Ya estaba completo: nada que hacer.
+                continue;
+            }
+            ModelSpec spec = customMob.definition().model();
+            if (spec == null || !spec.active()) {
+                continue;
+            }
+            this.completeLater(living, customMob.definition(), spec);
         }
     }
 
@@ -533,6 +681,8 @@ public final class BetterModelLink implements ModelLink {
 
     @Override
     public void reload() {
+        // releaseAll limpia tambien los estados, asi que la reaplicacion vuelve a poner el
+        // reposo y reevalua hitbox y placa con el yml nuevo.
         this.releaseAll();
         this.warnedModels.clear();
         int count = this.modelKeys().size();

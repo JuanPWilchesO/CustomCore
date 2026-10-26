@@ -288,6 +288,16 @@ placa al modelo, y dejar `show-name` sin tocar.
 
 `/customcore model validate` avisa del caso `tag` + `hide-body: true`.
 
+**CustomCore arranca antes que BetterModel** (los plugins se habilitan por orden alfabetico,
+y `BetterModel` va despues de `CustomCore`). Durante los primeros segundos los modelos de
+BetterModel **aun no estan cargados**. CustomCore lo detecta: los mobs que aparezcan en ese
+hueco se completan solos en cuanto BetterModel termina. En el log se ve:
+
+```
+[CustomCore] BetterModel enlazado; sus modelos aun se estan cargando. ...
+[CustomCore] BetterModel termino de cargar: 14 modelo(s). Se revisan los mobs con modelo.
+```
+
 ### Animaciones por evento
 
 | Clave | Cuando se reproduce |
