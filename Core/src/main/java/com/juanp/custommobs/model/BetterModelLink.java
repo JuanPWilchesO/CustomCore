@@ -38,6 +38,15 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class BetterModelLink implements ModelLink {
 
+    /**
+     * Asiento propio del modelo DESACTIVADO temporalmente.
+     *
+     * <p>BetterModel monta al jugador en una entidad de interaccion y mueve esa, no la montura
+     * vanilla: el caballo se quedaba quieto. Hasta resolverlo, la montura se monta a la manera
+     * de siempre y el modelo se sigue viendo encima.
+     */
+    private static final boolean SEAT_DESACTIVADO = true;
+
     /** Margen que se suma a la duracion de la muerte antes de cerrar el tracker. */
     private static final long DEATH_MARGIN_TICKS = 10L;
 
@@ -332,6 +341,11 @@ public final class BetterModelLink implements ModelLink {
         if (spec == null || !spec.active() || !spec.seat() || !definition.mountable()) {
             return false;
         }
+        if (SEAT_DESACTIVADO) {
+            // Montar en el asiento del modelo deja la montura sin movimiento: BetterModel mueve
+            // su entidad de interaccion, no el caballo. Se deja el montaje vanilla, que si anda.
+            return false;
+        }
         // El asiento es un hueso con tag 'p': si el modelo no lo trae, no hay donde sentarse.
         return this.readBones(this.trackers.get(entity.getUniqueId())).seat();
     }
@@ -371,6 +385,30 @@ public final class BetterModelLink implements ModelLink {
             this.warnOnce("seat:" + definition.id() + ":" + throwable.getMessage(),
                     "No se pudo subir al jugador al asiento de '" + definition.id() + "': "
                             + throwable.getMessage());
+        }
+    }
+
+    /**
+     * La montura lleva un jinete vanilla (montado en el caballo, no en el modelo).
+     *
+     * <p>Con el cuerpo oculto el jinete se veria sentado en el aire, asi que se deja visible el
+     * caballo mientras alguien lo monte.
+     */
+    public void riderMounted(LivingEntity entity, boolean mounted) {
+        EntityTracker tracker = this.trackers.get(entity.getUniqueId());
+        if (tracker == null || tracker.isClosed()) {
+            return;
+        }
+        try {
+            tracker.hideOption(mounted ? EntityHideOption.FALSE
+                    : EntityHideOption.builder()
+                            .or(EntityHideOption.DEFAULT)
+                            .or(EntityHideOption.FALSE)
+                            .build());
+            this.trace((mounted ? "jinete montado: cuerpo visible" : "jinete bajado: cuerpo oculto")
+                    + " en " + entity.getUniqueId());
+        } catch (Throwable throwable) {
+            // Cosmetico: si falla, se queda como estaba.
         }
     }
 

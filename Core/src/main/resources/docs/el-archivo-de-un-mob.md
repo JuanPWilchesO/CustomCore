@@ -380,9 +380,13 @@ El hueso del asiento debe llamarse **`p_algo`** (tag `p`). No confundir con la h
 (`b_`/`ob_`): si no hay hueso `seat`, **no se monta en el modelo** y el log lo dice con la
 lista de huesos que encontró.
 
-**La montura se mueve con el jinete** gracias al controlador (`MountControllers.WALK`)
-que se activa al montarse. Sin él, el jugador está sentado en el asiento del modelo y el
-caballo no recibe el movimiento: se queda quieto y solo se gira la vista.
+**El asiento propio del modelo está desactivado por ahora** (`model.seat` se ignora). El
+motivo: BetterModel monta al jugador en una entidad de interacción y mueve esa, no el
+caballo, así que la montura se quedaba quieta. Mientras eso se resuelve, la montura se
+monta a la manera de siempre y el modelo se sigue viendo encima.
+
+**Con jinete se ve el caballo** (el cuerpo deja de ocultarse): si no, el jugador saldría
+sentado en el aire, porque `hide-body` esconde la entidad sobre la que va montado.
 
 **Sin jinete la montura no deambula**: se le apaga la IA mientras nadie la lleva, y se le
 vuelve a encender al subirse.

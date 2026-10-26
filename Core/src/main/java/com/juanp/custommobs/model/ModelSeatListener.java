@@ -27,6 +27,44 @@ public final class ModelSeatListener implements Listener {
         this.service = service;
     }
 
+    /**
+     * El jugador monta la montura vanilla.
+     *
+     * <p>La montura se monta a la manera de siempre (el asiento del modelo se aparto porque
+     * dejaba el caballo sin movimiento), asi que aqui solo hay que evitar que el jinete salga
+     * sentado en el aire: con jinete, el caballo deja de ocultarse.
+     */
+    @EventHandler
+    public void onMount(org.bukkit.event.vehicle.VehicleEnterEvent event) {
+        if (!(event.getEntered() instanceof Player player)
+                || !(event.getVehicle() instanceof LivingEntity mount)) {
+            return;
+        }
+        CustomMob customMob = this.service.find(mount.getUniqueId()).orElse(null);
+        if (customMob == null || !customMob.definition().mountable()) {
+            return;
+        }
+        if (this.service.modelLink() instanceof BetterModelLink better) {
+            better.riderMounted(mount, true);
+        }
+    }
+
+    /** Al bajar, el caballo vuelve a ocultarse (solo se ve el modelo). */
+    @EventHandler
+    public void onLeave(org.bukkit.event.vehicle.VehicleExitEvent event) {
+        if (!(event.getExited() instanceof Player)
+                || !(event.getVehicle() instanceof LivingEntity mount)) {
+            return;
+        }
+        CustomMob customMob = this.service.find(mount.getUniqueId()).orElse(null);
+        if (customMob == null || !customMob.definition().mountable()) {
+            return;
+        }
+        if (this.service.modelLink() instanceof BetterModelLink better) {
+            better.riderMounted(mount, false);
+        }
+    }
+
     @EventHandler
     public void onInteract(PlayerInteractEntityEvent event) {
         if (event.getHand() != EquipmentSlot.HAND) {
