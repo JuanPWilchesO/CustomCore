@@ -66,9 +66,10 @@ sounds:
 
 - `ambient` se repite cada `interval-seconds`.
 - Los ids de sonido son los de Minecraft (`entity.zombie.hurt`, `block.anvil.land`…).
-- El sonido del yml **se suma** al de vanilla de ese tipo: el mob suena con los dos. Callar
-  el de vanilla aun no esta resuelto, asi que si quieres que solo se oiga el tuyo, elige un
-  sonido muy distinto al de su tipo.
+- Si configuras **al menos uno**, el mob deja de sonar por su cuenta: se oye **solo** lo del
+  yml. El costo es que pierde su sonido de pasos y el de su muerte vanilla.
+- Se oyen a **32 bloques**; mas lejos, no.
+- Un mob sin `sounds:` suena como cualquier bicho vanilla.
 
 ## 3. Color y brillo de tus mobs
 

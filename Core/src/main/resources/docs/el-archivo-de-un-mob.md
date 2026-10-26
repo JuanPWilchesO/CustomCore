@@ -180,9 +180,15 @@ ai: true
 respawn-seconds: 30
 ```
 
-Los sonidos del yml **se suman** al de vanilla del tipo: el mob suena con los dos a la vez.
-Callar el de vanilla **no esta resuelto** todavia: se intento y quedo pendiente (ver
-`MEMORY.md`). Un tipo sin configurar en el yml suena solo con el suyo de vanilla.
+Si el mob define **al menos un** sonido, su cuerpo vanilla queda **enmudo**: ya no suelta los
+suyos (grito, ambiente, pasos). Los que suenan son los del yml, y **solo** esos.
+
+Consecuencias que conviene saber:
+
+- El mob **no tiene sonido de pasos** salvo que lo pongas: no hay `step` en el yml.
+- Los sonidos que otros plugins hagan con la entidad (o su muerte vanilla) tampoco se oyen.
+- Los del yml se mandan a cada jugador a **32 bloques**; mas lejos no se oyen.
+- Un mob que **no** defina `sounds:` suena como cualquier bicho vanilla.
 
 - `disguise.type`: `player` usa `skin` (nombre de jugador) o `skin-url`.
 - `burn-in-daylight`: por defecto `false` en mobs de servidor y `true` en los de jugador.

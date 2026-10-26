@@ -687,6 +687,13 @@ public final class MobService implements Listener {
             mob.setGlowing(true);
         }
 
+        // Enmudece la entidad vanilla cuando el yml trae sonidos. Vanilla suelta los suyos por
+        // una ruta que no se puede interceptar (ni ENTITY_SOUND_EFFECT ni SoundEvent llegan), y
+        // el resultado era oir siempre el doble. Silenciando el cuerpo, el mob solo suena con
+        // los del yml, que SoundService manda a los jugadores de alrededor.
+        if (definition.sounds().hasAny()) {
+            mob.setSilent(true);
+        }
         this.applyAttributes(mob, definition);
         if (definition.mount() != null) {
             // Una montura no lleva el equipo normal: lo suyo es la silla y la armadura.

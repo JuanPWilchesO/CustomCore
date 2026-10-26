@@ -266,6 +266,10 @@ public final class CustomMobsPlugin extends JavaPlugin {
         pluginManager.registerEvents(new VillagePeaceListener(this.mobService), this);
         pluginManager.registerEvents(new DamageImmunityListener(this.mobService), this);
         pluginManager.registerEvents(new SoundListener(this.mobService, this.soundService), this);
+        // El sonido vanilla no se calla por paquete: se enmudece la entidad al nacer (ver
+        // MobService.configure) y los del yml los manda SoundService a cada jugador. El
+        // intento de filtrar paquetes y el de cancelar el evento de dano quedaron fuera: el
+        // segundo dejaba a los mobs invulnerables.
         // Suelta el modelo de un mob que desaparece sin morir (recogido, retirado, portal).
         pluginManager.registerEvents(new com.juanp.custommobs.model.ModelCleanupListener(this.mobService), this);
         pluginManager.registerEvents(new DaylightListener(this.mobService), this);

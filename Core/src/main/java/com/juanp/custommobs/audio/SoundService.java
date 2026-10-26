@@ -23,7 +23,14 @@ public final class SoundService {
         this.service = service;
     }
 
-    /** Reproduce un sonido en una ubicacion, si el spec lo define. */
+    /**
+     * Reproduce un sonido en una ubicacion, si el spec lo define.
+     *
+     * <p>Se manda a cada jugador cercano uno a uno, no con {@code world.playSound}: el mob que
+     * lo emite esta ENMUDECIDO ({@code setSilent}), y un sonido emitido desde su posicion en el
+     * mundo sigue siendo un sonido del mundo, no de la entidad, asi que suena igual. Al
+     * mandarlo a cada jugador, no depende del estado de la entidad.
+     */
     public void play(Location location, SoundSpec spec) {
         if (spec == null || location == null || location.getWorld() == null) {
             return;
@@ -32,8 +39,18 @@ public final class SoundService {
         if (sound == null) {
             return;
         }
-        location.getWorld().playSound(location, sound, spec.volume(), spec.pitch());
+        for (org.bukkit.entity.Player player : location.getWorld().getPlayers()) {
+            if (!player.getWorld().equals(location.getWorld())
+                    || player.getLocation().distanceSquared(location)
+                            > HEARING_RADIUS * HEARING_RADIUS) {
+                continue;
+            }
+            player.playSound(location, sound, spec.volume(), spec.pitch());
+        }
     }
+
+    /** Radio en bloques al que se oye un sonido de mob (el de vanilla ronda los 16). */
+    private static final double HEARING_RADIUS = 32.0D;
 
     /** Reproduce el golpe de un mob custom. */
     public void playAttack(CustomMob attacker) {
