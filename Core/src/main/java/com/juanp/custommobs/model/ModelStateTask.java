@@ -58,13 +58,24 @@ public final class ModelStateTask extends BukkitRunnable {
             boolean moving = previous.distanceSquared(moved.getLocation().toVector())
                     > MOVING_EPSILON;
             if (moving) {
-                link.animate(entity, customMob.definition(), ModelAnimation.WALK);
+                this.step(entity, customMob, link, ModelAnimation.WALK);
             } else {
-                // El enlace solo repite el reposo si el mob venia andando.
-                link.stopWalking(entity, customMob.definition());
+                // El enlace solo vuelve al reposo si el mob venia andando.
+                this.step(entity, customMob, link, ModelAnimation.IDLE);
             }
         }
         this.last.keySet().retainAll(alive);
+    }
+
+    /** Pide un estado de animacion al enlace, sin repetirlo si ya es el actual. */
+    private void step(LivingEntity entity, CustomMob customMob, ModelLink link,
+                      ModelAnimation state) {
+        if (!link.hasModel(entity)) {
+            // El modelo aun no esta puesto (mob recien invocado): se reintenta al siguiente ciclo.
+            this.last.remove(entity.getUniqueId());
+            return;
+        }
+        link.animate(entity, customMob.definition(), state);
     }
 
     @Override

@@ -781,7 +781,9 @@ public final class MobLoader {
                             entry.getBoolean("once", event == ModelAnimation.DEATH),
                             speed == null ? null : speed.floatValue(),
                             Math.max(0, entry.getInt("start", 0)),
-                            Math.max(0, entry.getInt("end", 0)));
+                            Math.max(0, entry.getInt("end", 0)),
+                            entry.getInt("priority",
+                                    event.oneShot() ? AnimationSpec.ONE_SHOT_PRIORITY : 0));
                 } else {
                     animation = normalize(animationsSection.getString(rawKey));
                     spec = animation == null ? null : AnimationSpec.of(animation);

@@ -1270,6 +1270,13 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
                             + " &8-> &f" + spec.name() + " &8sin hitbox: renombra un hueso a"
                             + " 'b_algo' (no 'hitbox'). Cuerpo visible."));
                 }
+                if (!report.nametag() && report.tagProbe() && spec.hideBody()) {
+                    // Con un hueso 'tag' la placa la pinta el nombre vanilla de la entidad, y
+                    // sobre un cuerpo oculto eso parpadea. Lo limpio es 'mtag'.
+                    sender.sendMessage(com.juanp.custommobs.mob.Texts.color(" &e" + definition.id()
+                            + " &8-> &f" + spec.name() + " &8tiene hueso 'tag': la placa es la"
+                            + " vanilla y con el cuerpo oculto parpadea. Renombralo a 'mtag_algo'."));
+                }
                 if (!report.seat() && spec.seat() && definition.mountable()) {
                     sender.sendMessage(com.juanp.custommobs.mob.Texts.color(" &e" + definition.id()
                             + " &8-> &f" + spec.name() + " &8sin asiento: renombra el hueso a"

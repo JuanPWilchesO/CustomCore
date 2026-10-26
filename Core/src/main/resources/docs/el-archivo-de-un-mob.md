@@ -264,23 +264,35 @@ colision no recibe dano. Este comportamiento se desactiva con
 > **Los modelos con mesh no sirven.** BetterModel no renderiza geometria de mesh: hay que
 > convertirla a cubos en Blockbench antes de exportar, o el modelo sale negro.
 
-### Nombre del mob
+### Nombre del mob: `mtag`, `ptag` y `tag` son cosas distintas
 
-BetterModel puede pintar el nombre siguiendo a un hueso, con el tag `mtag`. Si el modelo
-lo trae, CustomCore apaga el nombre vanilla: tener los dos a la vez hace que la placa
-parpadee, porque la del modelo se oculta cuando pierde la linea de vision y la vanilla no.
+| Tag en un hueso | Que pasa con la placa |
+|---|---|
+| `mtag` (`mtag_head`) | la pinta **el modelo**, pegada al hueso; se oculta si no hay linea de vision |
+| `ptag` | la pinta **el modelo**, siempre visible |
+| `tag` (`tag_name`) | **el modelo NO pinta placa**: manda el nombre vanilla de la entidad |
+
+En los tres casos el texto es el `customName` del mob, asi que un `display-name` con color
+se respeta igual.
+
+**El caso que da problemas es `tag` + `hide-body: true`.** Con el cuerpo oculto y la placa
+vanilla, el cliente la vuelve a colocar con cada paquete de la entidad invisible y la placa
+**parpadea**. La solucion es renombrar ese hueso a `mtag_...` (o `ptag_...`), que pasa la
+placa al modelo, y dejar `show-name` sin tocar.
 
 | `show-name` | Efecto |
 |---|---|
-| sin la clave (por defecto) | lo decide el modelo: vanilla apagado si trae `mtag` |
+| sin la clave (por defecto) | automatico: vanilla apagado si el modelo trae `mtag`/`ptag` |
 | `true` | el nombre vanilla siempre visible |
 | `false` | nunca el nombre vanilla |
+
+`/customcore model validate` avisa del caso `tag` + `hide-body: true`.
 
 ### Animaciones por evento
 
 | Clave | Cuando se reproduce |
 |---|---|
-| `idle` | en reposo |
+| `idle` | en reposo (es el estado inicial del mob) |
 | `walk` | al empezar a andar |
 | `attack` | al golpear a alguien |
 | `hurt` | al recibir dano |
@@ -298,10 +310,18 @@ animations:
     speed: 1.2        # velocidad de reproduccion
     start: 0          # ticks de entrada (lerp)
     end: 5            # ticks de salida (lerp)
+    priority: 10      # frente a otras animaciones; gana la mas alta
 ```
 
 Un evento sin clave no anima nada. `death` se reproduce y el modelo aguanta 2 segundos
 extra sobre el cadaver antes de cerrarse.
+
+**Reposo y marcha se alternan solos**: el mob arranca en `idle` y pasa a `walk` cuando se
+mueve. Un nombre de animacion que el modelo no tenga se avisa una vez en el log.
+
+**`attack`, `hurt` y `death` van por encima**: se lanzan con prioridad alta (10 por
+defecto) y paran `idle`/`walk` antes, porque la de andar se reinserta en cada ciclo y si no
+las taparia.
 
 ### Asiento de montura (`seat`, solo `category: mount`)
 

@@ -40,16 +40,25 @@ public final class BetterModelLink implements ModelLink {
     /** Margen tras el que se cierra el tracker de un mob muerto. */
     private static final long DEATH_KEEP_TICKS = 40L;
 
+    /**
+     * Ticks que se espera antes de devolver el mob a su estado tras un golpe.
+     *
+     * <p>Es un margen fijo, no la duracion real (que BetterModel no expone en la API publica):
+     * si sobra, el estado se reanuda igual; si faltara, se cortaria el golpe.
+     */
+    private static final long ONE_SHOT_BACK_TICKS = 15L;
+
     private final Plugin plugin;
     private final Map<java.util.UUID, EntityTracker> trackers = new ConcurrentHashMap<>();
     /**
-     * Mobs que estan andando ahora mismo.
+     * Estado de animacion de cada mob.
      *
-     * <p>Es la UNICA fuente de verdad para alternar idle/walk: antes habia ademas un
-     * {@code idlePlayed}, y los dos se contradecian (se quedaba puesta la animacion de
-     * andar con el mob parado).
+     * <p>Es la UNICA fuente de verdad para alternar idle/walk. Antes habia un {@code Set} de
+     * "andando" y un {@code idlePlayed} aparte, y se contradecian: ademas el {@code idle}
+     * inicial nunca se lanzaba (se saltaba la guarda de transicion), asi que el mob no tenia
+     * estado y {@code walk} nunca entraba.
      */
-    private final Set<java.util.UUID> walking = ConcurrentHashMap.newKeySet();
+    private final Map<java.util.UUID, ModelState> states = new ConcurrentHashMap<>();
     /** Mobs cuyo nombre vanilla se oculto para que mande la placa del modelo. */
     private final Set<java.util.UUID> hiddenNames = ConcurrentHashMap.newKeySet();
     private final Set<String> warned = ConcurrentHashMap.newKeySet();
@@ -140,8 +149,10 @@ public final class BetterModelLink implements ModelLink {
         }
 
         this.applyName(entity, definition, spec, bones);
+        // El reposo se pone SIEMPRE aqui, sin pasar por la guarda de transicion: es el estado
+        // inicial del mob y sin el no hay nada de lo que salir al empezar a andar.
+        this.playState(entity, definition, tracker, ModelState.IDLE);
         this.animate(entity, definition, ModelAnimation.SPAWN);
-        this.animate(entity, definition, ModelAnimation.IDLE);
     }
 
     /**
@@ -154,7 +165,9 @@ public final class BetterModelLink implements ModelLink {
     private void applyName(LivingEntity entity, MobDefinition definition, ModelSpec spec,
                            BoneInfo bones) {
         Boolean showName = spec.showName();
-        boolean hide = showName != null ? !showName : bones.name();
+        // Por defecto: manda el modelo si trae su propia placa ('mtag'/'ptag'). Un hueso con
+        // 'tag' no cuenta: ese justo lo que hace es dejar el nombre en manos del vanilla.
+        boolean hide = showName != null ? !showName : bones.nametag();
         if (!hide) {
             return;
         }
@@ -198,24 +211,33 @@ public final class BetterModelLink implements ModelLink {
     private BoneInfo readBones(EntityTracker tracker) {
         boolean hitBox = false;
         boolean seat = false;
-        boolean name = false;
+        boolean nametag = false;
         if (tracker == null || tracker.isClosed()) {
-            return new BoneInfo(hitBox, seat, name);
+            return new BoneInfo(hitBox, seat, nametag);
         }
         try {
             for (RenderedBone bone : tracker.bones()) {
                 hitBox |= bone.name().tagged(BoneTags.HITBOX);
                 seat |= bone.name().tagged(BoneTags.SEAT);
-                name |= bone.name().tagged(BoneTags.MOB_TAG, BoneTags.TAG, BoneTags.PLAYER_TAG);
+                // OJO: 'tag' NO es lo mismo que 'mtag'. BetterModel crea su placa en el hueso
+                // con 'mtag' (o 'ptag'); un hueso con 'tag' lo que hace es IMPEDIRLA, y la
+                // placa la pinta entonces el nombre vanilla de la entidad.
+                nametag |= bone.name().tagged(BoneTags.MOB_TAG, BoneTags.PLAYER_TAG);
             }
         } catch (Throwable throwable) {
             // Sin poder leer los huesos se asume lo conservador: no ocultar el cuerpo.
         }
-        return new BoneInfo(hitBox, seat, name);
+        return new BoneInfo(hitBox, seat, nametag);
+    }
+
+    /** Estado de animacion de un mob: el que alterna reposo y andar. */
+    private enum ModelState {
+        IDLE,
+        WALK
     }
 
     /** Lo que aporta el modelo a la entidad, leido de sus huesos. */
-    private record BoneInfo(boolean hitBox, boolean seat, boolean name) {
+    private record BoneInfo(boolean hitBox, boolean seat, boolean nametag) {
     }
 
     @Override
@@ -301,28 +323,20 @@ public final class BetterModelLink implements ModelLink {
         if (tracker == null || tracker.isClosed()) {
             return;
         }
-        if (event == ModelAnimation.IDLE && !this.hasModel(entity)) {
-            // Mob sin modelo (disfrazado, o modelo inexistente): no hay nada que animar.
-            // (Antes se comprueba el tracker: un mob disfrazado no debe recibir animaciones.)
-            return;
-        }
         try {
+            // Los estados (reposo / andar) se cambian SOLO si de verdad cambian: repetirlos en
+            // cada ciclo de la tarea reiniciaria la animacion sin parar.
             if (event == ModelAnimation.WALK) {
-                // Solo al EMPEZAR a andar. Relanzarla en cada ciclo la cortaria a si misma.
-                if (this.walking.add(entity.getUniqueId())) {
-                    this.play(tracker, spec, definition, ModelAnimation.IDLE);
-                }
+                this.playState(entity, definition, tracker, ModelState.WALK);
                 return;
             }
             if (event == ModelAnimation.IDLE) {
-                // Solo se vuelve al reposo si venia andando: repetirla en cada ciclo de la tarea
-                // la reiniciaria sin parar.
-                if (this.walking.remove(entity.getUniqueId())) {
-                    this.play(tracker, spec, definition, ModelAnimation.WALK);
-                }
+                this.playState(entity, definition, tracker, ModelState.IDLE);
                 return;
             }
-            this.play(tracker, spec, definition, null);
+            // Ataque, dano y muerte van con prioridad alta y paran lo que hubiera: sin esto la
+            // animacion de andar, que se reinserta cada ciclo, las tapaba.
+            this.playOneShot(entity, definition, tracker, spec, event);
             if (event == ModelAnimation.DEATH) {
                 this.closeAfterDeath(entity.getUniqueId(), tracker);
             }
@@ -333,40 +347,104 @@ public final class BetterModelLink implements ModelLink {
         }
     }
 
-    /** Anima el estado en reposo tras dejar de andar. */
-    @Override
-    public void stopWalking(LivingEntity entity, MobDefinition definition) {
-        if (this.walking.remove(entity.getUniqueId())) {
-            AnimationSpec idle = definition.model() == null
-                    ? null
-                    : definition.model().animation(ModelAnimation.IDLE);
-            if (idle != null && !idle.name().isBlank()) {
-                this.play(this.trackers.get(entity.getUniqueId()), idle, definition,
-                        ModelAnimation.WALK);
-            }
+    /** Cambia entre reposo y andar, y solo cuando el estado cambia de verdad. */
+    private void playState(LivingEntity entity, MobDefinition definition, EntityTracker tracker,
+                           ModelState state) {
+        this.playState(entity.getUniqueId(), definition, tracker, state);
+    }
+
+    /** Igual que el anterior, por UUID: la tarea diferida ya no tiene la entidad a mano. */
+    private void playState(java.util.UUID id, MobDefinition definition, EntityTracker tracker,
+                           ModelState state) {
+        if (tracker == null || tracker.isClosed()) {
+            return;
+        }
+        ModelState previous = this.states.get(id);
+        if (previous == state) {
+            return;
+        }
+        ModelAnimation event = state == ModelState.WALK ? ModelAnimation.WALK : ModelAnimation.IDLE;
+        AnimationSpec spec = definition.model() == null ? null : definition.model().animation(event);
+        if (spec == null || spec.name().isBlank()) {
+            // Sin animacion para ese estado: se recuerda igual, para no reintentarlo cada ciclo.
+            this.states.put(id, state);
+            return;
+        }
+        this.states.put(id, state);
+        ModelState other = state == ModelState.WALK ? ModelState.IDLE : ModelState.WALK;
+        this.stopState(tracker, definition, other);
+        if (!this.play(tracker, spec)) {
+            this.warnOnce("animmissing:" + definition.id() + ":" + spec.name(),
+                    "El modelo de '" + definition.id() + "' no tiene la animacion '" + spec.name()
+                            + "': ese estado se queda sin animar.");
+        }
+    }
+
+    /** Para la animacion del estado indicado, si el mob la declara. */
+    private void stopState(EntityTracker tracker, MobDefinition definition, ModelState state) {
+        ModelAnimation event = state == ModelState.WALK ? ModelAnimation.WALK : ModelAnimation.IDLE;
+        AnimationSpec spec = definition.model() == null ? null : definition.model().animation(event);
+        if (spec != null && !spec.name().isBlank()) {
+            tracker.stopAnimation(spec.name());
         }
     }
 
     /**
-     * Lanza una animacion parando antes la del estado contrario.
+     * Animacion de un golpe, del dano o de la muerte.
      *
-     * <p>Sin el {@code stopAnimation} previo, la animacion de andar se queda montada encima de
-     * la de reposo: BetterModel apila animaciones y la que no se para sigue mandando. Ese era
-     * el sintoma de "se queda la de andar con el mob parado".
+     * <p>Se para antes lo que estuviera sonando (reposo y andar) y se lanza con prioridad alta:
+     * si no, la de andar la tapa porque se reinserta en cada ciclo.
      */
-    private void play(EntityTracker tracker, AnimationSpec spec, MobDefinition definition,
-                      ModelAnimation stop) {
-        if (tracker == null || tracker.isClosed()) {
+    private void playOneShot(LivingEntity entity, MobDefinition definition, EntityTracker tracker,
+                             AnimationSpec spec, ModelAnimation event) {
+        this.stopState(tracker, definition, ModelState.WALK);
+        this.stopState(tracker, definition, ModelState.IDLE);
+        if (!this.play(tracker, spec)) {
+            this.warnOnce("animmissing:" + definition.id() + ":" + spec.name(),
+                    "El modelo de '" + definition.id() + "' no tiene la animacion '" + spec.name()
+                            + "' (" + event.key() + ").");
             return;
         }
-        if (stop != null && definition != null && definition.model() != null) {
-            AnimationSpec previous = definition.model().animation(stop);
-            if (previous != null && !previous.name().isBlank()
-                    && !previous.name().equalsIgnoreCase(spec.name())) {
-                tracker.stopAnimation(previous.name());
+        // El estado NO se olvida a proposito: si se olvidara, la tarea de estado volveria a
+        // poner reposo o andar en el siguiente ciclo y cortaria el golpe a la mitad. La animacion
+        // del golpe termina sola (PLAY_ONCE) y entonces se reactiva el estado.
+        this.playStateAfter(entity.getUniqueId(), definition, tracker);
+    }
+
+    /** Reactiva el estado (reposo o andar) cuando la animacion puntual termina. */
+    private void playStateAfter(java.util.UUID id, MobDefinition definition, EntityTracker tracker) {
+        this.plugin.getServer().getScheduler().runTaskLater(this.plugin, () -> {
+            ModelState state = this.states.get(id);
+            if (state == null || tracker.isClosed()) {
+                return;
             }
+            // Se fuerza el cambio quitando la marca: playState solo actua si el estado difiere.
+            this.states.remove(id);
+            this.playState(id, definition, tracker, state);
+        }, ONE_SHOT_BACK_TICKS);
+    }
+
+    /** Anima el estado en reposo tras dejar de andar. */
+    @Override
+    public void stopWalking(LivingEntity entity, MobDefinition definition) {
+        ModelState current = this.states.get(entity.getUniqueId());
+        if (current == ModelState.WALK) {
+            this.playState(entity, definition, this.trackers.get(entity.getUniqueId()),
+                    ModelState.IDLE);
         }
-        tracker.animate(spec.name(), modifier(spec));
+    }
+
+    /**
+     * Lanza una animacion. Devuelve {@code false} si el modelo no la tiene.
+     *
+     * <p>Las de golpe, dano y muerte llevan prioridad alta y {@code override} para que no las
+     * tape otra: BetterModel apila animaciones en un mapa por prioridad.
+     */
+    private boolean play(EntityTracker tracker, AnimationSpec spec) {
+        if (tracker == null || tracker.isClosed()) {
+            return false;
+        }
+        return tracker.animate(spec.name(), modifier(spec));
     }
 
     private void closeAfterDeath(java.util.UUID id, EntityTracker tracker) {
@@ -384,6 +462,7 @@ public final class BetterModelLink implements ModelLink {
         AnimationModifier.Builder builder = AnimationModifier.builder()
                 .start(spec.start())
                 .end(spec.end())
+                .priority(spec.effectivePriority())
                 .type(spec.once()
                         ? AnimationIterator.Type.PLAY_ONCE
                         : AnimationIterator.Type.LOOP);
@@ -413,7 +492,7 @@ public final class BetterModelLink implements ModelLink {
     @Override
     public void release(LivingEntity entity) {
         java.util.UUID id = entity.getUniqueId();
-        this.walking.remove(id);
+        this.states.remove(id);
         this.restoreName(entity);
         EntityTracker tracker = this.trackers.remove(id);
         if (tracker == null) {
@@ -436,7 +515,7 @@ public final class BetterModelLink implements ModelLink {
             }
         }
         this.trackers.clear();
-        this.walking.clear();
+        this.states.clear();
         this.hiddenNames.clear();
     }
 
@@ -498,7 +577,8 @@ public final class BetterModelLink implements ModelLink {
         }
         boolean hitBox = false;
         boolean seat = false;
-        boolean name = false;
+        boolean nametag = false;
+        boolean tagProbe = false;
         java.util.List<String> bones = new java.util.ArrayList<>();
         try {
             // flatten() recorre todo el arbol y da cada hueso con su BoneName ya parseado.
@@ -507,12 +587,13 @@ public final class BetterModelLink implements ModelLink {
                 bones.add(bone.rawName());
                 hitBox |= bone.tagged(BoneTags.HITBOX);
                 seat |= bone.tagged(BoneTags.SEAT);
-                name |= bone.tagged(BoneTags.MOB_TAG, BoneTags.TAG, BoneTags.PLAYER_TAG);
+                nametag |= bone.tagged(BoneTags.MOB_TAG, BoneTags.PLAYER_TAG);
+                tagProbe |= bone.tagged(BoneTags.TAG);
             }
         } catch (Throwable throwable) {
             return null;
         }
-        return new BoneReport(hitBox, seat, name, java.util.List.copyOf(bones));
+        return new BoneReport(hitBox, seat, nametag, tagProbe, java.util.List.copyOf(bones));
     }
 
     /**
@@ -520,10 +601,12 @@ public final class BetterModelLink implements ModelLink {
      *
      * @param hitBox si trae hueso con tag {@code b}/{@code ob}
      * @param seat   si trae hueso con tag {@code p}
-     * @param name   si trae hueso de placa ({@code mtag}, {@code tag}, {@code ptag})
-     * @param bones  nombres de los huesos leidos
+     * @param nametag  si trae hueso de placa propia ({@code mtag}/{@code ptag})
+     * @param tagProbe si trae hueso con tag {@code tag}, que IMPIDE la placa del modelo
+     * @param bones    nombres de los huesos leidos
      */
-    public record BoneReport(boolean hitBox, boolean seat, boolean name, java.util.List<String> bones) {
+    public record BoneReport(boolean hitBox, boolean seat, boolean nametag, boolean tagProbe,
+                             java.util.List<String> bones) {
     }
 
     /** Nombres de todos los modelos cargados por BetterModel. */

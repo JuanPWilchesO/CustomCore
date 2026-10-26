@@ -29,6 +29,14 @@ public enum ModelAnimation {
         return this.key;
     }
 
+    /**
+     * {@code true} si la animacion responde a un evento puntual (golpe, dano, muerte) y debe
+     * llevar prioridad alta: si no, la de andar la tapa porque se reinserta en cada ciclo.
+     */
+    public boolean oneShot() {
+        return this == ATTACK || this == HURT || this == DEATH;
+    }
+
     /** Clave del yml a evento, o {@code null} si no existe. */
     public static ModelAnimation parse(String raw) {
         if (raw == null || raw.isBlank()) {
