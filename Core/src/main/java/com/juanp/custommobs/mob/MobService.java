@@ -954,7 +954,15 @@ public final class MobService implements Listener {
         this.natural.removeIf(id -> !this.active.containsKey(id));
         this.active.values().removeIf(customMob -> {
             LivingEntity entity = customMob.entity();
-            return !entity.isValid() || entity.isDead();
+            if (!entity.isValid()) {
+                return true;
+            }
+            // Un cadaver con modelo sigue en el registro mientras dura su animacion de muerte: el
+            // modelo necesita la entidad para verse. Se cierra solo y ahi se retira.
+            if (entity.isDead()) {
+                return !this.modelLink.isBusy(entity);
+            }
+            return false;
         });
         // El cupo se toca al invocar y al morir: se guarda al vuelo, no en cada cambio.
         if (this.playerMobs.isDirty()) {
@@ -1198,8 +1206,10 @@ public final class MobService implements Listener {
             this.styles.clear(living);
         }
         // El modelo muere con la entidad: dejar el tracker abierto deja un modelo flotando
-        // en el aire, porque su entidad ya no existe.
-        if (entity instanceof LivingEntity living && living.isDead()) {
+        // en el aire, porque su entidad ya no existe. Salvo que este en su animacion de muerte:
+        // entonces la entidad se retira igual y el tracker se cierra con ella desde el enlace.
+        if (entity instanceof LivingEntity living && living.isDead()
+                && !this.modelLink.isBusy(living)) {
             this.modelLink.release(living);
         }
         // Se retira YA (diferirlo un tick lo empeoraba), y un segundo despues se le re-manda el

@@ -48,6 +48,15 @@ public interface ModelLink {
     /** El mob ha dejado de moverse: vuelve a la animacion en reposo, si venia andando. */
     void stopWalking(LivingEntity entity, MobDefinition definition);
 
+    /**
+     * {@code true} si el mob esta en una animacion puntual (golpe, dano, muerte).
+     *
+     * <p>Mientras dure, la tarea de estado no debe tocarlo: pisaria el golpe con el reposo.
+     */
+    default boolean isBusy(LivingEntity entity) {
+        return false;
+    }
+
     /** Suelta el modelo de una entidad que murio o desaparecio. */
     void release(LivingEntity entity);
 
