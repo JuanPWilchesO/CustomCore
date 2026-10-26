@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.0.6 — modelos 3D, spawn natural y sonidos
 
 - **Modelos 3D con BetterModel** (`model:` en el yml): un mob de cualquier categoría puede
   llevar un modelo de [BetterModel](https://modrinth.com/plugin/bettermodel) encima
@@ -26,6 +26,9 @@
   siguen sonando dobles.
 - **Dependencia de compilación**: `scripts/install-libs.sh` descarga el jar de BetterModel
   en `libs/` (ignorado por git), porque no hay artefacto Maven publicado.
+- **Consola mas limpia**: una receta que se omite porque le falta un ingrediente que no existe
+  en el catalogo ya no sale como aviso; pasa a `debug`. Un fallo de receta de verdad (forma
+  invalida, colision entre recetas) sigue avisando.
 - **`sigilo` completo también desde skills**: el efecto aplicado por una skill ya oculta al
   jugador de los demás (cuerpo, armadura y objetos), no solo de los mobs. No saca la entidad
   del cliente, así que conserva colisión, tab list y daño normal. Se limpian las partículas

@@ -103,7 +103,10 @@ public final class CraftService {
                     ? this.registerShaped(key, result, spec)
                     : this.registerItemShapeless(key, result, spec.loose());
             if (trouble != null) {
-                this.plugin.getLogger().warning("Receta de '" + name + "' omitida: " + trouble);
+                // Solo un fallo de verdad es aviso. Que un mob u objeto no tenga receta (un
+                // ingrediente que no existe en el catalogo) es lo normal en un servidor en
+                // construccion y no debe ensuciar la consola: va a debug.
+                this.trouble("Receta de '" + name + "' omitida: " + trouble);
             }
         }
 
@@ -123,8 +126,25 @@ public final class CraftService {
                     ? this.registerShaped(key, result, recipe)
                     : this.registerItemShapeless(key, result, recipe.loose());
             if (trouble != null) {
-                this.plugin.getLogger().warning("Receta de la pocion '" + potion.id() + "' omitida: " + trouble);
+                this.trouble("Receta de la pocion '" + potion.id() + "' omitida: " + trouble);
             }
+        }
+    }
+
+    /**
+     * Un problema de receta: aviso si deja algo a medias, debug si es solo una receta que no
+     * existe por falta de ingrediente.
+     *
+     * <p>Con {@code debug: true} en el config se ven los dos.
+     */
+    private void trouble(String message) {
+        boolean soft = message.contains("no es un objeto del catalogo");
+        if (!soft) {
+            this.plugin.getLogger().warning(message);
+            return;
+        }
+        if (this.plugin.getConfig().getBoolean("debug", false)) {
+            this.plugin.getLogger().info(message);
         }
     }
 
