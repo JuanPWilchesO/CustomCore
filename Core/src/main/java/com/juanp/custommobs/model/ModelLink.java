@@ -92,7 +92,7 @@ public interface ModelLink {
      * <p>Hay que devolver el controlador a {@code NONE}: si se queda en {@code WALK}, la entidad
      * sigue esperando un jinete que ya no esta.
      */
-    default void unseat(LivingEntity entity, MobDefinition definition) {
+    default void unseat(LivingEntity entity, MobDefinition definition, org.bukkit.entity.Player player) {
     }
 
     /** Cierra el tracker de todos los mobs vivos: recarga del catalogo o del propio modelo. */

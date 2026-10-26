@@ -343,46 +343,30 @@ public final class BetterModelLink implements ModelLink {
             return;
         }
         try {
-            EntityTrackerRegistry registry = tracker.registry();
-            if (registry == null) {
-                return;
-            }
-            HitBox seat = null;
-            java.util.List<String> seen = new java.util.ArrayList<>();
-            for (HitBox box : registry.hitBoxes()) {
-                if (box.positionSource() == null) {
-                    continue;
-                }
-                String bone = box.positionSource().name().rawName();
-                seen.add(bone);
-                // SOLO el hueso con tag SEAT ('p_...'). Antes se montaba en la primera hitbox que
-                // hubiera, que suele ser la de golpe ('ob_...'): el jugador quedaba sentado dentro
-                // del cuerpo en vez de en el asiento.
-                if (box.positionSource().name().tagged(BoneTags.SEAT)) {
-                    seat = box;
-                    break;
-                }
-            }
+            // tracker.hitbox(predicado) CREA el hitbox del hueso si no existia. Es la diferencia
+            // clave: el predicado por defecto de BetterModel crea hitboxes solo en huesos SIN
+            // tag, asi que un 'p_asiento' nunca aparece en registry.hitBoxes() y buscar ahi no
+            // encontraba nada (la montura se quedaba en el asiento vanilla del caballo).
+            HitBox seat = tracker.hitbox(null, bone -> bone.name().tagged(BoneTags.SEAT));
             if (seat == null) {
                 this.warnOnce("seat:" + definition.id(),
                         "La montura '" + definition.id() + "' usa 'model.seat' pero el modelo '"
                                 + definition.model().name() + "' no tiene ningun hueso con el tag"
-                                + " 'seat' (huesos con hitbox: " + seen + "). Renombra el hueso del"
-                                + " asiento a 'p_algo'.");
+                                + " 'seat'. Renombra el hueso del asiento a 'p_algo' (dos palabras,"
+                                + " con el prefijo 'p_').");
                 return;
             }
             PlatformEntity passenger = BukkitAdapter.adapt((org.bukkit.entity.Entity) player);
-            // Sin controlador el caballo no recibe el movimiento del jinete: el jugador esta
-            // sentado en el asiento del modelo, no sobre la entidad, y se queda quieto.
-            try {
-                seat.mountController(kr.toxicity.model.api.mount.MountControllers.WALK);
-            } catch (Throwable throwable) {
-                this.plugin.getLogger().warning("No se pudo activar el controlador de la montura '"
-                        + definition.id() + "': " + throwable.getMessage());
+            // El controlador ya lo pone BetterModel al cargar el modelo (lee el tag 'p_' y usa
+            // 'default-mount-controller' de su config), asi que NO se toca aqui.
+            // Con jinete la montura necesita su IA: sin ella no obedece al jugador.
+            if (entity instanceof org.bukkit.entity.AbstractHorse horse) {
+                horse.setAI(true);
             }
             seat.mount(passenger);
             this.trace("asiento de " + definition.id() + " en el hueso '"
-                    + seat.positionSource().name().rawName() + "'");
+                    + seat.positionSource().name().rawName() + "'"
+                    + " controlador=" + seat.mountController());
         } catch (Throwable throwable) {
             this.warnOnce("seat:" + definition.id() + ":" + throwable.getMessage(),
                     "No se pudo subir al jugador al asiento de '" + definition.id() + "': "
@@ -391,23 +375,22 @@ public final class BetterModelLink implements ModelLink {
     }
 
     @Override
-    public void unseat(LivingEntity entity, MobDefinition definition) {
+    public void unseat(LivingEntity entity, MobDefinition definition, org.bukkit.entity.Player player) {
         EntityTracker tracker = this.trackers.get(entity.getUniqueId());
         if (tracker == null || tracker.isClosed()) {
             return;
         }
         try {
-            EntityTrackerRegistry registry = tracker.registry();
-            if (registry == null) {
+            HitBox seat = tracker.hitbox(null, bone -> bone.name().tagged(BoneTags.SEAT));
+            if (seat == null) {
                 return;
             }
-            for (HitBox box : registry.hitBoxes()) {
-                if (box.positionSource() != null && box.positionSource().name().tagged(BoneTags.SEAT)) {
-                    box.mountController(kr.toxicity.model.api.mount.MountControllers.NONE);
-                }
-            }
+            // Se desmonta al jugador del asiento. El controlador no se toca: es del modelo.
+            seat.dismount(BukkitAdapter.adapt((org.bukkit.entity.Entity) player));
+            // Sin jinete vuelve a quedarse quieta (la IA se apaga en MountEffectTask).
+            this.trace("desmontado del asiento de " + definition.id());
         } catch (Throwable throwable) {
-            // Si no se puede devolver, el controlador queda inerte: el asiento ya no tiene jinete.
+            // Si ya no estaba montado, no hay nada que hacer.
         }
     }
 

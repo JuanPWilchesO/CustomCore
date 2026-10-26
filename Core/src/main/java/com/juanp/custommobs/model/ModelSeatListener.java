@@ -67,6 +67,8 @@ public final class ModelSeatListener implements Listener {
         if (customMob == null || !customMob.definition().mountable()) {
             return;
         }
-        this.service.modelLink().unseat(seat, customMob.definition());
+        if (event.getEntity() instanceof Player rider) {
+            this.service.modelLink().unseat(seat, customMob.definition(), rider);
+        }
     }
 }
