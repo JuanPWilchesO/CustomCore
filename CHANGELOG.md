@@ -2,6 +2,30 @@
 
 ## Unreleased
 
+- **Modelos 3D con BetterModel** (`model:` en el yml): un mob de cualquier categoría puede
+  llevar un modelo de [BetterModel](https://modrinth.com/plugin/bettermodel) encima
+  conservando su vida, daño y objetivos. **Probado en servidor**: placa (`mtag`/`ptag`),
+  hitbox (`b`/`ob`), y animaciones `idle`/`walk`/`attack`/`hurt`/`death`/`spawn`.
+  - BetterModel es `softdepend`: sin él nada se rompe y los mobs se ven vanilla.
+  - El modelo se deduce del **nombre del hueso** (`b_`, `ob_`, `p_`, `h_`, `mtag`, `ptag`).
+    Nombre compuesto obligatorio: `b_body`, no `b`.
+  - Si un mob tiene `disguise:` **y** `model:`, gana el disfraz (aviso único en el log).
+  - Comandos nuevos: `/customcore model list`, `model list <mob>` y `model validate`.
+  - **Las monturas (`category: mount`) NO reciben modelo** en esta versión: el asiento
+    propio del modelo deja la montura sin movimiento, porque BetterModel mueve su entidad
+    de interacción y no el caballo. Se avisa en el log y se ignora su bloque `model:`.
+- **Aparición aleatoria (`spawn: natural`)**:
+  - **Corregido**: un mob podía nacer con un bloque encima (bajo un árbol, junto a una
+    pared) y morir asfixiado a los pocos segundos. Ahora se exige hueco para dos bloques.
+  - Con `debug: true` el log dice por qué no aparece (región, luz, hora, altura, suelo,
+    bioma) una vez por motivo, y avisa al aparecer con la posición.
+- **Sonidos de mob**: si el yml define al menos un `sounds:`, el cuerpo vanilla queda
+  **enmudo** y solo suenan los del yml. Antes se oían los dos. Probado con `ambient`,
+  `hurt`, `attack` y `death`. Coste: el mob pierde su sonido de pasos y el de muerte
+  vanilla, y el alcance es de 32 bloques. Los mobs invocados **antes** de este cambio
+  siguen sonando dobles.
+- **Dependencia de compilación**: `scripts/install-libs.sh` descarga el jar de BetterModel
+  en `libs/` (ignorado por git), porque no hay artefacto Maven publicado.
 - **`sigilo` completo también desde skills**: el efecto aplicado por una skill ya oculta al
   jugador de los demás (cuerpo, armadura y objetos), no solo de los mobs. No saca la entidad
   del cliente, así que conserva colisión, tab list y daño normal. Se limpian las partículas
