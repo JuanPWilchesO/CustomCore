@@ -694,8 +694,13 @@ public final class BetterModelLink implements ModelLink {
         this.cancelStateLoop(id);
         this.stopState(tracker, definition, ModelState.WALK);
         this.stopState(tracker, definition, ModelState.IDLE);
-        // La muerte para TODO lo anterior: si el golpe seguia puesto, tapaba a la muerte.
-        if (event.terminal()) {
+        // Antes de una reactiva nueva se paran las anteriores.
+        //
+        // El dano gana al golpe: si al mob le pegan mientras golpea, se ve el 'hurt'. La muerte
+        // para todo lo anterior, que si no tapa a 'death'. Y el golpe corta un dano que estuviera
+        // sonando, porque es el evento mas reciente.
+        if (event == ModelAnimation.HURT || event == ModelAnimation.ATTACK
+                || event.terminal()) {
             this.stopReactive(tracker, definition);
         }
         this.play(tracker, spec, event);
