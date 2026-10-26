@@ -346,6 +346,13 @@ public final class CustomMobsPlugin extends JavaPlugin {
                 RegionGate.create(this));
         long spawnInterval = this.config.spawnIntervalSeconds() * 20L;
         this.naturalSpawn.runTaskTimer(this, spawnInterval, spawnInterval);
+        if (this.config.debug()) {
+            this.getLogger().info("[spawn] tarea de aparicion natural arrancada cada "
+                    + spawnInterval / 20L + "s ("
+                    + (this.config.spawnEnabled() ? "activa" : "DESACTIVADA") + ", "
+                    + this.config.spawnAttempts() + " intentos por jugador, tope "
+                    + this.config.spawnGlobalCap() + ")");
+        }
 
         this.ambientTask = new AmbientTask(this.soundService);
         this.ambientTask.runTaskTimer(this, 20L, 20L);

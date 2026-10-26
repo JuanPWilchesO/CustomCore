@@ -37,6 +37,8 @@ public final class NaturalSpawnTask extends BukkitRunnable {
     private final Random random = new Random();
     /** Ultimo motivo de descarte, para no repetir la misma traza en cada ciclo. */
     private final java.util.Map<String, String> lastReason = new java.util.HashMap<>();
+    /** Ultima foto del ciclo, para escribirla solo cuando cambia. */
+    private String lastSnapshot;
 
     public NaturalSpawnTask(CustomMobsPlugin plugin, MobService service, MobRegistry registry,
                             RegionGate regions) {
@@ -49,6 +51,9 @@ public final class NaturalSpawnTask extends BukkitRunnable {
     @Override
     public void run() {
         PluginConfig config = this.service.config();
+        if (this.service.config().debug()) {
+            this.snapshot(config);
+        }
         if (!config.spawnEnabled() || this.service.naturalCount() >= config.spawnGlobalCap()) {
             return;
         }
@@ -156,6 +161,34 @@ public final class NaturalSpawnTask extends BukkitRunnable {
             return "bioma " + this.biomeOf(ground);
         }
         return null;
+    }
+
+    /**
+     * Foto del estado antes de cada ciclo, con {@code debug: true}.
+     *
+     * <p>Dice lo que ninguna otra traza puede decir: si la tarea corre, si hay jugadores
+     * dentro, si el mundo esta habilitado y cuantos mobs naturales hay vivos. Se escribe solo
+     * cuando cambia algo, para no llenar el log cada 10 segundos.
+     */
+    private void snapshot(PluginConfig config) {
+        List<Player> players = new ArrayList<>(Bukkit.getOnlinePlayers());
+        StringBuilder where = new StringBuilder();
+        for (Player player : players) {
+            if (where.length() > 0) {
+                where.append(", ");
+            }
+            where.append(player.getName()).append('@').append(player.getWorld().getName())
+                    .append(' ').append(player.getLocation().getBlockX()).append(',')
+                    .append(player.getLocation().getBlockZ());
+        }
+        String line = "spawning=" + config.spawnEnabled()
+                + " naturales=" + this.service.naturalCount() + "/" + config.spawnGlobalCap()
+                + " jugadores=[" + where + "]";
+        if (line.equals(this.lastSnapshot)) {
+            return;
+        }
+        this.lastSnapshot = line;
+        this.service.plugin().getLogger().info("[spawn] ciclo " + line);
     }
 
     /** Deja en el log (con {@code debug: true}) por que no aparecio, sin repetirlo cada ciclo. */
