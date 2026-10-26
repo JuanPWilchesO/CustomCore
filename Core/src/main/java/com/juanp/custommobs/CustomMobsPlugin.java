@@ -266,16 +266,6 @@ public final class CustomMobsPlugin extends JavaPlugin {
         pluginManager.registerEvents(new VillagePeaceListener(this.mobService), this);
         pluginManager.registerEvents(new DamageImmunityListener(this.mobService), this);
         pluginManager.registerEvents(new SoundListener(this.mobService, this.soundService), this);
-        // Calla el sonido vanilla de los tipos que el mob configura con el suyo. Se hace en el
-        // paquete (como LibsDisguises), no en el evento de dano: cancelar el dano para callar
-        // el sonido dejaba a los mobs invulnerables.
-        try {
-            com.github.retrooper.packetevents.PacketEvents.getAPI().getEventManager()
-                    .registerListener(new com.juanp.custommobs.audio.VanillaSoundFilter(
-                            this.mobService, this.soundService));
-        } catch (Throwable ignored) {
-            // Sin PacketEvents los mobs suenan con el suyo y con el de su tipo, como antes.
-        }
         // Suelta el modelo de un mob que desaparece sin morir (recogido, retirado, portal).
         pluginManager.registerEvents(new com.juanp.custommobs.model.ModelCleanupListener(this.mobService), this);
         pluginManager.registerEvents(new DaylightListener(this.mobService), this);

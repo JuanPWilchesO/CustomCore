@@ -180,12 +180,9 @@ ai: true
 respawn-seconds: 30
 ```
 
-Los sonidos **sustituyen** al de vanilla de ese tipo: un mob con `hurt` configurado no
-usa el grito vanilla al recibir dano, y uno con `attack` no usa el suyo al golpear. El dano
-del mob **no cambia** en ningun caso.
-
-Hay dos excepciones porque Minecraft no deja separarlas: `death` **se suma** al de vanilla,
-y `ambient` convive con el vanilla. Un tipo sin configurar suena como siempre.
+Los sonidos del yml **se suman** al de vanilla del tipo: el mob suena con los dos a la vez.
+Callar el de vanilla **no esta resuelto** todavia: se intento y quedo pendiente (ver
+`MEMORY.md`). Un tipo sin configurar en el yml suena solo con el suyo de vanilla.
 
 - `disguise.type`: `player` usa `skin` (nombre de jugador) o `skin-url`.
 - `burn-in-daylight`: por defecto `false` en mobs de servidor y `true` en los de jugador.

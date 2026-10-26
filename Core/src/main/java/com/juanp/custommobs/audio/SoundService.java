@@ -18,8 +18,6 @@ public final class SoundService {
 
     private final MobService service;
     private final Set<String> unknown = ConcurrentHashMap.newKeySet();
-    /** Claves emitidas por el propio plugin, para que el filtro no las calle. */
-    private final Set<String> own = ConcurrentHashMap.newKeySet();
 
     public SoundService(MobService service) {
         this.service = service;
@@ -34,21 +32,7 @@ public final class SoundService {
         if (sound == null) {
             return;
         }
-        // Se apunta la clave: el filtro de sonidos vanilla no debe callar las nuestras, que son
-        // la razon de callarlas (el mob suena con la suya).
-        this.own.add(normalize(spec.sound()));
         location.getWorld().playSound(location, sound, spec.volume(), spec.pitch());
-    }
-
-    /** {@code true} si ese sonido lo emitio este plugin (no es vanilla del mob). */
-    public boolean isOwn(String key) {
-        return this.own.contains(normalize(key));
-    }
-
-    /** Clave comparable: en minusculas y sin {@code minecraft:}. */
-    static String normalize(String key) {
-        String raw = key.toLowerCase(Locale.ROOT).trim();
-        return raw.startsWith("minecraft:") ? raw.substring("minecraft:".length()) : raw;
     }
 
     /** Reproduce el golpe de un mob custom. */
