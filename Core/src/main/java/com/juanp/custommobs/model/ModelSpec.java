@@ -19,6 +19,9 @@ import java.util.Map;
  * @param damageAnimation si el modelo reproduce solo la animacion de dano
  * @param damageTint      si el modelo se tine de rojo al recibir dano
  * @param sightTrace      si el modelo solo se dibuja con linea de vision; {@code null} = por defecto
+ * @param showName        quien pinta el nombre: {@code null} = automatico (lo pinta el modelo si
+ *                        trae un hueso {@code mtag}), {@code true} = siempre el vanilla,
+ *                        {@code false} = nunca el vanilla
  * @param seat            si el modelo pone el asiento de la montura (hueso con tag SEAT)
  * @param animations      animaciones por evento, con las claves de {@link ModelAnimation}
  */
@@ -32,12 +35,13 @@ public record ModelSpec(
         boolean damageAnimation,
         boolean damageTint,
         Boolean sightTrace,
+        Boolean showName,
         boolean seat,
         Map<ModelAnimation, AnimationSpec> animations
 ) {
 
     public static final ModelSpec NONE = new ModelSpec(
-            false, null, true, true, false, null, true, true, null, false, Map.of());
+            false, null, true, true, false, null, true, true, null, null, false, Map.of());
 
     /** {@code true} si este mob lleva modelo y tiene nombre. */
     public boolean active() {

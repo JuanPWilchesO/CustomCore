@@ -793,6 +793,16 @@ public final class MobLoader {
         }
         Double scale = number(section.get("scale"));
         Boolean sightTrace = section.isSet("sight-trace") ? section.getBoolean("sight-trace") : null;
+        // 'auto' (o sin clave) deja que mande el modelo: si trae hueso 'mtag', pinta su placa.
+        Boolean showName = null;
+        if (section.isSet("show-name")) {
+            String raw = String.valueOf(section.get("show-name")).trim().toLowerCase(Locale.ROOT);
+            if ("auto".equals(raw)) {
+                showName = null;
+            } else {
+                showName = Boolean.parseBoolean(raw);
+            }
+        }
         return new ModelSpec(
                 true,
                 name,
@@ -803,6 +813,7 @@ public final class MobLoader {
                 section.getBoolean("damage-animation", true),
                 section.getBoolean("damage-tint", true),
                 sightTrace,
+                showName,
                 section.getBoolean("seat", true),
                 Map.copyOf(animations));
     }

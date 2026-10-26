@@ -1253,6 +1253,28 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
             if (definition.disguise() != null && definition.disguise().enabled()) {
                 sender.sendMessage(com.juanp.custommobs.mob.Texts.color(" &e" + definition.id()
                         + " &8tiene 'disguise' y 'model': gana el disfraz"));
+                continue;
+            }
+            // El nombre de hueso compone tags: 'hitbox' NO es un tag, 'b_hitbox' si. Es el
+            // error mas facil de cometer en Blockbench y deja el mob sin caja de colision.
+            if (exists && link instanceof com.juanp.custommobs.model.BetterModelLink better) {
+                var report = better.inspectBones(spec.name());
+                if (report == null) {
+                    sender.sendMessage(com.juanp.custommobs.mob.Texts.color(" &8" + definition.id()
+                            + " &7modelo no cargado aun; se revisa al aplicarse"));
+                    continue;
+                }
+                if (!report.hitBox() && spec.hideBody()) {
+                    wrong++;
+                    sender.sendMessage(com.juanp.custommobs.mob.Texts.color(" &c" + definition.id()
+                            + " &8-> &f" + spec.name() + " &8sin hitbox: renombra un hueso a"
+                            + " 'b_algo' (no 'hitbox'). Cuerpo visible."));
+                }
+                if (!report.seat() && spec.seat() && definition.mountable()) {
+                    sender.sendMessage(com.juanp.custommobs.mob.Texts.color(" &e" + definition.id()
+                            + " &8-> &f" + spec.name() + " &8sin asiento: renombra el hueso a"
+                            + " 'p_algo'."));
+                }
             }
         }
         if (checked == 0) {

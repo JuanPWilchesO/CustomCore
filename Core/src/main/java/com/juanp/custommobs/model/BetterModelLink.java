@@ -42,10 +42,16 @@ public final class BetterModelLink implements ModelLink {
 
     private final Plugin plugin;
     private final Map<java.util.UUID, EntityTracker> trackers = new ConcurrentHashMap<>();
-    /** Ultimo evento de estado por mob, para no relanzar la misma animacion en cada ciclo. */
-    private final Map<java.util.UUID, Boolean> walking = new ConcurrentHashMap<>();
-    /** Mobs que ya tienen la animacion de reposo puesta. */
-    private final Set<java.util.UUID> idlePlayed = ConcurrentHashMap.newKeySet();
+    /**
+     * Mobs que estan andando ahora mismo.
+     *
+     * <p>Es la UNICA fuente de verdad para alternar idle/walk: antes habia ademas un
+     * {@code idlePlayed}, y los dos se contradecian (se quedaba puesta la animacion de
+     * andar con el mob parado).
+     */
+    private final Set<java.util.UUID> walking = ConcurrentHashMap.newKeySet();
+    /** Mobs cuyo nombre vanilla se oculto para que mande la placa del modelo. */
+    private final Set<java.util.UUID> hiddenNames = ConcurrentHashMap.newKeySet();
     private final Set<String> warned = ConcurrentHashMap.newKeySet();
     private final Set<String> warnedModels = ConcurrentHashMap.newKeySet();
 
@@ -109,7 +115,10 @@ public final class BetterModelLink implements ModelLink {
         });
         this.trackers.put(entity.getUniqueId(), tracker);
 
-        boolean hitBox = !this.requireHitBox || this.ensureHitBox(tracker, target, spec);
+        BoneInfo bones = this.readBones(tracker);
+        // Una montura con asiento tambien sirve de caja de colision.
+        boolean hasBox = bones.hitBox() || (spec.seat() && bones.seat());
+        boolean hitBox = !this.requireHitBox || hasBox;
 
         if (spec.hideBody() || spec.hideEquipment() || spec.hideGlow()) {
             if (hitBox || !spec.hideBody()) {
@@ -121,16 +130,40 @@ public final class BetterModelLink implements ModelLink {
             } else {
                 // Sin hitbox propia, ocultar el cuerpo dejaria al mob intocable: se deja visible.
                 this.warnOnce("nohitbox:" + definition.id(),
-                        "El modelo '" + spec.name() + "' no declara hitbox (tag 'hitbox' o tag"
-                                + " 'seat'): el mob '" + definition.id() + "' conserva su cuerpo"
-                                + " vanilla para poder recibir dano. Anade el tag al modelo o pon"
-                                + " 'hide-body: false'.");
+                        "El modelo '" + spec.name() + "' no declara hitbox: BetterModel solo se la"
+                                + " pone a los huesos cuyo NOMBRE lleva el tag 'b' u 'ob' delante"
+                                + " (por ejemplo 'b_body' u 'ob_hitbox'), no a un hueso llamado"
+                                + " 'hitbox'. El mob '" + definition.id() + "' conserva su cuerpo"
+                                + " vanilla para poder recibir dano. Renombra el hueso en Blockbench"
+                                + " o pon 'hide-body: false'.");
             }
         }
 
-        this.idlePlayed.remove(entity.getUniqueId());
+        this.applyName(entity, definition, spec, bones);
         this.animate(entity, definition, ModelAnimation.SPAWN);
         this.animate(entity, definition, ModelAnimation.IDLE);
+    }
+
+    /**
+     * Decide quien pinta el nombre del mob.
+     *
+     * <p>Si el modelo trae un hueso con tag {@code mtag}, BetterModel dibuja SU placa siguiendo
+     * al hueso. Dejar ademas la vanilla es lo que la hace parpadear: las dos se superponen y la
+     * del modelo se oculta cuando no hay linea de vision. En ese caso se apaga la vanilla.
+     */
+    private void applyName(LivingEntity entity, MobDefinition definition, ModelSpec spec,
+                           BoneInfo bones) {
+        Boolean showName = spec.showName();
+        boolean hide = showName != null ? !showName : bones.name();
+        if (!hide) {
+            return;
+        }
+        // Se recuerda para devolverlo al liberar el mob: el nombre vanilla es parte del mob
+        // custom y otros sistemas (el estilo, el libro) cuentan con el.
+        if (entity.isCustomNameVisible()) {
+            this.hiddenNames.add(entity.getUniqueId());
+        }
+        entity.setCustomNameVisible(false);
     }
 
     /** Oculta solo el equipo: cuerpo visible. */
@@ -155,40 +188,34 @@ public final class BetterModelLink implements ModelLink {
     }
 
     /**
-     * Se asegura de que el modelo aporta una hitbox, que es lo que recibe el dano cuando el
-     * cuerpo vanilla esta oculto.
+     * Lee los huesos del tracker, que es la unica fuente fiable de lo que el modelo aporta.
+     *
+     * <p>Solo se MIRA: no se crea nada. Antes se llamaba a {@code createHitBox(null, ...)} y
+     * la implementacion de BetterModel hace {@code checkNotNull(entity)}, asi que lanzaba
+     * siempre y el resultado era "sin hitbox" para CUALQUIER modelo. BetterModel ya crea las
+     * hitboxes de los huesos con tag {@code b}/{@code ob} por su cuenta.
      */
-    private boolean ensureHitBox(EntityTracker tracker, PlatformEntity target, ModelSpec spec) {
-        EntityTrackerRegistry registry = tracker.registry();
-        if (registry != null && !registry.hitBoxes().isEmpty()) {
-            return true;
+    private BoneInfo readBones(EntityTracker tracker) {
+        boolean hitBox = false;
+        boolean seat = false;
+        boolean name = false;
+        if (tracker == null || tracker.isClosed()) {
+            return new BoneInfo(hitBox, seat, name);
         }
-        if (this.hitBoxOf(tracker) != null) {
-            return true;
-        }
-        // BonePredicate.Builder ya es un Predicate<RenderedBone>: createHitBox acepta eso.
-        java.util.function.Predicate<RenderedBone> predicate = spec.seat()
-                ? BonePredicate.tag(BoneTags.HITBOX, BoneTags.SEAT)
-                : BonePredicate.tag(BoneTags.HITBOX);
         try {
-            tracker.createHitBox(null, BonePredicate.from(predicate));
+            for (RenderedBone bone : tracker.bones()) {
+                hitBox |= bone.name().tagged(BoneTags.HITBOX);
+                seat |= bone.name().tagged(BoneTags.SEAT);
+                name |= bone.name().tagged(BoneTags.MOB_TAG, BoneTags.TAG, BoneTags.PLAYER_TAG);
+            }
         } catch (Throwable throwable) {
-            // Sin hitbox no se oculta el cuerpo; el modelo se ve igual.
+            // Sin poder leer los huesos se asume lo conservador: no ocultar el cuerpo.
         }
-        if (registry != null && !registry.hitBoxes().isEmpty()) {
-            return true;
-        }
-        return this.hitBoxOf(tracker) != null;
+        return new BoneInfo(hitBox, seat, name);
     }
 
-    private HitBox hitBoxOf(EntityTracker tracker) {
-        for (RenderedBone bone : tracker.bones()) {
-            HitBox box = bone.getHitBox();
-            if (box != null) {
-                return box;
-            }
-        }
-        return null;
+    /** Lo que aporta el modelo a la entidad, leido de sus huesos. */
+    private record BoneInfo(boolean hitBox, boolean seat, boolean name) {
     }
 
     @Override
@@ -197,16 +224,8 @@ public final class BetterModelLink implements ModelLink {
         if (spec == null || !spec.active() || !spec.seat() || !definition.mountable()) {
             return false;
         }
-        EntityTracker tracker = this.trackers.get(entity.getUniqueId());
-        if (tracker == null || tracker.isClosed()) {
-            return false;
-        }
-        try {
-            EntityTrackerRegistry registry = tracker.registry();
-            return registry != null && !registry.hitBoxes().isEmpty();
-        } catch (Throwable throwable) {
-            return false;
-        }
+        // El asiento es un hueso con tag 'p': si el modelo no lo trae, no hay donde sentarse.
+        return this.readBones(this.trackers.get(entity.getUniqueId())).seat();
     }
 
     @Override
@@ -289,22 +308,21 @@ public final class BetterModelLink implements ModelLink {
         }
         try {
             if (event == ModelAnimation.WALK) {
-                // 'walk' solo se relanza cuando el mob EMPIEZA a andar: si se relanzara en
-                // cada ciclo, la animacion se cortaria a si misma y el mob pareceria congelado.
-                if (this.walking.put(entity.getUniqueId(), Boolean.TRUE) == null) {
-                    this.play(tracker, spec);
+                // Solo al EMPEZAR a andar. Relanzarla en cada ciclo la cortaria a si misma.
+                if (this.walking.add(entity.getUniqueId())) {
+                    this.play(tracker, spec, definition, ModelAnimation.IDLE);
                 }
                 return;
             }
             if (event == ModelAnimation.IDLE) {
-                if (this.walking.remove(entity.getUniqueId()) == null
-                        && this.idlePlayed.contains(entity.getUniqueId())) {
-                    // Ya estaba en reposo: no se repite.
-                    return;
+                // Solo se vuelve al reposo si venia andando: repetirla en cada ciclo de la tarea
+                // la reiniciaria sin parar.
+                if (this.walking.remove(entity.getUniqueId())) {
+                    this.play(tracker, spec, definition, ModelAnimation.WALK);
                 }
-                this.idlePlayed.add(entity.getUniqueId());
+                return;
             }
-            this.play(tracker, spec);
+            this.play(tracker, spec, definition, null);
             if (event == ModelAnimation.DEATH) {
                 this.closeAfterDeath(entity.getUniqueId(), tracker);
             }
@@ -318,12 +336,36 @@ public final class BetterModelLink implements ModelLink {
     /** Anima el estado en reposo tras dejar de andar. */
     @Override
     public void stopWalking(LivingEntity entity, MobDefinition definition) {
-        if (this.walking.remove(entity.getUniqueId()) != null && this.hasModel(entity)) {
-            this.animate(entity, definition, ModelAnimation.IDLE);
+        if (this.walking.remove(entity.getUniqueId())) {
+            AnimationSpec idle = definition.model() == null
+                    ? null
+                    : definition.model().animation(ModelAnimation.IDLE);
+            if (idle != null && !idle.name().isBlank()) {
+                this.play(this.trackers.get(entity.getUniqueId()), idle, definition,
+                        ModelAnimation.WALK);
+            }
         }
     }
 
-    private void play(EntityTracker tracker, AnimationSpec spec) {
+    /**
+     * Lanza una animacion parando antes la del estado contrario.
+     *
+     * <p>Sin el {@code stopAnimation} previo, la animacion de andar se queda montada encima de
+     * la de reposo: BetterModel apila animaciones y la que no se para sigue mandando. Ese era
+     * el sintoma de "se queda la de andar con el mob parado".
+     */
+    private void play(EntityTracker tracker, AnimationSpec spec, MobDefinition definition,
+                      ModelAnimation stop) {
+        if (tracker == null || tracker.isClosed()) {
+            return;
+        }
+        if (stop != null && definition != null && definition.model() != null) {
+            AnimationSpec previous = definition.model().animation(stop);
+            if (previous != null && !previous.name().isBlank()
+                    && !previous.name().equalsIgnoreCase(spec.name())) {
+                tracker.stopAnimation(previous.name());
+            }
+        }
         tracker.animate(spec.name(), modifier(spec));
     }
 
@@ -372,7 +414,7 @@ public final class BetterModelLink implements ModelLink {
     public void release(LivingEntity entity) {
         java.util.UUID id = entity.getUniqueId();
         this.walking.remove(id);
-        this.idlePlayed.remove(id);
+        this.restoreName(entity);
         EntityTracker tracker = this.trackers.remove(id);
         if (tracker == null) {
             return;
@@ -395,7 +437,19 @@ public final class BetterModelLink implements ModelLink {
         }
         this.trackers.clear();
         this.walking.clear();
-        this.idlePlayed.clear();
+        this.hiddenNames.clear();
+    }
+
+    /**
+     * Devuelve el nombre vanilla que se habia ocultado para la placa del modelo.
+     *
+     * <p>El mob sigue siendo custom despues de soltar el modelo (se guarda en el huevo, se
+     * vuelve a aparecer, se le cambia el estilo): su nombre tiene que volver a verse.
+     */
+    private void restoreName(LivingEntity entity) {
+        if (this.hiddenNames.remove(entity.getUniqueId()) && entity.isValid()) {
+            entity.setCustomNameVisible(true);
+        }
     }
 
     @Override
@@ -427,9 +481,53 @@ public final class BetterModelLink implements ModelLink {
         }
     }
 
+    /**
+     * Que huesos con tag trae un modelo cargado (para el comando de validacion).
+     *
+     * <p>Se lee del modelo, no de una entidad: asi se puede revisar antes de invocar el mob.
+     * {@code null} si el modelo no esta cargado.
+     *
+     * @param hitBox si algun hueso lleva tag {@code b}/{@code ob}
+     * @param seat   si algun hueso lleva tag {@code p}
+     * @param name   si algun hueso lleva tag de placa ({@code mtag}, {@code tag}, {@code ptag})
+     */
+    public BoneReport inspectBones(String model) {
+        ModelRenderer renderer = BetterModel.modelOrNull(model);
+        if (renderer == null) {
+            return null;
+        }
+        boolean hitBox = false;
+        boolean seat = false;
+        boolean name = false;
+        java.util.List<String> bones = new java.util.ArrayList<>();
+        try {
+            // flatten() recorre todo el arbol y da cada hueso con su BoneName ya parseado.
+            for (kr.toxicity.model.api.data.renderer.RendererGroup group : renderer.flatten().toList()) {
+                var bone = group.name();
+                bones.add(bone.rawName());
+                hitBox |= bone.tagged(BoneTags.HITBOX);
+                seat |= bone.tagged(BoneTags.SEAT);
+                name |= bone.tagged(BoneTags.MOB_TAG, BoneTags.TAG, BoneTags.PLAYER_TAG);
+            }
+        } catch (Throwable throwable) {
+            return null;
+        }
+        return new BoneReport(hitBox, seat, name, java.util.List.copyOf(bones));
+    }
+
+    /**
+     * Lo que un modelo aporta a la entidad: caja de colision, asiento y placa.
+     *
+     * @param hitBox si trae hueso con tag {@code b}/{@code ob}
+     * @param seat   si trae hueso con tag {@code p}
+     * @param name   si trae hueso de placa ({@code mtag}, {@code tag}, {@code ptag})
+     * @param bones  nombres de los huesos leidos
+     */
+    public record BoneReport(boolean hitBox, boolean seat, boolean name, java.util.List<String> bones) {
+    }
+
     /** Nombres de todos los modelos cargados por BetterModel. */
-    public java.util.List<String> modelNames() {
-        java.util.List<String> names = new java.util.ArrayList<>(this.modelKeys());
+    public java.util.List<String> modelNames() {        java.util.List<String> names = new java.util.ArrayList<>(this.modelKeys());
         java.util.Collections.sort(names);
         return names;
     }

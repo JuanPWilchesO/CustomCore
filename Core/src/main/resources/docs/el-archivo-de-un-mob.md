@@ -223,7 +223,8 @@ model:
 | `damage-animation` | `true` \| `false` | `true` | animacion de dano del propio modelo |
 | `damage-tint` | `true` \| `false` | `true` | tinte rojo al recibir dano |
 | `sight-trace` | `true` \| `false` | el de BetterModel | solo se dibuja con linea de vision |
-| `seat` | `true` \| `false` | `true` | usar el hueso `seat` del modelo como asiento (`category: mount`) |
+| `show-name` | `true` \| `false` \| `auto` | `auto` | quien pinta el nombre, ver abajo |
+| `seat` | `true` \| `false` | `true` | usar el hueso `p_...` del modelo como asiento (`category: mount`) |
 | `animations` | mapa | vacio | animaciones por evento, ver abajo |
 
 **Si el mob tambien tiene `disguise:` activo, gana el disfraz** y el modelo se ignora (se
@@ -238,10 +239,42 @@ log avisa (y `/customcore model validate` los lista).
 ni quita modelos: solo los usa por nombre. Anadir un `.bbmodel` cambia el pack de BetterModel,
 asi que si lo sirves con AutoPack hay que regenerarlo y recargarlo.
 
-**El cuerpo solo se oculta si el modelo tiene hitbox.** Un modelo debe declarar un hueso
-con el tag `hitbox` (o `seat`) en Blockbench. Si no lo tiene, se deja el cuerpo vanilla
-visible: un mob invisible sin caja de colision no recibe dano. Este comportamiento se
-desactiva con `models.require-hitbox: false` en el config.
+**El cuerpo solo se oculta si el modelo tiene hitbox.** Y aqui esta el detalle que se pierde
+en casi todas las guias: BetterModel **no lee el tag de bloque de Blockbench**, lo deduce del
+**nombre del hueso**. El nombre se parte por `_` y cada palabra se busca en esta tabla:
+
+| Lo que hace | Abreviatura en el nombre |
+|---|---|
+| Hitbox | `b` u `ob` |
+| Asiento | `p` |
+| Cabeza | `h` (o `hi`, con los hijos) |
+| Placa con el nombre | `mtag` (sigue al mob), `tag`, `ptag` |
+
+Reglas:
+
+- Un hueso **llamado `hitbox` no lleva tag**: se trata como un hueso normal. Renombralo a
+  `b_hitbox` (o `ob_hitbox`) para que BetterModel le cree la caja de colision.
+- El nombre necesita **al menos dos palabras**: `b` a secas tampoco vale. Escribe `b_body`.
+- Las palabras de tag se **consumen**: el hueso `b_body` se llama internamente `body`.
+
+Sin hitbox, el cuerpo vanilla sigue visible a proposito: un mob invisible sin caja de
+colision no recibe dano. Este comportamiento se desactiva con
+`models.require-hitbox: false` en el config.
+
+> **Los modelos con mesh no sirven.** BetterModel no renderiza geometria de mesh: hay que
+> convertirla a cubos en Blockbench antes de exportar, o el modelo sale negro.
+
+### Nombre del mob
+
+BetterModel puede pintar el nombre siguiendo a un hueso, con el tag `mtag`. Si el modelo
+lo trae, CustomCore apaga el nombre vanilla: tener los dos a la vez hace que la placa
+parpadee, porque la del modelo se oculta cuando pierde la linea de vision y la vanilla no.
+
+| `show-name` | Efecto |
+|---|---|
+| sin la clave (por defecto) | lo decide el modelo: vanilla apagado si trae `mtag` |
+| `true` | el nombre vanilla siempre visible |
+| `false` | nunca el nombre vanilla |
 
 ### Animaciones por evento
 
