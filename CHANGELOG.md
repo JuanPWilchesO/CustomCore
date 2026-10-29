@@ -1,5 +1,35 @@
 # Changelog
 
+## Sin publicar — revision de robustez
+
+- **Un mob aturdido ya no se queda sin IA**. `setAI(false)` viaja en el NBT, pero el estado
+  del aturdimiento vivia solo en memoria: si su chunk se descargaba, o el servidor se apagaba
+  con mobs aturdidos, el mob volvia inerte para siempre. Ahora el bloqueo se marca en el PDC
+  (`ai_locked`) y se deshace al cargarlo. `releaseAll()` recorre tambien los mobs activos, y
+  `tick()` ya no descarta el estado de una entidad solo por estar descargada.
+- **Los YAML de estado se escriben sin dejar cortes**. `player-mobs.yml`, `styles.yml`,
+  `data/spawners.yml`, `data/player-classes.yml` e `items/*.yml` se escribian directamente
+  sobre el archivo vivo: una caida a mitad dejaba un YAML truncado y el siguiente guardado
+  lo sobrescribia (en `player-mobs.yml`, eso son los mobs que solo existen dentro de su
+  huevo). Ahora se escribe `.tmp`, se guarda un `.bak` y se renombra de forma atomica. Si el
+  archivo no se pudo leer al arrancar, el plugin intenta recuperarlo del `.bak` y, si no hay,
+  **no guarda encima** hasta que se repare.
+- **El huevo respeta protecciones**. `EggListener` no miraba si otro plugin cancelaba el
+  clic: ahora usa `ignoreCancelled` y `useInteractedBlock`, y consulta las regiones vetadas
+  del mob.
+- **`deny-regions` vale tambien para mobs de jugador**. Antes solo existia dentro de `spawn:`,
+  que los mobs de jugador no tienen, asi que el huevo no podia protegerse. La clave nueva en
+  la raiz del yml se suma a la de `spawn:`.
+- **Tope duro de `chunk-radius` (6)**. Tanto en `point.chunk-radius` como en el de cada mob:
+  con radio 6 son 169 chunks por mob. Por encima se recorta.
+- **Espera para redesplegar** (`eggs.redeploy-cooldown-seconds`, 5 s por defecto): tras
+  recoger un mob, ese huevo espera antes de poder volver a colocarse. Evita ir generando zona
+  de chunks nueva recogiendo y soltando en bucle.
+- **Sin PacketEvents el plugin arranca y sigue**. `FactionGlowService` se programaba como
+  tarea siempre y fallaba cada segundo si faltaba PacketEvents. Ahora hay un enlace vacio
+  (`GlowLink`), igual que con Teams, LuckPerms y BetterModel, y `/customcore glowfaccion`
+  explica que no esta disponible.
+
 ## 1.0.6 — modelos 3D, spawn natural y sonidos
 
 - **Modelos 3D con BetterModel** (`model:` en el yml): un mob de cualquier categoría puede
