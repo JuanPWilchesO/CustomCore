@@ -1399,6 +1399,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(TAG + "           | book [jugador]  (libro de inspeccion)");
         sender.sendMessage(TAG + "           | upgrade list | upgrade give <id> [jugador] | upgrade reload");
         sender.sendMessage(TAG + "           | model list [mob] | model validate  (modelos de BetterModel)");
+        sender.sendMessage(TAG + "           | triggers <mob>  (por que via se activa cada skill)");
         sender.sendMessage(TAG + "           | despedir <todos|id|id#marca>  (tus mobs; cualquiera puede usarlo)");
     }
 
@@ -1414,7 +1415,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
             List<String> options = admin
                     ? List.of("reload", "list", "give", "spawn", "remove", "active", "kill",
                             "enchants", "cuota", "item", "color", "glow", "spawner", "book", "upgrade",
-                            "despedir", "faction", "class", "effects", "potion", "model")
+                            "despedir", "faction", "class", "effects", "potion", "model", "triggers")
                     : List.of("cuota", "color", "glow", "despedir");
             for (String option : options) {
                 if (option.startsWith(args[0].toLowerCase(Locale.ROOT))) {
@@ -1466,6 +1467,16 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
         }
         // De aqui para abajo, todo es administracion: sin permiso, no se completa nada.
         if (!admin) {
+            return out;
+        }
+        if (args.length == 2 && (args[0].equalsIgnoreCase("triggers")
+                || args[0].equalsIgnoreCase("trigger"))) {
+            for (MobDefinition definition : this.plugin.registry().all()) {
+                if (definition.hasSkills()
+                        && definition.id().startsWith(args[1].toLowerCase(Locale.ROOT))) {
+                    out.add(definition.id());
+                }
+            }
             return out;
         }
         if (args.length == 2 && (args[0].equalsIgnoreCase("model") || args[0].equalsIgnoreCase("modelo"))) {
