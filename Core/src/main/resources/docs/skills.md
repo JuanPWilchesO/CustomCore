@@ -219,6 +219,14 @@ Reglas:
   se admiten al impactar.
 - Proyectiles cubiertos: flecha y ballesta, municion custom, tridente, bola de nieve y huevo.
   Cohete de ballesta, carga de viento, perla de ender y cana de pescar quedan fuera.
+- **Mobs con modelo**: con el cuerpo oculto, el proyectil toca primero la caja del modelo de
+  BetterModel (en el log aparece como una entidad que nada tiene que ver con el mob) y el
+  mob recibe el dano un instante despues. La skill se resuelve sobre el **mob real**, no
+  sobre la caja: si el primer aviso no es una entidad custom, el disparo no se gasta y se
+  espera al golpe del mob. Si ese golpe no llega, se aplica al mob con modelo mas cercano
+  al punto de impacto, a menos de **1.5 bloques**. Esa red de seguridad **no toca** a mobs
+  con `invulnerable: true`, con `projectile` en `immune:`, ni con la mecanica
+  `invulnerabilidad` activa: si el golpe no les afecta, la skill tampoco.
 - Multishot: solo la **primera** flecha que impacta ejecuta la skill.
 - Si el jugador tiene una **flecha cargada**, manda esa: sus skills y su consumo. Las
   skills del arco solo aplican cuando no hay ninguna cargada.
@@ -447,10 +455,21 @@ golpe que **aplica** el control no cuenta: una flecha que aturde y hace dano en 
 impacto no se cancela a si misma; el siguiente golpe si. Sirve para un control de apertura
 que no debe encadenarse. Por defecto es `false`.
 
+**Mobs con modelo (BetterModel)**: el control tambien congela el modelo. Parar la IA de la
+entidad no basta, porque con `hide-body: true` lo que se ve es el modelo: seguia animando
+`idle`/`walk` y, si algo empujaba a la entidad, el modelo volvia a andar. Al aturdir, el
+modelo se para sin animacion y no cambia de estado hasta que se suelta; al acabar, retoma
+el reposo y la IA decide si anda. El mob aturdido tampoco golpea, ni cuerpo a cuerpo ni
+con proyectil.
+
 `reveal-on-attack: true` es el equivalente para el sigilo: si la skill aplica
 `potion: sigilo` a un jugador, en cuanto ese jugador hace daño (cuerpo a cuerpo o con un
 proyectil) se le quita el sigilo y vuelve a ser visible. Por defecto es `false`, así que el
 sigilo aguanta hasta caducar.
+
+El sigilo también vale contra los **mobs custom con modelo**: no les deja fijar al jugador
+como objetivo (ni los goal, ni la tarea de respaldo, ni el evento de objetivo) y sueltan en
+el acto el que ya tuvieran. Antes solo cortaba a los mobs de vanilla.
 
 ```yaml
 - id: sombra_ataque

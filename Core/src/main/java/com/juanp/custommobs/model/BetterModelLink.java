@@ -86,6 +86,13 @@ public final class BetterModelLink implements ModelLink {
             new ConcurrentHashMap<>();
     /** Mobs cuyo nombre vanilla se oculto para que mande la placa del modelo. */
     private final Set<java.util.UUID> hiddenNames = ConcurrentHashMap.newKeySet();
+    /**
+     * Mobs con el modelo congelado por un control de masas (aturdimiento, raiz).
+     *
+     * <p>La tarea de estado los ignora: si los tocara, devolveria {@code walk} al modelo en
+     * cuanto la entidad aturdida se moviera un poco (empujon, piston, agua).
+     */
+    private final Set<java.util.UUID> frozen = ConcurrentHashMap.newKeySet();
     private final Set<String> warned = ConcurrentHashMap.newKeySet();
     private final Set<String> warnedModels = ConcurrentHashMap.newKeySet();
 
@@ -140,6 +147,8 @@ public final class BetterModelLink implements ModelLink {
         if (spec == null || !spec.active()) {
             return;
         }
+        this.trace("apply " + definition.id() + " en " + entity.getUniqueId()
+                + " tipo=" + entity.getType() + " modelo=" + spec.name());
         if (definition.mountable()) {
             // Las monturas con modelo quedan para mas adelante: el asiento del modelo no mueve
             // la montura vanilla (BetterModel mueve su entidad de interaccion) y el resultado no
@@ -178,9 +187,10 @@ public final class BetterModelLink implements ModelLink {
         TrackerModifier.Builder modifier = defaultModifier.toBuilder()
                 .damageAnimation(spec.damageAnimation())
                 .damageTint(spec.damageTint());
-        if (spec.sightTrace() != null) {
-            modifier.sightTrace(spec.sightTrace());
-        }
+        // 'sight-trace' apagado por defecto: encendido, BetterModel orienta el modelo hacia
+        // el jugador por su cuenta y el mob sigue girando aunque su IA este parada (un
+        // aturdido parecia no estarlo). Se activa a mano con 'model.sight-trace: true'.
+        modifier.sightTrace(spec.sightTrace() != null && spec.sightTrace());
 
         // getOrCreate: si el tracker ya existe (restauracion, cambio de mundo) no se duplica.
         EntityTracker tracker = renderer.getOrCreate(target, modifier.build(), created -> {
@@ -191,6 +201,9 @@ public final class BetterModelLink implements ModelLink {
         this.trackers.put(entity.getUniqueId(), tracker);
 
         BoneInfo bones = this.readBones(tracker);
+        this.trace("huesos " + definition.id() + ": n=" + bones.boneCount()
+                + " hitbox=" + bones.hitBox() + " asiento=" + bones.seat()
+                + " placa=" + bones.nametag() + " tracker=" + tracker.name());
         if (!bones.ready()) {
             // Huesos vacios = BetterModel aun cargando. No se decide nada: si se decidiera
             // ahora, la placa y la hitbox quedarian mal para siempre. Se reintenta desde la
@@ -554,6 +567,10 @@ public final class BetterModelLink implements ModelLink {
         if (tracker == null || tracker.isClosed()) {
             return;
         }
+        if (this.frozen.contains(id)) {
+            // Congelado por un control de masas: ninguna animacion de estado lo mueve.
+            return;
+        }
         if (this.states.get(id) == state) {
             return;
         }
@@ -647,11 +664,80 @@ public final class BetterModelLink implements ModelLink {
     /** Anima el estado en reposo tras dejar de andar. */
     @Override
     public void stopWalking(LivingEntity entity, MobDefinition definition) {
+        if (this.isFrozen(entity)) {
+            // Congelado: no se devuelve al reposo. La tarea de marcha y el control de masas
+            // se pelean, y ganaria la ultima en hablar.
+            return;
+        }
         ModelState current = this.states.get(entity.getUniqueId());
         if (current == ModelState.WALK) {
             this.playState(entity, definition, this.trackers.get(entity.getUniqueId()),
                     ModelState.IDLE);
         }
+    }
+
+    /**
+     * Congela el modelo de un mob bajo control de masas.
+     *
+     * <p>Se marcaba solo la entidad (IA parada), pero con 'hide-body' lo que el jugador ve es
+     * el modelo: ahi seguia animando, e incluso volvia a andar si algo movia la entidad. Al
+     * congelarlo se para la animacion y el bucle de repeticion; al soltarlo se retoma el
+     * estado que ponia la tarea de marcha.
+     *
+     * @param entity el mob
+     * @param frozen {@code true} para congelar, {@code false} para retomar
+     */
+    @Override
+    public void frozen(LivingEntity entity, boolean frozen) {
+        java.util.UUID id = entity.getUniqueId();
+        EntityTracker tracker = this.trackers.get(id);
+        if (tracker == null || tracker.isClosed()) {
+            // Sin modelo no hay nada que congelar; se quita la marca por si quedo colgada.
+            if (!frozen) {
+                this.frozen.remove(id);
+            }
+            return;
+        }
+        if (frozen) {
+            if (!this.frozen.add(id)) {
+                return;
+            }
+            this.trace("congelado " + id);
+            this.cancelStateLoop(id);
+            MobDefinition definition = this.definitionOf(entity);
+            this.stopState(tracker, definition, ModelState.WALK);
+            this.stopState(tracker, definition, ModelState.IDLE);
+            this.states.remove(id);
+            return;
+        }
+        if (!this.frozen.remove(id)) {
+            // Nunca se congelo: no hay nada que reanudar.
+            return;
+        }
+        this.trace("descongelado " + id);
+        MobDefinition definition = this.definitionOf(entity);
+        if (definition == null || definition.model() == null) {
+            return;
+        }
+        // Se vuelve al reposo: al soltarle la IA decide si anda, y la tarea de estado lo
+        // cambiara en el siguiente ciclo si toca andar.
+        this.playState(id, definition, tracker, ModelState.IDLE);
+    }
+
+    /** {@code true} si el modelo de ese mob esta congelado por un control de masas. */
+    public boolean isFrozen(LivingEntity entity) {
+        return this.frozen.contains(entity.getUniqueId());
+    }
+
+    /** La definicion del mob de esa entidad, si el plugin la conoce. */
+    private MobDefinition definitionOf(LivingEntity entity) {
+        if (!(this.plugin instanceof com.juanp.custommobs.CustomMobsPlugin owner)
+                || owner.mobs() == null) {
+            return null;
+        }
+        return owner.mobs().find(entity.getUniqueId())
+                .map(com.juanp.custommobs.mob.CustomMob::definition)
+                .orElse(null);
     }
 
     /**
@@ -774,6 +860,7 @@ public final class BetterModelLink implements ModelLink {
     private void closeTracker(java.util.UUID id, EntityTracker tracker) {
         this.trace("cierre del tracker en " + id);
         this.busy.remove(id);
+        this.frozen.remove(id);
         this.lastReactive.remove(id);
         this.cancelStateLoop(id);
         this.states.remove(id);
@@ -821,6 +908,7 @@ public final class BetterModelLink implements ModelLink {
         java.util.UUID id = entity.getUniqueId();
         this.states.remove(id);
         this.busy.remove(id);
+        this.frozen.remove(id);
         this.lastReactive.remove(id);
         this.cancelStateLoop(id);
         this.restoreName(entity);
@@ -850,6 +938,7 @@ public final class BetterModelLink implements ModelLink {
         this.trackers.clear();
         this.states.clear();
         this.busy.clear();
+        this.frozen.clear();
         this.lastReactive.clear();
         this.hiddenNames.clear();
     }

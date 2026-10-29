@@ -29,6 +29,14 @@ cooldown-seconds: 20
 `mode: activa` solo entra en combate. Para una trampa de area, cambia a
 `target-type: radius` con `target: enemies` y un `range` corto.
 
+### Mobs con modelo
+
+Si el mob tiene un modelo de BetterModel, aturdirlo congela tambien el modelo: deja de
+alternar `idle`/`walk` y no se mueve aunque algo empuje a la entidad. El mob aturdido
+tampoco golpea, ni cuerpo a cuerpo ni con flecha. Necesita que el modelo no tenga
+`sight-trace: true`: con ese ajuste BetterModel orienta el modelo hacia el jugador por su
+cuenta y el aturdido sigue girando. Va apagado por defecto.
+
 ## Raiz, silencio y desarme
 
 ```yaml

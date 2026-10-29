@@ -83,6 +83,12 @@ public final class TargetPolicy {
         if (soldier.isOwner(candidate.getUniqueId())) {
             return false;
         }
+        // El sigilo del plugin corta la deteccion de los mobs custom igual que la de vanilla.
+        // Se mira aqui y no solo en el evento: el objetivo se fija tambien por goal y por la
+        // tarea de respaldo, que no pasan por EntityTargetLivingEntityEvent.
+        if (this.isHidden(candidate)) {
+            return false;
+        }
         // Un mob amistoso con el pueblo no toca a la gente del pueblo.
         if (soldier.definition().villageFriendly() && VillageFolk.isLeftAlone(candidate)) {
             return false;
@@ -90,6 +96,12 @@ public final class TargetPolicy {
         return soldier.definition().server()
                 ? this.isValidServerTarget(soldier, candidate)
                 : this.isValidPlayerMobTarget(soldier, candidate);
+    }
+
+    /** {@code true} si es un jugador con el sigilo del plugin activo. */
+    private boolean isHidden(LivingEntity candidate) {
+        return candidate instanceof Player player
+                && this.service.plugin().effects().hasMechanic(player, "sigilo");
     }
 
     // ------------------------------------------------------------------ mobs de jugador
