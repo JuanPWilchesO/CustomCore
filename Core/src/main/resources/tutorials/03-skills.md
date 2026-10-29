@@ -207,7 +207,45 @@ se interpretan como `LOOK + ENEMIES`; `target: enemies/allies/self` siguen siend
 
 En `effect: message` el objetivo **se ignora**: habla a quien este en rango.
 
-## 4. Detalles que importan
+## 4. Que tu mob reaccione a lo que pasa
+
+Hasta aqui las skills salen solas cada cierto tiempo. Con `trigger:` ademas reaccionan a
+**eventos**: recibir un golpe, matar, morir, estar sobre un bloque, vivir de noche.
+
+```yaml
+- id: represalia
+  effect: damage
+  target: target        # quien te golpeo
+  amount: 4.0
+  trigger: [onHurt]
+  cooldown-seconds: 8
+
+- id: ultimo_aliento
+  effect: summon
+  target: self
+  summon: esbirro
+  amount: 2
+  trigger: [onDeath]
+
+- id: sobre_magma
+  effect: damage
+  target: self
+  amount: 1.0
+  trigger: [onBlock]
+  trigger.block: MAGMA_BLOCK
+```
+
+Lo importante:
+
+- `trigger:` **no reemplaza** a `mode`, se suma. Si pones los dos, se dispara por las dos
+  vias; si solo pones `trigger:`, el ciclo periodico deja de tocarla.
+- Una skill necesita `mode`, `trigger`, o los dos. Sin ninguno, es `pasiva` como siempre.
+- Cooldown y `chance` son comunes a todas las vias de esa skill.
+- `onHealth` lanza la fase 2 del jefe: `trigger: [onHealth]` con `trigger.health: 30%`.
+
+La lista completa esta en `../docs/skills.md`, seccion **Triggers**.
+
+## 5. Detalles que importan
 
 - `range` tiene tope de **128 bloques**.
 - `chance: 0.5` = acierta la mitad de las veces; si falla, **no gasta** el cooldown.
@@ -215,7 +253,7 @@ En `effect: message` el objetivo **se ignora**: habla a quien este en rango.
   enemigo, sus skills tambien.
 - El intervalo de evaluacion es `skills.interval-ticks` del config (20 = 1 segundo).
 
-## 5. Prueba
+## 6. Prueba
 
 ```
 /customcore reload

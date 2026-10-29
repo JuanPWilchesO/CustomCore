@@ -424,7 +424,7 @@ public final class EffectListener implements Listener {
         boolean any = false;
         for (String id : use.skillIds()) {
             var skill = this.plugin.skillCatalog().get(id).orElse(null);
-            if (skill == null || skill.trigger() != com.juanp.custommobs.skill.SkillTrigger.IMPACT) {
+            if (skill == null || skill.mode() != com.juanp.custommobs.skill.SkillMode.IMPACT) {
                 return false;
             }
             any = true;

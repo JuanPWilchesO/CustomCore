@@ -121,6 +121,10 @@ attitude: hostile
 | `neutral` | no ataca salvo que lo agredan |
 | `defender` | nunca ataca jugadores; persigue a los monstruos que los amenazan |
 
+> **Ojo con `defender`:** los jugadores pasan a ser **de su bando**, así que el mob tampoco
+> recibe daño de ellos. Sus golpes se anulan en silencio: el mob parece invulnerable. Si
+> quieres que no ataque pero que sí se le pueda pegar, usa `neutral`.
+
 En un mob de servidor, la relacion con jugadores la manda `attitude`; `targets.players`
 es para los mobs de jugador. Ver `facciones-equipos-y-combate.md`.
 

@@ -490,7 +490,7 @@ public final class ProjectileListener implements Listener {
         }
         for (String id : use.skillIds()) {
             SkillSpec skill = catalog.get(id).orElse(null);
-            if (skill != null && skill.trigger() == SkillTrigger.IMPACT) {
+            if (skill != null && skill.mode() == SkillMode.IMPACT) {
                 found.add(skill);
             }
         }

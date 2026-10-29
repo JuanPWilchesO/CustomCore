@@ -1,9 +1,24 @@
 package com.juanp.custommobs.skill;
 
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.Set;
+
 /**
  * Una skill configurable de un mob, leida de la seccion {@code skills} de su yml.
  *
- * <p>Se evalua cada {@code skills.interval-ticks} del config central. Una skill con
+ * <p>Se activa por dos vias independientes que se suman:
+ * <ul>
+ *   <li>{@code mode} ({@link SkillMode}): la via de siempre —pasiva, activa, interaccion,
+ *       item o impacto—.</li>
+ *   <li>{@code trigger} ({@link SkillEvent}): eventos del juego y condiciones de estado
+ *       (recibir dano, matar, estar sobre un bloque, vivir de noche...).</li>
+ * </ul>
+ * Una skill debe declarar al menos una de las dos. Si solo declara triggers, el
+ * planificador periodico no la toca: la disparan sus eventos. Si no declara ninguna, es
+ * pasiva, como siempre.
+ *
+ * <p>La pasiva se evalua cada {@code skills.interval-ticks} del config central. Una skill con
  * {@code chance} menor que 1 no siempre se dispara: si falla la tirada, se reintenta en
  * la siguiente evaluacion sin consumir el cooldown.
  *
@@ -11,8 +26,14 @@ package com.juanp.custommobs.skill;
  * @param effect                que hace
  * @param target                a quien apunta (en {@code MESSAGE} se ignora: habla al radio)
  * @param targetType            como se elige: LOOK (cruz de vista) o RADIUS (radio)
- * @param trigger               cuando se dispara: pasiva, activa (solo en combate) o al
- *                              hacer clic derecho sobre el mob
+ * @param mode                  cuando se dispara por la via de siempre; {@code null} si la
+ *                              skill solo se activa por triggers
+ * @param events                triggers declarados; vacia si la skill no tiene
+ * @param triggerBlock          bloque de {@code onBlock}; {@code null} si no aplica
+ * @param daytime               mitad del dia de {@code onDaytime}; {@code null} si no aplica
+ * @param health                vida umbral de {@code onHealth} (0 = no aplica)
+ * @param healthPercent         si el umbral de vida es una fraccion de la vida maxima
+ * @param kill                  que muerte cuenta para {@code onKill}
  * @param range                 radio de busqueda y alcance maximo, en bloques
  * @param cooldownSeconds       segundos minimos entre usos
  * @param chance                probabilidad por evaluacion (0.0 a 1.0; 1.0 = siempre)
@@ -43,7 +64,13 @@ public record SkillSpec(
         SkillEffect effect,
         SkillTarget target,
         SkillTargetType targetType,
-        SkillTrigger trigger,
+        SkillMode mode,
+        Set<SkillEvent> events,
+        org.bukkit.Material triggerBlock,
+        Daytime daytime,
+        double health,
+        boolean healthPercent,
+        KillFilter kill,
         double range,
         int cooldownSeconds,
         double chance,
@@ -74,6 +101,18 @@ public record SkillSpec(
     public static final double MIN_DISTANCE = 0.5D;
     public static final double MAX_DISTANCE = 20.0D;
 
+    /** Tope del umbral de {@code trigger.health} cuando se escribe en porcentaje. */
+    public static final double MAX_HEALTH_PERCENT = 1.0D;
+
+    public SkillSpec {
+        if (events == null || events.isEmpty()) {
+            events = Set.of();
+        } else {
+            events = Collections.unmodifiableSet(EnumSet.copyOf(events));
+        }
+        kill = kill == null ? KillFilter.DEFAULT : kill;
+    }
+
     public boolean hasMessage() {
         return this.message != null && !this.message.isBlank();
     }
@@ -88,5 +127,25 @@ public record SkillSpec(
 
     public boolean hasCooldownMessage() {
         return this.cooldownMessage != null && !this.cooldownMessage.isBlank();
+    }
+
+    /** {@code true} si declara ese trigger. */
+    public boolean hasEvent(SkillEvent event) {
+        return this.events.contains(event);
+    }
+
+    /** {@code true} si se dispara por al menos un evento. */
+    public boolean hasTrigger() {
+        return !this.events.isEmpty();
+    }
+
+    /** {@code true} si el planificador periodico debe evaluarla. */
+    public boolean periodic() {
+        return this.mode != null && this.mode.periodic();
+    }
+
+    /** {@code true} si un trigger de estado (bloque, hora, vida) puede dispararla. */
+    public boolean hasStateTrigger() {
+        return this.events.stream().anyMatch(SkillEvent::periodic);
     }
 }

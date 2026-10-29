@@ -72,7 +72,12 @@ siendo objetivos especiales de mob.
 | `effect` | `damage` \| `heal` \| `ignite` \| `freeze` \| `block_below` \| `explosion` \| `repair_all` \| `teleport_behind` \| `backstep` \| `message` \| `potion` \| `summon` \| `chain` \| `console_command` \| `player_command` | — |
 | `target-type` | `LOOK` \| `RADIUS` | se infiere del `target` viejo |
 | `target` | `ENEMIES` \| `ALLIES` \| `SELF`; legado: `owner` \| `target` \| `look` | `self` en cadenas, invocaciones y comandos; obligatorio en el resto |
-| `mode` | `pasiva` \| `activa` \| `interaccion` \| `item` | `pasiva` |
+| `mode` | `pasiva` \| `activa` \| `interaccion` \| `item` \| `impacto`; opcional si hay `trigger` | `pasiva` si no hay `trigger` |
+| `trigger` | lista de triggers: `onHurt` \| `onAttack` \| `onDeath` \| `onKill` \| `onBlock` \| `onDaytime` \| `onHealth` | — |
+| `trigger.block` | material para `onBlock` (obligatorio con ese trigger) | — |
+| `trigger.daytime` | `day` \| `night`, para `onDaytime` (obligatorio) | — |
+| `trigger.health` | umbral de `onHealth`: `60` (puntos) o `30%`/`0.3` (fraccion de la vida maxima) | — |
+| `trigger.kill` | `cualquiera` \| `jugadores` \| `mobs`, para `onKill` | `cualquiera` |
 | `range` | bloques (tope 128) | `8.0` |
 | `cooldown-seconds` | entero | `5` |
 | `chance` | `0.0` a `1.0` | `1.0` |
@@ -133,6 +138,128 @@ Los avisos ya no van al chat. Se muestran en la boss bar (arriba) o en un títul
 | `interaccion` | cuando un jugador hace **clic derecho** sobre el mob |
 | `item` | solo lo lanza un objeto con `usar.skill`/`usar.skills`; el planificador de mobs lo ignora. Obligatorio para comandos y cadenas desde objetos |
 | `impacto` | cuando un **proyectil** lanzado por el jugador toca algo. Solo desde objetos; el planificador de mobs lo ignora |
+
+## Triggers (`trigger:`)
+
+Un trigger es una **via de activacion mas**, independiente del `mode`. La skill se dispara
+por todas las vias que tenga: por su `mode` y por cada trigger de su lista.
+
+```yaml
+# Solo por trigger: no se evalua en el ciclo periodico.
+- id: furia
+  effect: damage
+  target: target
+  trigger: [onHurt]
+  amount: 6.0
+  cooldown-seconds: 10
+
+# Las dos vias a la vez: pasiva y tambien al matar.
+- id: sed
+  effect: heal
+  target: self
+  mode: pasiva
+  trigger: [onKill]
+  amount: 4.0
+  cooldown-seconds: 2
+```
+
+Reglas:
+
+- Una skill necesita **al menos uno de los dos**: `mode` o `trigger`.
+- Si declara `trigger` **y no** dice `mode`, el ciclo periodico **no la toca**: solo la
+  disparan sus triggers. Ya no se asume `pasiva`.
+- Si no dice ninguno de los dos, es `pasiva`, como siempre.
+- El cooldown y `chance` son **compartidos** entre todas las vias: una skill que se dispara
+  por `onHurt` y `onKill` no puede saltar dos veces seguidas porque el cooldown es uno.
+- Los triggers no bloquean: si el evento no ocurre, la via periodica sigue igual.
+
+### Dónde se escribe
+
+```yaml
+trigger: [onHurt, onDeath]     # lista
+trigger: onHurt                # un solo trigger
+trigger:                       # con claves extra
+  onHurt: true
+  onDeath: true
+```
+
+Las claves extra (`block`, `daytime`, `health`, `kill`) van **dentro** de `trigger:` o al
+mismo nivel que `trigger` con el prefijo `trigger-` (`trigger-block`, `trigger-daytime`...).
+
+| `trigger` | Cuando se dispara | Clave extra |
+|---|---|---|
+| `onHurt` | el mob **recibe** dano | — |
+| `onAttack` | el mob **golpea** a alguien, cuerpo a cuerpo o con proyectil | — |
+| `onDeath` | el mob **muere**. Admite todos los efectos, incluido `summon` | — |
+| `onKill` | el mob **mata**. Por defecto cuenta cualquier muerte | `trigger.kill: cualquiera` \| `jugadores` \| `mobs` |
+| `onBlock` | el mob **esta de pie** sobre un bloque concreto | `trigger.block: MAGMA_BLOCK` (obligatorio) |
+| `onDaytime` | la hora del mundo coincide (noche = 13000-23000, igual que la aparicion natural) | `trigger.daytime: day` \| `night` (obligatorio) |
+| `onHealth` | la **vida** del mob llega al umbral o por debajo | `trigger.health` (obligatorio) |
+
+`onBlock`, `onDaytime` y `onHealth` son condiciones de estado: se valoran en cada ciclo de
+`skills.interval-ticks`, pero **solo** en las skills que declaran algún trigger, asi que una
+skill pasiva normal no paga nada por ellas. `onHealth` ademas se comprueba en el mismo golpe
+(`onHurt`), para que la fase 2 del jefe no espere hasta el siguiente ciclo.
+
+### `trigger.health`
+
+```yaml
+- id: fase_dos
+  effect: summon
+  target: self
+  summon: esbirro
+  trigger: [onHealth]
+  trigger.health: 30%
+  cooldown-seconds: 60
+```
+
+- `30%` o `0.3` = fraccion de la **vida maxima real** del mob (tambien vale con vida
+  maxima subida por atributos).
+- `60` = puntos de vida absolutos.
+- Se dispara cuando la vida actual esta **en o por debajo** del umbral.
+
+### Ejemplos completos
+
+```yaml
+# Un jefe que se enfurece al recibir dano y deja un regalo al morir.
+- id: enfurecer
+  effect: potion
+  target: self
+  potion: speed
+  potion-duration-seconds: 5
+  trigger: [onHurt]
+  cooldown-seconds: 20
+
+- id: ultima_palabra
+  effect: explosion
+  target: enemies
+  range: 4
+  amount: 2.5
+  trigger: [onDeath]
+
+# Un minero que se enciende sobre magma.
+- id: quemadura
+  effect: damage
+  target: self
+  amount: 1.0
+  trigger: [onBlock]
+  trigger.block: MAGMA_BLOCK
+
+# Una guardia que se refuerza de noche, solo contando kills de jugadores.
+- id: refuerzo
+  effect: summon
+  target: self
+  summon: centinela
+  trigger: [onDaytime, onKill]
+  trigger.daytime: night
+  trigger.kill: jugadores
+```
+
+Los comandos y las cadenas (`console_command`, `player_command`, `chain`) **no** admiten
+triggers: solo se activan con un clic (`mode: interaccion` o `mode: item`). Un comando de
+consola disparado por un evento del mob es el mismo agujero de seguridad de siempre.
+
+## Ejemplos de `mode`
 
 ```yaml
 skills:

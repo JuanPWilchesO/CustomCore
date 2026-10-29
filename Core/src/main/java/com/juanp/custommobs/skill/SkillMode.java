@@ -3,11 +3,15 @@ package com.juanp.custommobs.skill;
 import java.util.Locale;
 
 /**
- * Cuando entra a funcionar una skill.
+ * Como se evalua una skill de un mob: la via "de siempre", la que no depende de eventos.
+ *
+ * <p>Es independiente de {@link SkillEvent}. Una skill puede tener un modo, uno o varios
+ * triggers, o los dos; las dos vias se suman.
  *
  * <ul>
  *   <li>{@link #PASSIVE}: siempre, mientras el mob este cargado. Es el comportamiento de
- *       siempre y el valor por defecto.</li>
+ *       siempre y el valor por defecto cuando la skill no dice ni {@code mode} ni
+ *       {@code trigger}.</li>
  *   <li>{@link #ACTIVE}: solo cuando el mob esta en combate, es decir, cuando tiene a
  *       alguien a quien atacar.</li>
  *   <li>{@link #INTERACT}: cuando un jugador hace clic derecho sobre el mob. Sirve para
@@ -18,7 +22,7 @@ import java.util.Locale;
  *       de mobs tampoco la ejecuta: la dispara el proyectil.</li>
  * </ul>
  */
-public enum SkillTrigger {
+public enum SkillMode {
 
     PASSIVE,
     ACTIVE,
@@ -28,10 +32,10 @@ public enum SkillTrigger {
     IMPACT;
 
     /** Valor por defecto cuando el yml no dice nada. */
-    public static final SkillTrigger DEFAULT = PASSIVE;
+    public static final SkillMode DEFAULT = PASSIVE;
 
     /** Acepta nombres en espanol y en ingles; {@code null} si no reconoce el texto. */
-    public static SkillTrigger parse(String raw) {
+    public static SkillMode parse(String raw) {
         if (raw == null || raw.isBlank()) {
             return null;
         }
@@ -44,5 +48,10 @@ public enum SkillTrigger {
                     "on-hit", "onhit", "hit" -> IMPACT;
             default -> null;
         };
+    }
+
+    /** {@code true} si el planificador periodico de mobs puede evaluarla. */
+    public boolean periodic() {
+        return this == PASSIVE || this == ACTIVE;
     }
 }

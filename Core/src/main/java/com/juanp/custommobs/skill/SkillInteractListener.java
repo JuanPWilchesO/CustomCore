@@ -52,7 +52,7 @@ public final class SkillInteractListener implements Listener {
             return;
         }
         long interactivas = customMob.definition().skills().stream()
-                .filter(skill -> skill.trigger() == SkillTrigger.INTERACT).count();
+                .filter(skill -> skill.mode() == SkillMode.INTERACT).count();
         this.debug("Clic sobre " + customMob.definition().id() + " de " + player.getName()
                 + ": skills de interaccion = " + interactivas + ".");
         this.skills.interact(customMob, player);

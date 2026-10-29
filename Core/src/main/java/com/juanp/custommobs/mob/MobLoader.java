@@ -10,13 +10,16 @@ import com.juanp.custommobs.model.ModelSpec;
 import com.juanp.custommobs.skill.ChainOption;
 import com.juanp.custommobs.skill.ChainSpec;
 import com.juanp.custommobs.skill.ChainStep;
+import com.juanp.custommobs.skill.Daytime;
+import com.juanp.custommobs.skill.KillFilter;
 import com.juanp.custommobs.skill.SkillCatalog;
 import com.juanp.custommobs.skill.SkillEffect;
+import com.juanp.custommobs.skill.SkillEvent;
+import com.juanp.custommobs.skill.SkillMode;
 import com.juanp.custommobs.skill.SkillSpec;
 import com.juanp.custommobs.skill.SkillTarget;
 import com.juanp.custommobs.skill.SkillTargetType;
 import com.juanp.custommobs.skill.MessageDisplay;
-import com.juanp.custommobs.skill.SkillTrigger;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
@@ -39,6 +42,11 @@ public final class MobLoader {
 
     /** Tope de seguridad: ninguna skill puede apuntar mas lejos que esto. */
     private static final double MAX_SKILL_RANGE = 128.0D;
+
+    /** Claves de {@code trigger:} que no son un nombre de trigger, sino su ajuste. */
+    private static final Set<String> TRIGGER_OPTION_KEYS = Set.of("block", "daytime",
+            "health", "kill", "trigger-block", "trigger-daytime", "trigger-health",
+            "trigger-kill");
 
     private MobLoader() {
     }
@@ -477,23 +485,49 @@ public final class MobLoader {
                 "end-message", "end");
         String cooldownMessage = messageOf(entry, "cooldown-aviso", "aviso-cooldown",
                 "mensaje-cooldown", "cooldown-message");
-        // Si el yml no dice nada, la skill es pasiva: el comportamiento de siempre.
-        SkillTrigger parsed = SkillTrigger.parse(asString(entry.get("mode")));
-        SkillTrigger trigger = parsed == null ? SkillTrigger.DEFAULT : parsed;
+        // Si la skill declara 'trigger', 'mode' es opcional: queda solo con sus triggers y el
+        // planificador de mobs no la toca. Sin 'mode' ni 'trigger', es pasiva, como siempre.
+        String modeRaw = asString(entry.get("mode"));
+        SkillMode mode = SkillMode.parse(modeRaw);
+        if (mode == null && modeRaw != null && !modeRaw.isBlank()) {
+            Bukkit.getLogger().warning("[CustomMobs] La skill '" + id + "' tiene un 'mode'"
+                    + " desconocido: '" + modeRaw + "'. Usa pasiva, activa, interaccion,"
+                    + " item o impacto. Se descarta.");
+            return null;
+        }
+        TriggerSpec triggers = parseTriggers(entry, id);
+        if (triggers == null) {
+            return null;
+        }
+        if (mode == null && triggers.events().isEmpty()) {
+            mode = SkillMode.DEFAULT;
+        }
 
         // Los comandos y las cadenas solo valen en una interaccion. Un mob que ejecuta comandos
         // por su cuenta —en pasiva, o en mitad de un combate— es un agujero de seguridad: se
-        // descarta la skill y se avisa, sin tumbar la carga del mob.
+        // descarta la skill y se avisa, sin tumbar la carga del mob. Los triggers no abren esa
+        // puerta: disparar un comando de consola al morir el mob tambien seria un agujero.
         boolean commandLike = effect == SkillEffect.CONSOLE_COMMAND
                 || effect == SkillEffect.PLAYER_COMMAND || effect == SkillEffect.CHAIN;
-        if (commandLike && trigger != SkillTrigger.INTERACT && trigger != SkillTrigger.ITEM) {
+        if (commandLike && mode != SkillMode.INTERACT && mode != SkillMode.ITEM) {
             Bukkit.getLogger().warning("[CustomMobs] La skill '" + id + "' usa " + effect
                     + " pero no es de interaccion ni de item; se descarta. Los comandos van"
                     + " con 'mode: interaccion' o 'mode: item'; las cadenas, solo con"
                     + " 'mode: interaccion'.");
             return null;
         }
-        if (trigger == SkillTrigger.IMPACT) {
+        if (commandLike && !triggers.events().isEmpty()) {
+            Bukkit.getLogger().warning("[CustomMobs] La skill '" + id + "' usa " + effect
+                    + " y tambien declara 'trigger'; los comandos y las cadenas solo se"
+                    + " pueden activar con un clic. Se descarta.");
+            return null;
+        }
+        if (effect == SkillEffect.CHAIN && mode != SkillMode.INTERACT) {
+            Bukkit.getLogger().warning("[CustomMobs] La skill '" + id + "' es una cadena y"
+                    + " solo vale con 'mode: interaccion'; se descarta.");
+            return null;
+        }
+        if (mode == SkillMode.IMPACT) {
             // El impacto solo resuelve una entidad golpeada o un area alrededor del golpe.
             if (target == SkillTarget.OWNER || target == SkillTarget.TARGET
                     || target == SkillTarget.LOOK) {
@@ -508,11 +542,6 @@ public final class MobLoader {
                         + " Se descarta.");
                 return null;
             }
-        }
-        if (effect == SkillEffect.CHAIN && trigger != SkillTrigger.INTERACT) {
-            Bukkit.getLogger().warning("[CustomMobs] La skill '" + id + "' es una cadena y"
-                    + " solo vale con 'mode: interaccion'; se descarta.");
-            return null;
         }
         // matchMaterial(null) lanza IllegalArgumentException en Paper: solo se llama
         // cuando la clave existe y no esta vacia.
@@ -558,7 +587,13 @@ public final class MobLoader {
                 effect,
                 target,
                 targetType,
-                trigger,
+                mode,
+                triggers.events(),
+                triggers.block(),
+                triggers.daytime(),
+                triggers.health(),
+                triggers.healthPercent(),
+                triggers.kill(),
                 Math.min(MAX_SKILL_RANGE, Math.max(1.0D, asNumber(entry.get("range"), 8.0D))),
                 (int) Math.max(0L, Math.round(asNumber(entry.get("cooldown-seconds"), 5.0D))),
                 Math.min(1.0D, Math.max(0.0D, asNumber(entry.get("chance"), 1.0D))),
@@ -584,6 +619,216 @@ public final class MobLoader {
                 revealOnAttack,
                 messageDisplay
         );
+    }
+
+    /**
+     * Resultado de leer {@code trigger}: la lista de eventos y las claves extra de cada uno.
+     * {@code events} vacia significa que la skill no declara triggers.
+     */
+    private record TriggerSpec(Set<SkillEvent> events, Material block, Daytime daytime,
+                               double health, boolean healthPercent, KillFilter kill) {
+
+        static final TriggerSpec NONE = new TriggerSpec(Set.of(), null, null, 0.0D, false,
+                KillFilter.DEFAULT);
+    }
+
+    /**
+     * Lee los triggers de una skill. Acepta las tres formas habituales de escribirlo:
+     *
+     * <pre>
+     * trigger: [onHurt, onDeath]
+     * trigger: onHurt
+     * trigger:
+     *   onHurt: true
+     *   block: MAGMA_BLOCK   # solo con onBlock
+     *   daytime: night       # solo con onDaytime
+     *   health: 30%          # solo con onHealth
+     *   kill: jugadores      # solo con onKill
+     * </pre>
+     *
+     * @return la lista leida, o {@code null} si algo no cuadra (ya avisado en el log)
+     */
+    private static TriggerSpec parseTriggers(Map<?, ?> entry, String id) {
+        Object raw = entry.get("trigger");
+        if (raw == null) {
+            return TriggerSpec.NONE;
+        }
+        Set<SkillEvent> events = java.util.EnumSet.noneOf(SkillEvent.class);
+        // Las claves extra viven dentro de 'trigger:' o al mismo nivel que 'trigger'.
+        Map<?, ?> extra = entry;
+        if (raw instanceof Map<?, ?> map) {
+            extra = map;
+            for (Map.Entry<?, ?> flag : map.entrySet()) {
+                String key = String.valueOf(flag.getKey());
+                if (TRIGGER_OPTION_KEYS.contains(key.toLowerCase(Locale.ROOT))) {
+                    continue;
+                }
+                if (!asBoolean(flag.getValue())) {
+                    continue;
+                }
+                SkillEvent event = SkillEvent.parse(key);
+                if (event == null) {
+                    Bukkit.getLogger().warning("[CustomMobs] La skill '" + id + "' declara"
+                            + " un trigger desconocido: '" + key + "'. Se descarta.");
+                    return null;
+                }
+                events.add(event);
+            }
+        } else if (raw instanceof java.util.List<?> list) {
+            for (Object item : list) {
+                SkillEvent event = SkillEvent.parse(asString(item));
+                if (event == null) {
+                    Bukkit.getLogger().warning("[CustomMobs] La skill '" + id + "' declara"
+                            + " un trigger desconocido: '" + item + "'. Se descarta.");
+                    return null;
+                }
+                events.add(event);
+            }
+        } else {
+            for (String part : String.valueOf(raw).split("[,\\s]+")) {
+                if (part.isBlank()) {
+                    continue;
+                }
+                SkillEvent event = SkillEvent.parse(part);
+                if (event == null) {
+                    Bukkit.getLogger().warning("[CustomMobs] La skill '" + id + "' declara"
+                            + " un trigger desconocido: '" + part + "'. Se descarta.");
+                    return null;
+                }
+                events.add(event);
+            }
+        }
+        if (events.isEmpty()) {
+            Bukkit.getLogger().warning("[CustomMobs] La skill '" + id + "' declara 'trigger'"
+                    + " pero no indica ningun evento. Se descarta.");
+            return null;
+        }
+
+        Material block = null;
+        String blockName = asString(option(extra, "block"));
+        if (blockName != null && !blockName.isBlank()) {
+            block = Material.matchMaterial(blockName);
+            if (block != null && (!block.isBlock() || block.isAir())) {
+                block = null;
+            }
+            if (block == null) {
+                Bukkit.getLogger().warning("[CustomMobs] La skill '" + id + "' tiene un"
+                        + " 'trigger.block' invalido: '" + blockName + "'. Se descarta.");
+                return null;
+            }
+        }
+        if (events.contains(SkillEvent.ON_BLOCK) && block == null) {
+            Bukkit.getLogger().warning("[CustomMobs] La skill '" + id + "' usa 'onBlock' pero"
+                    + " no tiene un 'trigger.block' valido; se descarta.");
+            return null;
+        }
+        if (block != null && !events.contains(SkillEvent.ON_BLOCK)) {
+            Bukkit.getLogger().warning("[CustomMobs] La skill '" + id + "' dice"
+                    + " 'trigger.block' sin 'onBlock'; esa clave no hace nada. Se descarta.");
+            return null;
+        }
+
+        Daytime daytime = null;
+        String daytimeRaw = asString(option(extra, "daytime"));
+        if (daytimeRaw != null && !daytimeRaw.isBlank()) {
+            daytime = Daytime.parse(daytimeRaw);
+            if (daytime == null) {
+                Bukkit.getLogger().warning("[CustomMobs] La skill '" + id + "' tiene un"
+                        + " 'trigger.daytime' invalido: '" + daytimeRaw + "'; usa day o"
+                        + " night. Se descarta.");
+                return null;
+            }
+        }
+        if (events.contains(SkillEvent.ON_DAYTIME) && daytime == null) {
+            Bukkit.getLogger().warning("[CustomMobs] La skill '" + id + "' usa 'onDaytime'"
+                    + " pero no dice 'trigger.daytime' (day o night); se descarta.");
+            return null;
+        }
+        if (daytime != null && !events.contains(SkillEvent.ON_DAYTIME)) {
+            Bukkit.getLogger().warning("[CustomMobs] La skill '" + id + "' dice"
+                    + " 'trigger.daytime' sin 'onDaytime'; esa clave no hace nada."
+                    + " Se descarta.");
+            return null;
+        }
+
+        double health = 0.0D;
+        boolean healthPercent = false;
+        String healthRaw = asString(option(extra, "health"));
+        if (healthRaw != null && !healthRaw.isBlank()) {
+            String text = healthRaw.trim();
+            boolean withSign = text.endsWith("%");
+            if (withSign) {
+                text = text.substring(0, text.length() - 1).trim();
+            }
+            Double value = number(text);
+            if (value == null || value < 0.0D) {
+                Bukkit.getLogger().warning("[CustomMobs] La skill '" + id + "' tiene un"
+                        + " 'trigger.health' invalido: '" + healthRaw + "'. Se descarta.");
+                return null;
+            }
+            // Tres formas, y las tres se leen como "vida actual / vida maxima":
+            //   '30%'  -> 30 por ciento -> 0.30
+            //   '0.3'  -> ya es una fraccion
+            //   '60'   -> puntos de vida absolutos
+            if (withSign) {
+                healthPercent = true;
+                health = value / 100.0D;
+            } else if (value > 0.0D && value < 1.0D) {
+                healthPercent = true;
+                health = value;
+            } else {
+                health = value;
+            }
+            if (healthPercent && health > SkillSpec.MAX_HEALTH_PERCENT) {
+                Bukkit.getLogger().warning("[CustomMobs] La skill '" + id + "' tiene un"
+                        + " 'trigger.health' en porcentaje mayor que 100%: '" + healthRaw
+                        + "'. Se descarta.");
+                return null;
+            }
+        }
+        if (events.contains(SkillEvent.ON_HEALTH) && health <= 0.0D) {
+            Bukkit.getLogger().warning("[CustomMobs] La skill '" + id + "' usa 'onHealth' pero"
+                    + " no dice 'trigger.health'; se descarta.");
+            return null;
+        }
+        if (health > 0.0D && !events.contains(SkillEvent.ON_HEALTH)) {
+            Bukkit.getLogger().warning("[CustomMobs] La skill '" + id + "' dice"
+                    + " 'trigger.health' sin 'onHealth'; esa clave no hace nada. Se descarta.");
+            return null;
+        }
+
+        KillFilter kill = KillFilter.DEFAULT;
+        String killRaw = asString(option(extra, "kill"));
+        if (killRaw != null && !killRaw.isBlank()) {
+            kill = KillFilter.parse(killRaw);
+            if (kill == null) {
+                Bukkit.getLogger().warning("[CustomMobs] La skill '" + id + "' tiene un"
+                        + " 'trigger.kill' invalido: '" + killRaw + "'; usa jugadores, mobs"
+                        + " o cualquiera. Se descarta.");
+                return null;
+            }
+        }
+        return new TriggerSpec(events, block, daytime, health, healthPercent, kill);
+    }
+
+    /**
+     * Valor de una clave extra de {@code trigger}. Se aceptan las tres formas que salen en
+     * la practica, porque YAML no distingue una cosa de otra y las tres se escriben:
+     *
+     * <pre>
+     * trigger:            # la clave vive dentro de la seccion
+     *   onBlock: true
+     *   block: MAGMA_BLOCK
+     * trigger.block: X    # clave PLANA: en YAML el punto es parte del nombre
+     * trigger-block: X    # con guion, estilo de las demas claves del yml
+     * </pre>
+     */
+    private static Object option(Map<?, ?> extra, String key) {
+        Object value = extra.get(key);
+        if (value == null) {
+            value = extra.get("trigger." + key);
+        }
+        return value == null ? extra.get("trigger-" + key) : value;
     }
 
     /**
