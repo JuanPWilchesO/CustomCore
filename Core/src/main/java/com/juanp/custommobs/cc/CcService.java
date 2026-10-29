@@ -12,6 +12,7 @@ import org.bukkit.boss.BarStyle;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Player;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.ArrayList;
@@ -65,6 +66,21 @@ public final class CcService {
 
     public boolean disarmed(UUID id) {
         return this.has(id, "disarm");
+    }
+
+    /** {@code true} si esa entidad tiene algun control vigente en memoria. */
+    public boolean activeOn(UUID id) {
+        Map<String, Long> types = this.active.get(id);
+        if (types == null || types.isEmpty()) {
+            return false;
+        }
+        long now = System.currentTimeMillis();
+        for (Long ends : types.values()) {
+            if (ends != null && ends > now) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public boolean has(UUID id, String type) {
@@ -270,10 +286,24 @@ public final class CcService {
         this.immuneUntil.remove(id);
     }
 
-    /** Restaura a todos los conectados antes de apagar el plugin. */
+    /**
+     * Suelta todos los controles antes de apagar el plugin.
+     *
+     * <p>Se recorren tambien los mobs activos: antes solo se miraban los jugadores
+     * conectados y los mobs aturdidos se quedaban con la IA apagada para siempre, porque
+     * {@code setAI(false)} viaja en el NBT.
+     */
     public void releaseAll() {
         for (Player player : Bukkit.getOnlinePlayers()) {
             this.release(player);
+        }
+        var service = this.plugin.mobs();
+        if (service != null) {
+            for (LivingEntity mob : service.loadedMobs()) {
+                if (this.active.containsKey(mob.getUniqueId())) {
+                    this.release(mob);
+                }
+            }
         }
         this.active.clear();
         this.breakOnHit.clear();
@@ -302,8 +332,11 @@ public final class CcService {
             if (wasLocked && !locked && entity instanceof LivingEntity living) {
                 this.unlock(living);
             }
-            if (entity == null) {
-                // El jugador o mob ya no esta cargado: no dejar restos.
+            if (entity == null && this.gone(entry.getKey())) {
+                // La entidad ya no existe: no dejar restos. Antes se borraba tambien cuando
+                // solo estaba descargada, y el mob aturdido perdia la IA guardada sin que
+                // nadie se la devolviera: al recargar su chunk seguia con la IA apagada.
+                // Si solo esta descargada, el estado se conserva hasta que vuelva.
                 this.savedSpeed.remove(entry.getKey());
                 this.savedJump.remove(entry.getKey());
                 this.savedAi.remove(entry.getKey());
@@ -321,6 +354,28 @@ public final class CcService {
                 }
             }
         }
+    }
+
+    /**
+     * {@code true} si la entidad ya no existe, para borrar su estado guardado.
+     *
+     * <p>Un mob descargado sigue en el {@code player-mobs.yml} (o es un mob de servidor
+     * persistente) y volvera a cargarse: conservar su estado es lo correcto. El resto —una
+     * entidad muerta, recogida o borrada— se limpia.
+     */
+    private boolean gone(UUID id) {
+        var service = this.plugin.mobs();
+        if (service == null) {
+            return true;
+        }
+        // Cupo de jugador: el vinculo sobrevive a la descarga del chunk, asi que si esta, el
+        // mob sigue vivo aunque ahora mismo no se pueda enumerar.
+        var link = service.playerMobs().byEntity(id);
+        if (link.isPresent()) {
+            return !link.get().deployed();
+        }
+        // Mobs de servidor y naturales: no tienen vinculo, se miran por la marca del PDC.
+        return service.resolve(id).isEmpty();
     }
 
     private boolean movementLocked(Map<String, Long> types) {
@@ -360,6 +415,11 @@ public final class CcService {
         }
         if (target instanceof Mob mob) {
             this.savedAi.putIfAbsent(id, mob.hasAI());
+            // La marca va ANTES de apagar la IA y en el PDC: setAI(false) se guarda en el
+            // NBT, asi que sin ella un mob aturdido al descargarse su chunk —o al apagar el
+            // servidor— volvia con la IA apagada para siempre.
+            mob.getPersistentDataContainer().set(this.plugin.mobs().keys().aiLocked(),
+                    PersistentDataType.BYTE, (byte) 1);
             mob.setAI(false);
         }
         // Fuera de la rama de Mob: un mob de otro plugin puede no implementar Mob y aun asi
@@ -390,6 +450,7 @@ public final class CcService {
         }
         if (target instanceof Mob mob) {
             Boolean ai = this.savedAi.remove(id);
+            mob.getPersistentDataContainer().remove(this.plugin.mobs().keys().aiLocked());
             if (ai != null) {
                 mob.setAI(ai);
             }

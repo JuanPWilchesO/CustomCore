@@ -17,6 +17,7 @@ public final class MobKeys {
     private final NamespacedKey spawnX;
     private final NamespacedKey spawnY;
     private final NamespacedKey spawnZ;
+    private final NamespacedKey aiLocked;
 
     public MobKeys(Plugin plugin) {
         this.definition = new NamespacedKey(plugin, "definition");
@@ -30,6 +31,7 @@ public final class MobKeys {
         this.spawnX = new NamespacedKey(plugin, "spawn_x");
         this.spawnY = new NamespacedKey(plugin, "spawn_y");
         this.spawnZ = new NamespacedKey(plugin, "spawn_z");
+        this.aiLocked = new NamespacedKey(plugin, "ai_locked");
     }
 
     public NamespacedKey definition() {
@@ -77,5 +79,17 @@ public final class MobKeys {
 
     public NamespacedKey spawnZ() {
         return this.spawnZ;
+    }
+
+    /**
+     * El plugin le apago la IA al mob para aturdirlo y aun no se la ha devuelto.
+     *
+     * <p>Va en el PDC a proposito: {@code setAI(false)} se guarda en el NBT, asi que un mob
+     * aturdido cuando su chunk se descarga —o cuando el servidor se apaga— volvia con la IA
+     * apagada para siempre. Con esta marca, al cargarlo se sabe que la IA la apagamos
+     * nosotros y no la definicion ({@code ai: false}), que si debe quedarse apagada.
+     */
+    public NamespacedKey aiLocked() {
+        return this.aiLocked;
     }
 }
