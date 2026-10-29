@@ -362,6 +362,14 @@ public final class CcService {
             this.savedAi.putIfAbsent(id, mob.hasAI());
             mob.setAI(false);
         }
+        // Fuera de la rama de Mob: un mob de otro plugin puede no implementar Mob y aun asi
+        // llevar modelo. Congelar un mob sin modelo no hace nada (el enlace lo ignora).
+        var service = this.plugin.mobs();
+        if (service != null) {
+            // Con el cuerpo vanilla oculto, lo que se ve es el modelo de BetterModel: parar la
+            // IA no basta porque el modelo seguiria animando y, al empujarle, volveria a andar.
+            service.modelLink().frozen(target, true);
+        }
     }
 
     private void unlock(LivingEntity target) {
@@ -385,6 +393,12 @@ public final class CcService {
             if (ai != null) {
                 mob.setAI(ai);
             }
+        }
+        var service = this.plugin.mobs();
+        if (service != null) {
+            // Se suelta SIEMPRE, aunque no hubiera IA guardada: puede quedar el modelo
+            // congelado de un bloqueo huerfano.
+            service.modelLink().frozen(target, false);
         }
     }
 
