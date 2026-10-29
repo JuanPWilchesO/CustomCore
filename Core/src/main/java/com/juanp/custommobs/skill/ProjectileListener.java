@@ -6,6 +6,7 @@ import com.juanp.custommobs.mob.Texts;
 import org.bukkit.Material;
 import org.bukkit.entity.AbstractArrow;
 import org.bukkit.entity.Egg;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.boss.BarColor;
@@ -356,6 +357,24 @@ public final class ProjectileListener implements Listener {
             return;
         }
         this.service.hit(trident, trident.getLocation(), hit);
+    }
+
+    /**
+     * Golpe real de cualquier proyectil sobre una entidad.
+     *
+     * <p>Con el cuerpo oculto, {@link ProjectileHitEvent} avisa primero de la caja del
+     * modelo de BetterModel y el mob recibe el dano un instante despues. Sin este camino,
+     * la skill se quedaba en la caja y el mob no se enteraba.
+     */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onProjectileDamage(EntityDamageByEntityEvent event) {
+        Entity damager = event.getDamager();
+        if (!(damager instanceof Projectile projectile) || damager instanceof Trident) {
+            return;   // el tridente tiene su propio camino
+        }
+        if (event.getEntity() instanceof LivingEntity hit) {
+            this.service.hitEntity(projectile, hit);
+        }
     }
 
     /**

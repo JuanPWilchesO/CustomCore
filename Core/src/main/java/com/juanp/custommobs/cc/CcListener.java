@@ -1,8 +1,10 @@
 package com.juanp.custommobs.cc;
 
 import com.juanp.custommobs.drop.ItemCatalog;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Projectile;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -44,13 +46,25 @@ public final class CcListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onDamage(EntityDamageByEntityEvent event) {
-        if (!(event.getDamager() instanceof Player player)) {
+        // Solo el atacante se mira: quien aturde a un mob espera que deje de pegar, no que
+        // deje de recibir. Se cubre el cuerpo a cuerpo y el proyectil (quien disparo).
+        LivingEntity attacker = this.attackerOf(event);
+        if (attacker == null) {
             return;
         }
-        var id = player.getUniqueId();
+        var id = attacker.getUniqueId();
         if (this.cc.stunned(id) || this.cc.disarmed(id)) {
             event.setCancelled(true);
         }
+    }
+
+    /** Quien golpea: el propio atacante, o quien disparo el proyectil. */
+    private LivingEntity attackerOf(EntityDamageByEntityEvent event) {
+        Entity source = event.getDamager();
+        if (source instanceof Projectile projectile) {
+            source = projectile.getShooter() instanceof Entity shooter ? shooter : null;
+        }
+        return source instanceof LivingEntity living ? living : null;
     }
 
     /** El dano recibido puede romper un control marcado con 'cancel-on-hit'. */

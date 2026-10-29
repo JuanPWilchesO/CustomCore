@@ -232,7 +232,7 @@ model:
 | `scale` | numero | el del modelo | escala del modelo |
 | `damage-animation` | `true` \| `false` | `true` | animacion de dano del propio modelo |
 | `damage-tint` | `true` \| `false` | `true` | tinte rojo al recibir dano |
-| `sight-trace` | `true` \| `false` | el de BetterModel | solo se dibuja con linea de vision |
+| `sight-trace` | `true` \| `false` | `false` | solo lo dibuja a quien tiene linea de vision. **Apagado por defecto**: encendido, BetterModel gira el modelo hacia el jugador por su cuenta y el mob parece vivo aunque su IA este parada (pasa con un aturdido) |
 | `show-name` | `true` \| `false` \| `auto` | `auto` | quien pinta el nombre, ver abajo |
 | `seat` | `true` \| `false` | `true` | usar el hueso `p_...` del modelo como asiento (`category: mount`) |
 | `animations` | mapa | vacio | animaciones por evento, ver abajo |

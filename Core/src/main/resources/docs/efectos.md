@@ -27,7 +27,9 @@ la entidad del cliente, así que **conservas la colisión, la tab list y el dañ
 placa de nombre la oculta la invisibilidad y las partículas de sprint se limpian. **No toca
 los equipos de scoreboard**, así que no choca con TAB ni con otros plugins de equipos.
 
-Los mobs no pueden fijarte como objetivo mientras dure. Si el efecto se aplica desde una
+Los mobs no pueden fijarte como objetivo mientras dure, tampoco los **mobs custom con
+modelo**: no se te enganchan ni por goal, ni por la tarea de respaldo, ni por el evento de
+objetivo, y sueltan en el acto el que ya tuvieran. Si el efecto se aplica desde una
 skill con `potion: sigilo`, la clave `reveal-on-attack: true` hace que te muestres al hacer
 daño (cuerpo a cuerpo o proyectil) y que se te quite el sigilo.
 

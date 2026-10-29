@@ -49,6 +49,18 @@ public interface ModelLink {
     void stopWalking(LivingEntity entity, MobDefinition definition);
 
     /**
+     * Congela o suelta el modelo de un mob bajo un control de masas (aturdimiento, raiz).
+     *
+     * <p>Con el cuerpo vanilla oculto, parar la IA de la entidad no basta: el modelo es lo
+     * que ve el jugador. Congelado, el modelo deja de alternar reposo y marcha y no vuelve a
+     * andar mientras le empujen. Al soltarlo, retoma el estado que tocaba.
+     *
+     * @param frozen {@code true} para congelar, {@code false} para retomarlo
+     */
+    default void frozen(LivingEntity entity, boolean frozen) {
+    }
+
+    /**
      * {@code true} si el mob esta en una animacion puntual (golpe, dano, muerte).
      *
      * <p>Mientras dure, la tarea de estado no debe tocarlo: pisaria el golpe con el reposo.

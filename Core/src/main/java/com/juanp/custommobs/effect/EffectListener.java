@@ -729,15 +729,21 @@ public final class EffectListener implements Listener {
      * El sigilo tambien vale contra mobs: en cuanto intentan fijarte como objetivo,
      * se cancela la adquisicion. Los que ya te tenian de objetivo se limpian aqui y
      * en {@link #clearSigiloTargets()} cada 10 ticks.
+     *
+     * <p>Sin comprobar {@link Mob}: un mob de otro plugin puede no implementarlo y aun asi
+     * fijar objetivos. Lo que se mira es la entidad y su objetivo.
      */
     @EventHandler(ignoreCancelled = true)
     public void onSigiloTarget(EntityTargetLivingEntityEvent event) {
-        if (!(event.getEntity() instanceof Mob)) {
+        if (!(event.getTarget() instanceof Player player)
+                || !this.service.hasMechanic(player, "sigilo")) {
             return;
         }
-        if (event.getTarget() instanceof Player player
-                && this.service.hasMechanic(player, "sigilo")) {
-            event.setCancelled(true);
+        event.setCancelled(true);
+        // Cancelar impide fijarlo, pero si ya lo tenia se suelta en el acto.
+        if (event.getEntity() instanceof Mob mob && mob.getTarget() != null
+                && mob.getTarget().getUniqueId().equals(player.getUniqueId())) {
+            mob.setTarget(null);
         }
     }
 
@@ -750,11 +756,23 @@ public final class EffectListener implements Listener {
         }
     }
 
-    /** Quita el objetivo a los mobs en 64 bloques que apunten a ese jugador. */
+    /**
+     * Quita el objetivo a los mobs en 64 bloques que apunten a ese jugador.
+     *
+     * <p>Se recorre la entidad entera y no solo {@link Mob}: un mob custom de otro plugin
+     * puede no implementar esa interfaz. El objetivo se limpia cuando la entidad expone
+     * {@link Mob}; si no, al menos el sigilo ya no le deja volver a fijarlo.
+     */
     private void clearTargets(Player player) {
         for (var entity : player.getWorld().getNearbyEntities(
                 player.getLocation(), 64.0D, 64.0D, 64.0D)) {
-            if (entity instanceof Mob mob && mob.getTarget() != null
+            if (!(entity instanceof LivingEntity living)) {
+                continue;
+            }
+            if (living.getUniqueId().equals(player.getUniqueId())) {
+                continue;
+            }
+            if (living instanceof Mob mob && mob.getTarget() != null
                     && mob.getTarget().getUniqueId().equals(player.getUniqueId())) {
                 mob.setTarget(null);
             }
