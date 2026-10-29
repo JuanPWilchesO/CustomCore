@@ -111,7 +111,7 @@ public final class CustomMobsPlugin extends JavaPlugin {
     private com.juanp.custommobs.classes.ClassBook classBook;
     private EconomyLink economy;
     private ChainService chains;
-    private FactionGlowService glow;
+    private com.juanp.custommobs.glow.GlowLink glow;
     private FactionTeams factionTeams;
     private DisguiseLink disguiseLink;
     private ModelLink modelLink;
@@ -365,8 +365,16 @@ public final class CustomMobsPlugin extends JavaPlugin {
         this.modelStateTask.runTaskTimer(this, 5L, 5L);
 
         // Brillo de facciones por espectador: cada segundo basta, y solo manda lo que cambia.
-        this.glow = new FactionGlowService(this, this.mobService);
-        this.glow.runTaskTimer(this, 20L, 20L);
+        // Usa la API de PacketEvents, que es opcional: sin el plugin se usa la version
+        // vacia y no se llega a cargar la clase que la toca.
+        this.glow = pluginManager.getPlugin("packetevents") == null
+                ? new com.juanp.custommobs.glow.NoGlowLink()
+                : new FactionGlowService(this, this.mobService);
+        if (!this.glow.available()) {
+            this.getLogger().info("Sin PacketEvents: el brillo de facciones por espectador"
+                    + " queda apagado.");
+        }
+        this.glow.start(this);
 
         // Aviso en la action bar al mirar un mob custom: Enemigo / Aliado / Neutral.
         if (this.getConfig().getBoolean("faction-info.action-bar", true)) {
@@ -613,7 +621,7 @@ public final class CustomMobsPlugin extends JavaPlugin {
     }
 
     /** Brillo de los jugadores segun su faccion, para cada quien. */
-    public FactionGlowService glow() {
+    public com.juanp.custommobs.glow.GlowLink glow() {
         return this.glow;
     }
 

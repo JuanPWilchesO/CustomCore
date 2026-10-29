@@ -294,6 +294,10 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage(TAG + " 'glowfaccion' solo funciona desde el juego.");
             return;
         }
+        if (!this.plugin.glow().available()) {
+            sender.sendMessage(TAG + " El brillo de facciones no esta disponible: falta PacketEvents.");
+            return;
+        }
         String mode = this.plugin.glow().mode();
         if (!"player".equals(mode)) {
             sender.sendMessage(TAG + " El brillo de facciones no lo decides tu ahora mismo"
