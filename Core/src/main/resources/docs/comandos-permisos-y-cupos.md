@@ -46,6 +46,7 @@ Todos bajo `/customcore` (alias `cmobs`, `cm`).
 | `model list <mob>` | modelo, ocultaciones y animaciones de un mob |
 | `model validate` | revisa todo el catalogo y avisa de modelos que no existen en BetterModel |
 | `testcast <skill>` | lanza una skill desde tu mirada, sin depender del clic de un item (solo admin) |
+| `triggers <mob>` | dice por que via se activa cada skill del mob (tick, clic o solo triggers) |
 
 Un jugador tiene **una sola clase**: `class set` **reemplaza** la anterior, no la suma.
 

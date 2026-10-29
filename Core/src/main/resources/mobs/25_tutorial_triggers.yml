@@ -1,0 +1,106 @@
+# =============================================================================
+# 25 - Mob de pruebas de TRIGGERS (1.0.7)
+# -----------------------------------------------------------------------------
+# Categoria 'server': sin dueno y sin cupo, para no gastar el tuyo.
+# Se invoca con:   /customcore spawn tutorial_triggers
+#
+# Cada skill prueba un trigger distinto. Los cooldowns son bajos a proposito.
+# 'attitude: neutral' = no te ataca hasta que lo agredas, y SI recibe tu dano.
+# OJO con 'defender': mete a los jugadores en su bando protegido y entonces
+# CUALQUIER golpe del jugador se anula. Parecia inmune y no lo era.
+#
+#   onHurt    -> golpealo (6 dano de vuelta, cooldown 5 s)
+#   onAttack  -> que pelee con un monstruo cercano (veneno al que ataca)
+#   onBlock   -> ponlo encima de un bloque de ORO (mensaje cada 6 s)
+#   onDaytime -> /time set night (de noche se da velocidad)
+#   onHealth  -> bajalo al 30% de vida (invoca 2 esbirros, y solo dispara al
+#                cruzar el umbral, no cada segundo)
+#   onKill    -> que mate (se cura) y de paso prueba 'trigger.kill: mobs'
+# =============================================================================
+
+id: tutorial_triggers
+category: server
+display-name: '&dCobaya de triggers'
+type: ZOMBIE
+
+# Sin faccion y neutral: se le puede pegar, y no ataca hasta que lo agredan.
+attitude: neutral
+burn-in-daylight: false
+
+attributes:
+  health: 100.0
+  damage: 2.0
+  speed: 0.25
+
+# Anclado a su bloque, pero con margen para pelear sin alejarse demasiado.
+leash:
+  max-distance: 8.0
+  teleport-distance: 12.0
+
+skills:
+  # --- onHurt: reacciona a que le peguen -------------------------------
+  - id: t_onhurt
+    effect: damage
+    target: target
+    range: 6.0
+    amount: 6.0
+    cooldown-seconds: 5
+    trigger: [onHurt]
+    message: '&d[onHurt] me han golpeado.'
+
+  # --- onAttack: se dispara cuando el propio mob golpea ----------------
+  - id: t_onattack
+    effect: potion
+    target: target
+    range: 6.0
+    potion: poison
+    potion-duration-seconds: 4
+    potion-amplifier: 0
+    cooldown-seconds: 8
+    trigger: [onAttack]
+
+  # --- onBlock: solo mientras este de pie sobre un bloque concreto -----
+  # Se usa TERRACOTTA (o cualquier bloque solido) y NO magma: la IA de vanilla
+  # evita el magma y el fuego, asi que el mob se apartaba antes de disparar.
+  - id: t_onblock
+    effect: message
+    target: self
+    range: 12
+    cooldown-seconds: 6
+    message: '&a[onBlock] estoy sobre el bloque configurado.'
+    trigger: [onBlock]
+    trigger.block: GOLD_BLOCK
+
+  # --- onDaytime: solo de noche --------------------------------------
+  - id: t_ondaytime
+    effect: potion
+    target: self
+    potion: speed
+    potion-duration-seconds: 5
+    potion-amplifier: 1
+    cooldown-seconds: 10
+    trigger: [onDaytime]
+    trigger.daytime: night
+
+  # --- onHealth: fase 2 al bajar del 30% de vida --------------------
+  - id: t_onhealth
+    effect: summon
+    target: self
+    summon: tutorial_guardia
+    amount: 2
+    cooldown-seconds: 60
+    trigger: [onHealth]
+    trigger.health: 30%
+
+  # --- onKill: solo si mata a un mob, nunca a un jugador -------------
+  - id: t_onkill
+    effect: heal
+    target: self
+    amount: 15.0
+    cooldown-seconds: 10
+    trigger: [onKill]
+    trigger.kill: mobs
+
+lore:
+  - '&7Prueba de los triggers de la 1.0.7.'
+  - '&7onHurt, onAttack, onBlock, onDaytime, onHealth, onKill.'

@@ -73,6 +73,18 @@ skills:
     cooldown-seconds: 45
     message: '{mob} &fNi te acerques.'
 
+  # 5) TRIGGER: reacciona al golpe. Sin 'mode', esta skill NO entra en el ciclo
+  #    periodico: solo la dispara que le peguen. El cooldown es el mismo de siempre.
+  #    'trigger:' se puede escribir como lista: trigger: [onHurt, onKill].
+  - id: represalia
+    effect: damage
+    target: target
+    range: 6.0
+    amount: 3.0
+    cooldown-seconds: 8
+    trigger: [onHurt]
+    message: '&cEl arquero devuelve el golpe.'
+
 lore:
   - '&7Arquero con las cuatro skills.'
   - '&7Dano, curacion, pocion y habla.'

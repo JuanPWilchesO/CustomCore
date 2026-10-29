@@ -84,43 +84,322 @@ public final class SkillService extends BukkitRunnable {
                 continue;
             }
             // Las de interaccion solo las dispara un clic derecho; las activas, solo en
-            // combate; las pasivas, siempre que el mob este cargado.
+            // combate; las pasivas, siempre que el mob este cargado. Una skill que solo
+            // declara 'trigger' no se toca aqui: la disparan sus eventos.
             boolean inCombat = this.inCombat(entity);
             for (SkillSpec skill : skills) {
                 // Las de item solo las dispara el uso explicito de un objeto. Un mob que
                 // las referencie con 'ref:' no debe ejecutarlas por su cuenta.
-                if (skill.trigger() == SkillTrigger.INTERACT
-                        || skill.trigger() == SkillTrigger.ITEM
-                        || skill.trigger() == SkillTrigger.IMPACT) {
+                if (skill.mode() != null && !skill.mode().periodic()) {
                     continue;
                 }
-                if (skill.trigger() == SkillTrigger.ACTIVE && !inCombat) {
+                if (skill.mode() == SkillMode.ACTIVE && !inCombat) {
                     continue;
                 }
-                this.tryUse(customMob, skill, now);
+                if (!skill.periodic()) {
+                    // Sin via periodica propia: en el tick NO se evalua, aunque tenga triggers
+                    // de estado. Esos se disparan por el evento que los cambia (onHurt) y por
+                    // la comprobacion de estado de cada skill, que se hace en fire().
+                    continue;
+                }
+                this.tryUse(customMob, skill, now, null, null, customMob.definition().id());
             }
         }
         // Un mob que ya no existe no debe dejar cooldowns colgando.
         this.cooldowns.keySet().removeIf(id -> this.service.find(id).isEmpty());
+        this.fireStateTriggers();
+    }
+
+    /**
+     * Dispara en el tick las skills que se activan por condicion de estado: {@code onBlock},
+     * {@code onDaytime} y {@code onHealth}.
+     *
+     * <p>{@link #run()} solo evalua las skills con {@code mode} pasiva o activa; este metodo
+     * cubre las que se activan por su trigger, para que una skill de solo evento no tenga
+     * forma de ejecutarse en el ciclo.
+     */
+    private void fireStateTriggers() {
+        long now = System.currentTimeMillis();
+        for (CustomMob customMob : this.service.active()) {
+            List<SkillSpec> skills = customMob.definition().skills();
+            if (skills.isEmpty()) {
+                continue;
+            }
+            LivingEntity entity = customMob.entity();
+            if (entity.isDead() || !entity.isValid()) {
+                continue;
+            }
+            for (SkillSpec skill : skills) {
+                if (!skill.hasStateTrigger()) {
+                    continue;
+                }
+                SkillEvent met = this.metStateTrigger(customMob, entity, skill);
+                if (met != null) {
+                    this.tryUse(customMob, skill, now, null, met, customMob.definition().id());
+                } else {
+                    // La condicion no se cumple (ya no esta sobre el bloque, ya no es de
+                    // noche...): se suelta el cooldown. Asi, al volver a cumplirse, la skill
+                    // entra en el acto en vez de esperar a que expire un cooldown viejo.
+                    Map<String, Long> perMob = this.cooldowns.get(entity.getUniqueId());
+                    if (perMob != null) {
+                        perMob.remove(skill.id());
+                    }
+                }
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------ triggers
+
+    /**
+     * Dispara por evento las skills del mob que declaran ese trigger.
+     *
+     * <p>El trigger no restringe nada: suma una via de activacion a las que ya tenga la
+     * skill por su {@code mode}. El cooldown y la probabilidad son los mismos.
+     *
+     * @param customMob mob que se activa
+     * @param event     trigger que acaba de ocurrir
+     * @param other     el otro implicado (quien golpeo, quien murio, quien mato); puede ser
+     *                  {@code null}
+     */
+    public void fire(CustomMob customMob, SkillEvent event, LivingEntity other) {
+        if (customMob == null || event == null) {
+            return;
+        }
+        List<SkillSpec> skills = customMob.definition().skills();
+        if (skills.isEmpty()) {
+            return;
+        }
+        LivingEntity entity = customMob.entity();
+        boolean alive = !entity.isDead() && entity.isValid();
+        long now = System.currentTimeMillis();
+        // De quien / contra quien, para la traza de depuracion.
+        String who = customMob.definition().id() + (other == null ? ""
+                : " -> " + other.getName() + " (" + other.getType() + ")");
+        for (SkillSpec skill : skills) {
+            if (!skill.hasEvent(event)) {
+                continue;
+            }
+            // Para 'onKill' el mob sobrevive y puede actuar con normalidad. Para 'onDeath'
+            // esta ya muerto: se aplica sin pasar por la resolucion de objetivos, que exige
+            // una entidad viva y un mundo cargado.
+            if (event == SkillEvent.ON_DEATH) {
+                this.useOnDeath(customMob, skill, other, now, true);
+                continue;
+            }
+            if (!alive) {
+                continue;
+            }
+            if (this.stateTriggerReady(customMob, entity, skill)) {
+                this.tryUse(customMob, skill, now, other, event, who);
+            } else {
+                this.trace(event, who, skill, "no cumple " + this.stateTriggerLabel(skill));
+            }
+        }
+    }
+
+    /**
+     * Marca de depuracion: la skill llego a evaluarse por un trigger. Solo escribe con
+     * {@code debug: true} en el config.
+     *
+     * <p>Cuenta el RESULTADO, no la llegada del evento: {@code aplicada}, {@code cooldown},
+     * {@code suerte}, {@code sin objetivos} o {@code no cumple <estado>}. Antes el aviso se
+     * escribia al llegar el evento y no decia si la skill habia hecho algo.
+     */
+    private void trace(SkillEvent event, String who, SkillSpec skill, String outcome) {
+        if (!this.service.config().debug()) {
+            return;
+        }
+        // En la via periodica ('mode' pasiva/activa) no hay evento: se nombra por su modo.
+        String trigger = event != null ? event.label()
+                : skill.mode() != null ? "mode " + skill.mode().name()
+                : "trigger";
+        this.service.plugin().getLogger().info("[skill] " + trigger + " "
+                + (who == null ? "?" : who) + ": " + skill.id() + " " + outcome);
+    }
+
+    /** Nombre legible del trigger de estado que no se cumple, para la traza. */
+    private String stateTriggerLabel(SkillSpec skill) {
+        for (SkillEvent event : skill.events()) {
+            if (event.periodic()) {
+                return switch (event) {
+                    case ON_BLOCK -> "onBlock (" + skill.triggerBlock() + ")";
+                    case ON_DAYTIME -> "onDaytime (" + skill.daytime() + ")";
+                    case ON_HEALTH -> "onHealth (" + (skill.healthPercent()
+                            ? (skill.health() * 100.0D) + "%" : skill.health()) + ")";
+                    default -> event.label();
+                };
+            }
+        }
+        return "sus triggers";
+    }
+
+    /**
+     * {@code true} si la skill cumple ahora mismo todos sus triggers de estado (bloque, hora
+     * y vida). Una skill sin triggers de estado siempre esta lista.
+     */
+    private boolean stateTriggerReady(CustomMob customMob, LivingEntity entity, SkillSpec skill) {
+        return this.metStateTrigger(customMob, entity, skill) != null;
+    }
+
+    /**
+     * Trigger de estado que se cumple de verdad ahora mismo, o {@code null} si falta alguno.
+     *
+     * <p>Devuelve cual para poder nombrarlo en la traza: con dos skills de estado en el mismo
+     * mob, un aviso generico no dice cual salto.
+     */
+    private SkillEvent metStateTrigger(CustomMob customMob, LivingEntity entity, SkillSpec skill) {
+        SkillEvent met = null;
+        for (SkillEvent event : skill.events()) {
+            boolean ok = switch (event) {
+                case ON_BLOCK -> {
+                    if (skill.triggerBlock() == null) {
+                        yield true;
+                    }
+                    Block below = entity.getLocation().subtract(0.0D, 1.0D, 0.0D).getBlock();
+                    yield below.getType() == skill.triggerBlock();
+                }
+                case ON_DAYTIME -> skill.daytime() == null
+                        || skill.daytime().matches(entity.getWorld().getTime());
+                case ON_HEALTH -> skill.health() > 0.0D && this.healthReached(entity, skill);
+                default -> true;
+            };
+            if (!ok) {
+                return null;
+            }
+            if (event.periodic()) {
+                met = event;
+            }
+        }
+        return met;
+    }
+
+    /** {@code true} si la vida actual es igual o menor al umbral de {@code trigger.health}. */
+    private boolean healthReached(LivingEntity entity, SkillSpec skill) {
+        double current = entity.getHealth();
+        if (!skill.healthPercent()) {
+            return current <= skill.health();
+        }
+        AttributeInstance maxHealth = entity.getAttribute(Attribute.MAX_HEALTH);
+        double max = maxHealth != null ? maxHealth.getValue() : 20.0D;
+        // Con porcentaje, el umbral es una fraccion de la vida maxima real: asi funcionan
+        // tambien las skills que curan o los mobs con absorcion.
+        return max > 0.0D && current / max <= skill.health();
+    }
+
+    /**
+     * Aplica una skill que se dispara al morir el mob.
+     *
+     * <p>Los efectos se aplican sobre el propio mob (curacion, pocion, invocacion) o sobre el
+     * radio de {@code range}. No hay objetivos que resolver: el mob ya no esta.
+     */
+    private void useOnDeath(CustomMob customMob, SkillSpec skill, LivingEntity killer, long now,
+                            boolean traced) {
+        LivingEntity entity = customMob.entity();
+        String who = customMob.definition().id()
+                + (killer == null ? "" : " a manos de " + killer.getName());
+        Map<String, Long> perMob = this.cooldowns.computeIfAbsent(entity.getUniqueId(),
+                id -> new ConcurrentHashMap<>());
+        Long until = perMob.get(skill.id());
+        if (until != null && now < until) {
+            this.trace(SkillEvent.ON_DEATH, who, skill, "en cooldown ("
+                    + Math.max(0L, (until - now) / 1000L) + "s)");
+            return;
+        }
+        if (skill.chance() < 1.0D && this.random.nextDouble() > skill.chance()) {
+            this.trace(SkillEvent.ON_DEATH, who, skill,
+                    "falla la tirada de chance (" + skill.chance() + ")");
+            return;
+        }
+        perMob.put(skill.id(), now + skill.cooldownSeconds() * 1000L);
+        if (skill.effect() == SkillEffect.MESSAGE) {
+            String spoken = this.spoken(customMob, skill);
+            for (Player listener : this.listeners(entity, skill.range())) {
+                listener.sendMessage(com.juanp.custommobs.mob.Texts.color(spoken));
+            }
+            this.trace(SkillEvent.ON_DEATH, who, skill, "mensaje enviado");
+            return;
+        }
+        if (skill.effect() == SkillEffect.SUMMON) {
+            boolean ok = this.summon(customMob, skill);
+            this.trace(SkillEvent.ON_DEATH, who, skill,
+                    ok ? "invocacion aplicada" : "sin sitio para invocar");
+            return;
+        }
+        // El resto de efectos van contra el asesino si la skill lo pide, o contra el radio
+        // del sitio donde murio el mob (una ultima explosion, hielo, dano en area...).
+        Location where = entity.getLocation();
+        List<LivingEntity> targets = new ArrayList<>();
+        switch (skill.target()) {
+            case IMPACT, TARGET, LOOK -> {
+                if (killer != null && killer.isValid()
+                        && this.withinRange(where, killer, skill.range())) {
+                    targets.add(killer);
+                }
+            }
+            case SELF -> targets.add(entity);
+            case OWNER -> this.ownerOf(customMob)
+                    .filter(owner -> this.withinRange(where, owner, skill.range()))
+                    .ifPresent(targets::add);
+            case ENEMIES -> {
+                for (LivingEntity candidate : this.nearby(where, skill.range())) {
+                    if (this.service.policy().isValidTarget(customMob, candidate)) {
+                        targets.add(candidate);
+                    }
+                }
+            }
+            case ALLIES -> {
+                for (LivingEntity candidate : this.nearby(where, skill.range())) {
+                    if (this.isAlly(customMob, candidate)) {
+                        targets.add(candidate);
+                    }
+                }
+            }
+        }
+        for (LivingEntity target : targets) {
+            this.apply(customMob, skill, target);
+        }
+        this.trace(SkillEvent.ON_DEATH, who, skill, targets.isEmpty()
+                ? "sin objetivos" : "aplicada a " + targets.size() + " objetivo(s)");
     }
 
     // ------------------------------------------------------------------ ejecucion
 
     private void tryUse(CustomMob customMob, SkillSpec skill, long now) {
+        this.tryUse(customMob, skill, now, null, null, null);
+    }
+
+    /**
+     * Evalua cooldown, probabilidad y objetivos, y aplica la skill.
+     *
+     * <p>La via periodica y la de eventos comparten este camino: un trigger que acaba de
+     * ocurrir solo suma una evaluacion extra, con el mismo cooldown y la misma
+     * probabilidad.
+     *
+     * @param other el otro implicado en el trigger; {@code null} en la via periodica
+     * @param event trigger que la disparo; {@code null} en la via periodica
+     * @param who   descripcion del mob y el otro implicado, para la traza
+     */
+    private void tryUse(CustomMob customMob, SkillSpec skill, long now, LivingEntity other,
+                        SkillEvent event, String who) {
         LivingEntity entity = customMob.entity();
         Map<String, Long> perMob = this.cooldowns.computeIfAbsent(entity.getUniqueId(),
                 id -> new ConcurrentHashMap<>());
         Long until = perMob.get(skill.id());
         if (until != null && now < until) {
+            this.trace(event, who, skill, "en cooldown ("
+                    + Math.max(0L, (until - now) / 1000L) + "s)");
             return;
         }
         if (skill.chance() < 1.0D && this.random.nextDouble() > skill.chance()) {
+            this.trace(event, who, skill, "falla la tirada de chance (" + skill.chance() + ")");
             return;
         }
 
         if (skill.effect() == SkillEffect.MESSAGE) {
             List<Player> listeners = this.listeners(entity, skill.range());
             if (listeners.isEmpty()) {
+                this.trace(event, who, skill, "sin oyentes en " + skill.range() + " bloques");
                 return;
             }
             perMob.put(skill.id(), now + skill.cooldownSeconds() * 1000L);
@@ -129,6 +408,7 @@ public final class SkillService extends BukkitRunnable {
                 // El texto se colorea aqui: los '&' del yml no los traduce Bukkit solo.
                 listener.sendMessage(com.juanp.custommobs.mob.Texts.color(spoken));
             }
+            this.trace(event, who, skill, "mensaje enviado a " + listeners.size() + " jugador(es)");
             return;
         }
 
@@ -136,25 +416,41 @@ public final class SkillService extends BukkitRunnable {
         // encuentra sitio, se reintenta en el siguiente ciclo sin gastar el cooldown.
         if (skill.effect() == SkillEffect.SUMMON) {
             if (!this.summon(customMob, skill)) {
+                this.trace(event, who, skill, "sin sitio para invocar");
                 return;
             }
             perMob.put(skill.id(), now + skill.cooldownSeconds() * 1000L);
+            this.trace(event, who, skill, "invocacion aplicada");
             return;
         }
 
-        List<LivingEntity> targets = this.resolve(customMob, skill);
+        List<LivingEntity> targets = this.resolve(customMob, skill, other);
         if (targets.isEmpty()) {
+            this.trace(event, who, skill, "sin objetivos");
             return;
         }
         perMob.put(skill.id(), now + skill.cooldownSeconds() * 1000L);
         for (LivingEntity target : targets) {
             this.apply(customMob, skill, target);
         }
+        this.trace(event, who, skill, "aplicada a " + targets.size() + " objetivo(s)");
     }
 
     private List<LivingEntity> resolve(CustomMob customMob, SkillSpec skill) {
+        return this.resolve(customMob, skill, null);
+    }
+
+    /**
+     * Resuelve los objetivos de una skill.
+     *
+     * @param other el otro implicado en un trigger (quien golpeo, quien murio); {@code null}
+     *              en la via periodica. Cuando no es nulo, {@code target: target} y
+     *              {@code target: look} lo usan a el: en un {@code onAttack} el objetivo del
+     *              mob puede no estar fijado todavia.
+     */
+    private List<LivingEntity> resolve(CustomMob customMob, SkillSpec skill, LivingEntity other) {
         if (skill.targetType() != null) {
-            return this.resolveTyped(customMob, skill);
+            return this.resolveTyped(customMob, skill, other);
         }
         LivingEntity entity = customMob.entity();
         List<LivingEntity> found = new ArrayList<>();
@@ -167,9 +463,11 @@ public final class SkillService extends BukkitRunnable {
                     .ifPresent(found::add);
             case TARGET, LOOK -> {
                 // Desde un mob, 'look' es lo mismo que su objetivo actual.
-                if (entity instanceof Mob mob && mob.getTarget() != null
-                        && this.inRange(entity, mob.getTarget(), skill.range())) {
-                    found.add(mob.getTarget());
+                LivingEntity target = other != null ? other
+                        : entity instanceof Mob mob ? mob.getTarget() : null;
+                if (target != null && !target.getUniqueId().equals(entity.getUniqueId())
+                        && this.inRange(entity, target, skill.range())) {
+                    found.add(target);
                 }
             }
             case ENEMIES -> {
@@ -191,21 +489,25 @@ public final class SkillService extends BukkitRunnable {
     }
 
     /** Resolucion nueva: LOOK (un objetivo filtrado por bando) o RADIUS (area). */
-    private List<LivingEntity> resolveTyped(CustomMob customMob, SkillSpec skill) {
+    private List<LivingEntity> resolveTyped(CustomMob customMob, SkillSpec skill,
+                                            LivingEntity other) {
         LivingEntity entity = customMob.entity();
         List<LivingEntity> found = new ArrayList<>();
         switch (skill.targetType()) {
             case LOOK -> {
                 if (skill.target() == SkillTarget.SELF) {
                     found.add(entity);
-                } else if (entity instanceof Mob mob && mob.getTarget() != null) {
-                    LivingEntity target = mob.getTarget();
-                    if (skill.target() == SkillTarget.ENEMIES
-                            && this.service.policy().isValidTarget(customMob, target)) {
-                        found.add(target);
-                    } else if (skill.target() == SkillTarget.ALLIES
-                            && this.isAlly(customMob, target)) {
-                        found.add(target);
+                } else {
+                    LivingEntity target = other != null ? other
+                            : entity instanceof Mob mob ? mob.getTarget() : null;
+                    if (target != null && !target.getUniqueId().equals(entity.getUniqueId())) {
+                        if (skill.target() == SkillTarget.ENEMIES
+                                && this.service.policy().isValidTarget(customMob, target)) {
+                            found.add(target);
+                        } else if (skill.target() == SkillTarget.ALLIES
+                                && this.isAlly(customMob, target)) {
+                            found.add(target);
+                        }
                     }
                 }
             }
@@ -761,7 +1063,7 @@ public final class SkillService extends BukkitRunnable {
         }
         long now = System.currentTimeMillis();
         for (SkillSpec skill : skills) {
-            if (skill.trigger() == SkillTrigger.INTERACT) {
+            if (skill.mode() == SkillMode.INTERACT) {
                 this.useInteraction(customMob, skill, clicker, now);
             }
         }
@@ -945,6 +1247,20 @@ public final class SkillService extends BukkitRunnable {
         return source.getLocation().distanceSquared(target.getLocation()) <= range * range;
     }
 
+    /** Igual que {@link #inRange(LivingEntity, LivingEntity, double)}, desde un punto. */
+    private boolean withinRange(Location center, LivingEntity target, double range) {
+        if (center == null || center.getWorld() == null) {
+            return false;
+        }
+        if (range <= 0.0D) {
+            return center.getWorld().equals(target.getWorld());
+        }
+        if (!center.getWorld().equals(target.getWorld())) {
+            return false;
+        }
+        return center.distanceSquared(target.getLocation()) <= range * range;
+    }
+
     private List<LivingEntity> nearby(LivingEntity entity, double range) {
         List<LivingEntity> found = new ArrayList<>();
         for (Entity candidate : entity.getNearbyEntities(range, range, range)) {
@@ -1010,7 +1326,7 @@ public final class SkillService extends BukkitRunnable {
                         "El item apunta a una skill que no existe en skills/: " + id);
                 continue;
             }
-            if (skill.trigger() == SkillTrigger.IMPACT) {
+            if (skill.mode() == SkillMode.IMPACT) {
                 // Se arma al disparar y se resuelve al impactar: no se castea al usar.
                 continue;
             }
@@ -1025,7 +1341,7 @@ public final class SkillService extends BukkitRunnable {
         boolean commandLike = skill.effect() == SkillEffect.CONSOLE_COMMAND
                 || skill.effect() == SkillEffect.PLAYER_COMMAND
                 || skill.effect() == SkillEffect.CHAIN;
-        if (commandLike && skill.trigger() != SkillTrigger.ITEM) {
+        if (commandLike && skill.mode() != SkillMode.ITEM) {
             this.service.plugin().getLogger().warning("La skill '" + skill.id()
                     + "' usa " + skill.effect() + " pero no es 'mode: item'; no se ejecuta"
                     + " desde un objeto.");

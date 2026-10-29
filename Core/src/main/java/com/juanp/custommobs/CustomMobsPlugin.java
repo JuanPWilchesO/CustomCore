@@ -51,6 +51,7 @@ import com.juanp.custommobs.mob.NaturalSpawnTask;
 import com.juanp.custommobs.recall.RecallService;
 import com.juanp.custommobs.region.RegionGate;
 import com.juanp.custommobs.skill.SkillInteractListener;
+import com.juanp.custommobs.skill.SkillEventListener;
 import com.juanp.custommobs.skill.ProjectileListener;
 import com.juanp.custommobs.cc.CcListener;
 import com.juanp.custommobs.ui.StatusListener;
@@ -287,6 +288,7 @@ public final class CustomMobsPlugin extends JavaPlugin {
             pluginManager.registerEvents(new TeamFactionListener(this), this);
         }
         pluginManager.registerEvents(new SkillInteractListener(this.craftService, this.mobService, this.skillService), this);
+        pluginManager.registerEvents(new SkillEventListener(this.mobService, this.skillService), this);
         pluginManager.registerEvents(new MobItemListener(this, this.mobService, this.upgradeService, this.book), this);
 
         // Efectos y pociones: mecanicas y la tarea que las mantiene. El catalogo ya se

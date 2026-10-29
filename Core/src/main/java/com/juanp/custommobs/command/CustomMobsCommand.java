@@ -5,6 +5,8 @@ import com.juanp.custommobs.mob.CustomMob;
 import com.juanp.custommobs.style.MobStyle;
 import com.juanp.custommobs.team.TeamLink;
 import com.juanp.custommobs.mob.MobDefinition;
+import com.juanp.custommobs.skill.SkillEvent;
+import com.juanp.custommobs.skill.SkillSpec;
 import com.juanp.custommobs.spawner.SpawnerEntry;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -101,6 +103,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
             case "item" -> this.item(sender, args);
             case "effects" -> this.effects(sender, args);
             case "testcast", "cast" -> this.testCast(sender, args);
+            case "triggers", "trigger" -> this.triggers(sender, args);
             case "potion" -> this.potion(sender, args);
             case "model", "modelo" -> this.model(sender, args);
             case "spawner" -> this.spawner(sender, args);
@@ -337,6 +340,53 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
         int cast = this.plugin.skillService().cast(player,
                 List.of(args[1].toLowerCase(Locale.ROOT)));
         player.sendMessage(TAG + " Skills lanzadas: " + cast);
+    }
+
+    /**
+     * Diagnostico de triggers: dice, para cada skill de un mob, por que via se activa.
+     *
+     * <p>Sirve para lo que mas cuesta depurar a mano: una skill que no salta porque su
+     * trigger es de estado y no se cumple, o una que tiene solo trigger y por eso el ciclo
+     * periodico no la toca. No dispara nada: solo lee la definicion ya cargada.
+     */
+    private void triggers(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            sender.sendMessage(TAG + " Uso: /customcore triggers <mob>");
+            return;
+        }
+        MobDefinition definition = this.plugin.registry().get(args[1].toLowerCase(Locale.ROOT))
+                .orElse(null);
+        if (definition == null) {
+            sender.sendMessage(TAG + " No existe la definicion '" + args[1] + "'.");
+            return;
+        }
+        if (definition.skills().isEmpty()) {
+            sender.sendMessage(TAG + " '" + definition.id() + "' no tiene skills.");
+            return;
+        }
+        sender.sendMessage(TAG + " Triggers de '" + definition.id() + "' ("
+                + definition.skills().size() + " skills):");
+        for (SkillSpec skill : definition.skills()) {
+            String via;
+            if (skill.mode() != null && skill.mode().periodic()) {
+                via = "tick (" + skill.mode().name().toLowerCase(Locale.ROOT) + ")";
+            } else if (skill.mode() != null) {
+                via = "clic (" + skill.mode().name().toLowerCase(Locale.ROOT) + ")";
+            } else {
+                via = "solo triggers";
+            }
+            if (skill.hasStateTrigger()) {
+                via += " + estado";
+            }
+            String events = skill.hasTrigger() ? skill.events().stream()
+                    .map(SkillEvent::label).sorted()
+                    .reduce((a, b) -> a + ", " + b).orElse("-") : "-";
+            sender.sendMessage(" - " + skill.id() + ": " + via + " | " + events
+                    + (skill.triggerBlock() != null ? " | block=" + skill.triggerBlock() : "")
+                    + (skill.daytime() != null ? " | daytime=" + skill.daytime() : "")
+                    + (skill.health() > 0.0D ? " | health=" + (skill.healthPercent()
+                    ? (skill.health() * 100.0D) + "%" : skill.health()) : ""));
+        }
     }
 
     private void give(CommandSender sender, String[] args) {
@@ -1349,6 +1399,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
         sender.sendMessage(TAG + "           | book [jugador]  (libro de inspeccion)");
         sender.sendMessage(TAG + "           | upgrade list | upgrade give <id> [jugador] | upgrade reload");
         sender.sendMessage(TAG + "           | model list [mob] | model validate  (modelos de BetterModel)");
+        sender.sendMessage(TAG + "           | triggers <mob>  (por que via se activa cada skill)");
         sender.sendMessage(TAG + "           | despedir <todos|id|id#marca>  (tus mobs; cualquiera puede usarlo)");
     }
 
@@ -1364,7 +1415,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
             List<String> options = admin
                     ? List.of("reload", "list", "give", "spawn", "remove", "active", "kill",
                             "enchants", "cuota", "item", "color", "glow", "spawner", "book", "upgrade",
-                            "despedir", "faction", "class", "effects", "potion", "model")
+                            "despedir", "faction", "class", "effects", "potion", "model", "triggers")
                     : List.of("cuota", "color", "glow", "despedir");
             for (String option : options) {
                 if (option.startsWith(args[0].toLowerCase(Locale.ROOT))) {
@@ -1416,6 +1467,16 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
         }
         // De aqui para abajo, todo es administracion: sin permiso, no se completa nada.
         if (!admin) {
+            return out;
+        }
+        if (args.length == 2 && (args[0].equalsIgnoreCase("triggers")
+                || args[0].equalsIgnoreCase("trigger"))) {
+            for (MobDefinition definition : this.plugin.registry().all()) {
+                if (definition.hasSkills()
+                        && definition.id().startsWith(args[1].toLowerCase(Locale.ROOT))) {
+                    out.add(definition.id());
+                }
+            }
             return out;
         }
         if (args.length == 2 && (args[0].equalsIgnoreCase("model") || args[0].equalsIgnoreCase("modelo"))) {
