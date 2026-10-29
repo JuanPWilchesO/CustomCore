@@ -35,17 +35,19 @@
   de sprint; los sonidos se mantienen.
 - **`reveal-on-attack`** en el yml de la skill: con `potion: sigilo`, el jugador se muestra
   al hacer daño (cuerpo a cuerpo o proyectil) y se le quita el sigilo. Por defecto `false`.
-- **Flechas y mobs con modelo**: con el cuerpo oculto, el proyectil toca primero la caja del
+- **Flechas y mobs con modelo** (**probado en servidor**: flecha sedante contra
+  `fire_demon`): con el cuerpo oculto, el proyectil toca primero la caja del
   modelo de BetterModel y el mob recibe el daño un instante después. Las skills de impacto
   (`mode: impacto`) se resuelven sobre el **mob real**, y si el golpe no llega se aplican al
   mob con modelo más cercano al impacto, a menos de **1.5 bloques**. No se aplican a mobs
   `invulnerable`, con `projectile` en `immune:`, ni con la mecánica `invulnerabilidad`
   activa. Antes la skill se quedaba en la caja y el mob no se enteraba.
-- **`sigilo` también contra mobs custom**: no les deja fijar al jugador como objetivo (goal,
-  tarea de respaldo y evento de objetivo) y sueltan el que ya tuvieran. Antes solo cortaba a
-  los mobs de vanilla, asi que contra un mob custom no servia.
-- **Los controles de masas llegan a los mobs con modelo**: con el cuerpo vanilla oculto,
-  aturdir o enraizar solo paraba la IA de la entidad, y lo que se ve es el modelo de
+- **`sigilo` también contra mobs custom** (**probado en servidor**): no les deja fijar al
+  jugador como objetivo (goal, tarea de respaldo y evento de objetivo) y sueltan el que ya
+  tuvieran. Antes solo cortaba a los mobs de vanilla, asi que contra un mob custom no servia.
+- **Los controles de masas llegan a los mobs con modelo** (**probado en servidor**: `stun`
+  sobre un mob con cuerpo oculto): con el cuerpo vanilla oculto, aturdir o enraizar solo
+  paraba la IA de la entidad, y lo que se ve es el modelo de
   BetterModel: seguia animando `idle`/`walk` y, si algo empujaba a la entidad, volvia a
   andar. Ahora el control congela tambien el modelo y lo retoma al soltarlo. El mob aturdido
   o desarmado tampoco golpea, ni cuerpo a cuerpo ni con proyectil.
