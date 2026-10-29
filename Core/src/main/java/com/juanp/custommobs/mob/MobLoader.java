@@ -31,6 +31,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -42,6 +43,14 @@ public final class MobLoader {
 
     /** Tope de seguridad: ninguna skill puede apuntar mas lejos que esto. */
     private static final double MAX_SKILL_RANGE = 128.0D;
+    /**
+     * Tope duro del radio de chunks de un mob fijo.
+     *
+     * <p>Con radio {@code r} se mantienen cargados {@code (2r+1)^2} chunks: con 6 son 169,
+     * ya mucho para un solo mob. Por encima de aqui el coste del servidor crece sin que el
+     * yml pueda justificarlo.
+     */
+    private static final int MAX_CHUNK_RADIUS = 6;
 
     /** Claves de {@code trigger:} que no son un nombre de trigger, sino su ajuste. */
     private static final Set<String> TRIGGER_OPTION_KEYS = Set.of("block", "daytime",
@@ -171,7 +180,10 @@ public final class MobLoader {
                 cfg.getBoolean("attacks-monsters", false),
                 // Por defecto SI se transforma: es el comportamiento de siempre, y asi no cambia
                 // nada en los mobs que ya existian.
-                cfg.getBoolean("transformable", true)
+                cfg.getBoolean("transformable", true),
+                // Regiones vetadas para el huevo. Se leen de la raiz, no de 'spawn': las
+                // necesita tambien el mob de jugador, que no tiene seccion 'spawn'.
+                deniedRegions(cfg)
         ));
     }
 
@@ -839,7 +851,24 @@ public final class MobLoader {
         if (!cfg.isInt("chunk-radius")) {
             return null;
         }
-        return Math.max(0, cfg.getInt("chunk-radius"));
+        // Tope duro: cada punto de radio son (2r+1)^2 chunks. Sin tope, un yml con
+        // 'chunk-radius: 100' pedia 40401 chunks por mob.
+        return Math.min(MAX_CHUNK_RADIUS, Math.max(0, cfg.getInt("chunk-radius")));
+    }
+
+    /**
+     * Regiones de WorldGuard donde el mob no puede aparecer al invocarlo con el huevo.
+     *
+     * <p>Se suman las de {@code spawn.deny-regions} (solo mobs de servidor) y las de la raiz
+     * {@code deny-regions}, que vale para cualquier categoria. Se deduplican.
+     */
+    private static List<String> deniedRegions(ConfigurationSection cfg) {
+        Set<String> names = new LinkedHashSet<>(lowerList(cfg.getStringList("deny-regions")));
+        ConfigurationSection spawn = cfg.getConfigurationSection("spawn");
+        if (spawn != null) {
+            names.addAll(lowerList(spawn.getStringList("deny-regions")));
+        }
+        return List.copyOf(names);
     }
 
     /**

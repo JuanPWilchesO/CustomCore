@@ -161,8 +161,14 @@ point:
   # Radio en chunks que se mantiene cargado alrededor del bloque de un mob anclado a
   # un punto, para que no desaparezca ni deje de contar aunque no haya jugadores
   # cerca. OJO: es un cuadrado de (2*radio+1)^2 chunks; con el valor 4 son 81 chunks
-  # por mob. 0 = desactivado.
+  # por mob. 0 = desactivado. Maximo 6 (169 chunks por mob): por encima se recorta.
   chunk-radius: 4
+
+eggs:
+  # Segundos de espera para volver a colocar un huevo cuyo mob acaba de recogerse.
+  # Evita el bucle recoger-colocar, que iba generando zonas de chunks nuevas en el mapa.
+  # Solo espera ese vinculo: los demas huevos del jugador y los nuevos no. 0 = sin espera.
+  redeploy-cooldown-seconds: 5
 
 spawning:
   # Aparicion aleatoria de los mobs de servidor que la pidan en su yml con 'spawn.natural'.
