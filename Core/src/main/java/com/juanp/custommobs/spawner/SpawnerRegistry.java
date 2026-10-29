@@ -1,11 +1,11 @@
 package com.juanp.custommobs.spawner;
 
+import com.juanp.custommobs.store.AtomicYaml;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.Plugin;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -25,6 +25,8 @@ public final class SpawnerRegistry {
     private final Plugin plugin;
     private final File file;
     private final Map<UUID, SpawnerEntry> entries = new LinkedHashMap<>();
+    /** El archivo no se pudo leer al arrancar: no se guarda encima hasta repararlo. */
+    private boolean loadFailed;
 
     public SpawnerRegistry(Plugin plugin) {
         this.plugin = plugin;
@@ -34,7 +36,15 @@ public final class SpawnerRegistry {
     /** Lee los spawners del disco. Los archivos corruptos se ignoran. */
     public void load() {
         this.entries.clear();
+        this.loadFailed = false;
         if (!this.file.exists()) {
+            return;
+        }
+        AtomicYaml.cleanTemp(this.file);
+        if (AtomicYaml.unreadable(this.file)) {
+            this.plugin.getLogger().warning(
+                    "data/spawners.yml no se puede leer: no se guardara encima.");
+            this.loadFailed = true;
             return;
         }
         YamlConfiguration cfg = YamlConfiguration.loadConfiguration(this.file);
@@ -65,6 +75,9 @@ public final class SpawnerRegistry {
 
     /** Vuelca los spawners al disco. */
     public void save() {
+        if (this.loadFailed) {
+            return;
+        }
         YamlConfiguration cfg = new YamlConfiguration();
         for (SpawnerEntry entry : this.entries.values()) {
             String base = "spawners." + entry.id() + ".";
@@ -78,14 +91,9 @@ public final class SpawnerRegistry {
                 cfg.set(base + "respawn-at", entry.respawnAt());
             }
         }
-        try {
-            File parent = this.file.getParentFile();
-            if (parent != null && !parent.exists() && !parent.mkdirs()) {
-                this.plugin.getLogger().warning("No se pudo crear la carpeta data/");
-            }
-            cfg.save(this.file);
-        } catch (IOException ex) {
-            this.plugin.getLogger().warning("No se pudo guardar data/spawners.yml: " + ex.getMessage());
+        if (!AtomicYaml.save(cfg, this.file)) {
+            this.plugin.getLogger().warning("No se pudo guardar data/spawners.yml"
+                    + " (el anterior queda intacto).");
         }
     }
 

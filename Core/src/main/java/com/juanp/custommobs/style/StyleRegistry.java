@@ -1,11 +1,11 @@
 package com.juanp.custommobs.style;
 
 import com.juanp.custommobs.CustomMobsPlugin;
+import com.juanp.custommobs.store.AtomicYaml;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -25,6 +25,8 @@ public final class StyleRegistry {
     private final Map<UUID, MobStyle> players = new HashMap<>();
     private final Map<UUID, MobStyle> teams = new HashMap<>();
     private boolean dirty;
+    /** El archivo no se pudo leer al arrancar: no se guarda encima hasta repararlo. */
+    private boolean loadFailed;
 
     public StyleRegistry(CustomMobsPlugin plugin) {
         this.plugin = plugin;
@@ -34,7 +36,14 @@ public final class StyleRegistry {
     public void load() {
         this.players.clear();
         this.teams.clear();
+        this.loadFailed = false;
         if (!this.file.exists()) {
+            return;
+        }
+        AtomicYaml.cleanTemp(this.file);
+        if (AtomicYaml.unreadable(this.file)) {
+            this.plugin.getLogger().warning("styles.yml no se puede leer: no se guardara encima.");
+            this.loadFailed = true;
             return;
         }
         YamlConfiguration yaml = YamlConfiguration.loadConfiguration(this.file);
@@ -47,14 +56,17 @@ public final class StyleRegistry {
     }
 
     public void save() {
+        if (this.loadFailed) {
+            return;
+        }
         YamlConfiguration yaml = new YamlConfiguration();
         this.write(yaml, "players", this.players);
         this.write(yaml, "teams", this.teams);
-        try {
-            yaml.save(this.file);
+        if (AtomicYaml.save(yaml, this.file)) {
             this.dirty = false;
-        } catch (IOException ex) {
-            this.plugin.getLogger().warning("No se pudieron guardar los estilos: " + ex.getMessage());
+        } else {
+            this.plugin.getLogger().warning("No se pudieron guardar los estilos: "
+                    + "no se pudo escribir styles.yml (el anterior queda intacto).");
         }
     }
 

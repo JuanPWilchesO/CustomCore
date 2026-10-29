@@ -2,6 +2,7 @@ package com.juanp.custommobs.drop;
 
 import com.juanp.custommobs.CustomMobsPlugin;
 import com.juanp.custommobs.mob.Texts;
+import com.juanp.custommobs.store.AtomicYaml;
 import org.bukkit.Material;
 import com.juanp.custommobs.mob.Texts;
 import org.bukkit.NamespacedKey;
@@ -11,7 +12,6 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
@@ -93,17 +93,7 @@ public final class ItemCatalog {
                 yaml.set("receta", previousRecipe);
             }
         }
-        try {
-            if (!this.folder.exists() && !this.folder.mkdirs()) {
-                this.plugin.getLogger().warning("No se pudo crear la carpeta items/");
-                return false;
-            }
-            yaml.save(file);
-            return true;
-        } catch (IOException ex) {
-            this.plugin.getLogger().warning("No se pudo guardar el item '" + name + "': " + ex.getMessage());
-            return false;
-        }
+        return this.write(file, name, yaml);
     }
 
     /** Objeto guardado con ese nombre, con su NBT intacto. */
@@ -221,13 +211,7 @@ public final class ItemCatalog {
         }
         YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
         yaml.set("faccion", faction == null ? null : faction.trim().toLowerCase(Locale.ROOT));
-        try {
-            yaml.save(file);
-            return true;
-        } catch (IOException ex) {
-            this.plugin.getLogger().warning("No se pudo escribir items/" + name + ".yml: " + ex.getMessage());
-            return false;
-        }
+        return this.write(file, name, yaml);
     }
 
     /** La faccion a la que el objeto queda reservado, o vacio si es libre. */
@@ -269,13 +253,7 @@ public final class ItemCatalog {
         }
         YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
         yaml.set("clase", clazz == null ? null : clazz.trim().toLowerCase(Locale.ROOT));
-        try {
-            yaml.save(file);
-            return true;
-        } catch (IOException ex) {
-            this.plugin.getLogger().warning("No se pudo escribir items/" + name + ".yml: " + ex.getMessage());
-            return false;
-        }
+        return this.write(file, name, yaml);
     }
 
     /** La clase del objeto, si su yml la declara. */
@@ -341,13 +319,23 @@ public final class ItemCatalog {
         }
         YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
         yaml.set(key, allowed ? null : false);
-        try {
-            yaml.save(file);
+        return this.write(file, name, yaml);
+    }
+
+    /**
+     * Escribe el yml de un objeto sin dejarlo a medias.
+     *
+     * <p>Se usa en todas las ediciones del catalogo: faccion, clase y protecciones. Una
+     * escritura cortada dejaba el objeto con un YAML invalido y sus datos de catalogo
+     * perdidos.
+     */
+    private boolean write(File file, String name, YamlConfiguration yaml) {
+        if (AtomicYaml.save(yaml, file)) {
             return true;
-        } catch (IOException ex) {
-            this.plugin.getLogger().warning("No se pudo escribir items/" + name + ".yml: " + ex.getMessage());
-            return false;
         }
+        this.plugin.getLogger().warning("No se pudo escribir items/" + name + ".yml"
+                + " (el anterior queda intacto).");
+        return false;
     }
 
     /** Protecciones guardadas en el yml del item. */
