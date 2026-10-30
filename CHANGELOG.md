@@ -29,6 +29,21 @@
   tarea siempre y fallaba cada segundo si faltaba PacketEvents. Ahora hay un enlace vacio
   (`GlowLink`), igual que con Teams, LuckPerms y BetterModel, y `/customcore glowfaccion`
   explica que no esta disponible.
+- **Cadenas**: el boton lleva ahora el paso en el que se mostro, asi que un boton viejo no
+  mueve la conversacion. Ademas se comprueban distancia al mob
+  (`chains.choice-distance`, 8) y caducidad (`chains.conversation-timeout-seconds`, 300).
+- **Objetos y zonas protegidas**: el uso temprano de un objeto (`items.ignore-cancelled-use`)
+  se saltaba las regiones. Ahora `usar.deny-regions` en el yml del objeto veta su uso en las
+  regiones de WorldGuard que declare, igual que los mobs.
+- **Brillo de facciones**: al entrar y salir se limpia el estado por conexion (ya no queda
+  una fuga de mapas y el color y la placa vuelven a aparecer tras reconectar), y solo se
+  recorre a los jugadores del radio en vez de a todos por pareja.
+- **Economia con Vault**: se cobra por Vault si esta (y por EssentialsX si no), y un fallo
+  de la API ya no se confunde con "no tiene dinero": se distingue y se avisa en el log.
+- **Carga de chunks**: el registro de mobs usa `EntitiesLoadEvent` en vez de leer
+  `Chunk#getEntities()` dentro de `ChunkLoadEvent`.
+- **`immuneUntil`** de los mobs se limpia al vencer; antes solo se borraba el de los
+  jugadores.
 
 ## 1.0.6 — modelos 3D, spawn natural y sonidos
 

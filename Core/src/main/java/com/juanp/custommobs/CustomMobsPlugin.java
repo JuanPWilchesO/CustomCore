@@ -373,6 +373,10 @@ public final class CustomMobsPlugin extends JavaPlugin {
         if (!this.glow.available()) {
             this.getLogger().info("Sin PacketEvents: el brillo de facciones por espectador"
                     + " queda apagado.");
+        } else {
+            // Los equipos falsos son por conexion: al salir hay que olvidar lo enviado.
+            pluginManager.registerEvents(new com.juanp.custommobs.glow.GlowListener(
+                    (FactionGlowService) this.glow), this);
         }
         this.glow.start(this);
 

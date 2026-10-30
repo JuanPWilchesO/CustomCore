@@ -25,8 +25,10 @@ import java.util.concurrent.ConcurrentHashMap;
  * terminar (una charla no necesita sobrevivir a un reinicio).
  *
  * <p>El avance lo dispara un clic en el chat: el boton manda un comando interno con el id de la
- * conversacion y el numero de opcion. <b>El paso no viaja en el clic</b>: se usa el que el
- * servidor tiene apuntado, para que nadie pueda saltarse un pago escribiendo el comando a mano.
+ * conversacion, <b>el paso</b> y el numero de opcion. El paso viaja en el clic a proposito: un
+ * boton viejo —de una pregunta que ya se contesto— no debe mover la conversacion actual. Como
+ * solo se acepta el paso que el servidor tiene apuntado, sigue sin poder saltarse un pago
+ * escribiendo el comando a mano.
  */
 public final class ChainService {
 
@@ -38,7 +40,13 @@ public final class ChainService {
     private final EconomyLink economy;
     private final Map<UUID, Conversation> conversations = new ConcurrentHashMap<>();
 
-    private record Conversation(UUID id, UUID mobId, String skillId, String stepId) {
+    private record Conversation(UUID id, UUID mobId, String skillId, String stepId,
+                                long lastTouched) {
+
+        Conversation touched() {
+            return new Conversation(this.id, this.mobId, this.skillId, this.stepId,
+                    System.currentTimeMillis());
+        }
     }
 
     public ChainService(CustomMobsPlugin plugin, MobService service, EconomyLink economy) {
@@ -57,13 +65,37 @@ public final class ChainService {
         this.enter(mob, player, skill, UUID.randomUUID(), first, 0);
     }
 
-    /** Avanza la conversacion: lo llama el comando interno que manda el boton. */
-    public void choose(Player player, UUID conversationId, int optionIndex) {
+    /**
+     * Avanza la conversacion: lo llama el comando interno que manda el boton.
+     *
+     * @param stepId paso en el que se mostro el boton. Si ya no es el actual, el clic es de una
+     *               pregunta vieja y se ignora sin cerrar nada
+     */
+    public void choose(Player player, UUID conversationId, String stepId, int optionIndex) {
         Conversation conversation = this.conversations.get(player.getUniqueId());
         if (conversation == null || !conversation.id().equals(conversationId)) {
             return;
         }
+        if (stepId == null || !stepId.equals(conversation.stepId())) {
+            // Boton de una pregunta anterior: el jugador ya paso de esa. No se cierra la
+            // conversacion por un clic atrasado.
+            return;
+        }
+        long timeout = this.plugin.config().chainTimeoutSeconds();
+        if (timeout > 0 && System.currentTimeMillis() - conversation.lastTouched() > timeout * 1000L) {
+            this.conversations.remove(player.getUniqueId());
+            player.sendMessage(com.juanp.custommobs.mob.Texts.color(
+                    "&7Esa conversacion ya caduco. Vuelve a hablar con el mob."));
+            return;
+        }
         CustomMob mob = this.service.find(conversation.mobId()).orElse(null);
+        if (mob != null && !this.inReach(player, mob)) {
+            // El mob se fue o el jugador se alejo: no se puede seguir hablando con la pared.
+            this.conversations.remove(player.getUniqueId());
+            player.sendMessage(com.juanp.custommobs.mob.Texts.color(
+                    "&7Ya no estas lo bastante cerca para seguir esta conversacion."));
+            return;
+        }
         SkillSpec skill = mob == null ? null : this.skillOf(mob, conversation.skillId());
         ChainStep step = skill == null ? null : this.stepOf(skill, conversation.stepId());
         if (step == null || optionIndex < 0 || optionIndex >= step.options().size()) {
@@ -92,7 +124,8 @@ public final class ChainService {
             return;
         }
         this.conversations.put(player.getUniqueId(),
-                new Conversation(conversationId, mob.entity().getUniqueId(), skill.id(), step.id()));
+                new Conversation(conversationId, mob.entity().getUniqueId(), skill.id(), step.id(),
+                        System.currentTimeMillis()));
 
         // 1) lo que dice.
         if (step.message() != null && !step.message().isBlank()) {
@@ -134,7 +167,7 @@ public final class ChainService {
         if (step.asks()) {
             for (int index = 0; index < step.options().size(); index++) {
                 player.sendMessage(this.button(mob, player, step.options().get(index).label(),
-                        conversationId, index));
+                        conversationId, step.id(), index));
             }
             return;
         }
@@ -151,7 +184,8 @@ public final class ChainService {
      * dinero, luego objeto y luego niveles; la primera que se pueda pagar se consume.
      */
     private boolean pay(Player player, ChainStep step) {
-        if (step.pay() > 0.0D && this.economy.charge(player, step.pay())) {
+        if (step.pay() > 0.0D
+                && this.economy.charge(player, step.pay()) == EconomyLink.Charge.CHARGED) {
             return true;
         }
         if (step.payItem() != null
@@ -272,10 +306,29 @@ public final class ChainService {
 
     /** Un boton: el texto que se pulsa, y el comando interno que lleva al paso siguiente. */
     private Component button(CustomMob mob, Player player, String label, UUID conversationId,
-                            int index) {
+                            String stepId, int index) {
         return LegacyComponentSerializer.legacyAmpersand()
                 .deserialize(this.text(mob, player, label))
-                .clickEvent(ClickEvent.runCommand("/customcore _chain " + conversationId + " " + index))
+                .clickEvent(ClickEvent.runCommand("/customcore _chain " + conversationId + " "
+                        + stepId + " " + index))
                 .hoverEvent(HoverEvent.showText(Component.text("Pulsa para elegir")));
+    }
+
+    /**
+     * {@code true} si el jugador sigue lo bastante cerca del mob para continuar la charla.
+     *
+     * <p>La distancia sale de {@code chains.choice-distance}. Un solo mundo y una sola
+     * comprobacion por clic: no hay coste en el ciclo.
+     */
+    private boolean inReach(Player player, CustomMob mob) {
+        double distance = this.plugin.config().chainChoiceDistance();
+        if (distance <= 0.0D) {
+            return true;
+        }
+        var entity = mob.entity();
+        if (!entity.isValid() || !player.getWorld().equals(entity.getWorld())) {
+            return false;
+        }
+        return player.getLocation().distanceSquared(entity.getLocation()) <= distance * distance;
     }
 }

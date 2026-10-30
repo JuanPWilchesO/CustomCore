@@ -4,6 +4,7 @@ import com.juanp.custommobs.CustomMobsPlugin;
 import com.juanp.custommobs.item.ItemFactionLock;
 import com.juanp.custommobs.item.UseSpec;
 import com.juanp.custommobs.mob.Texts;
+import com.juanp.custommobs.region.RegionGate;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -214,11 +215,35 @@ public final class EffectListener implements Listener {
         return !this.plugin.drops().catalog().stunFree(item);
     }
 
-    /** {@code true} si el objeto no tiene restriccion o el jugador la cumple. */
+    /**
+     * {@code true} si el objeto no tiene restriccion o el jugador la cumple.
+     *
+     * <p>Tambien mira las {@code deny-regions} del objeto: {@link #onUseEarly} corre aunque
+     * otro plugin cancele el clic, asi que sin esto un objeto del catalogo se podia usar dentro
+     * de una zona protegida.
+     */
     public boolean canUse(Player player, ItemStack item) {
         ItemFactionLock lock = this.plugin.itemLock();
         // Si el lock no esta listo, se falla cerrado: mejor no usar que saltarse la regla.
-        return lock != null && lock.requirement(player, item) == null;
+        if (lock == null || lock.requirement(player, item) != null) {
+            return false;
+        }
+        return this.regionAllows(player, item);
+    }
+
+    /**
+     * {@code true} si las regiones vetadas en el {@code usar:} del objeto dejan usarlo ahi.
+     *
+     * <p>Se usa el mismo cerco que los mobs ({@link RegionGate}); sin WorldGuard esta abierto.
+     * Los objetos sin regiones declaradas no pagan ninguna consulta.
+     */
+    private boolean regionAllows(Player player, ItemStack item) {
+        UseSpec use = this.useOf(item);
+        if (use == null || use.deniedRegions().isEmpty()) {
+            return true;
+        }
+        return RegionGate.create(this.plugin).allows(player.getLocation(), "",
+                use.deniedRegions());
     }
 
     /** @return {@code false} si la faccion de la pocion no deja usarla */

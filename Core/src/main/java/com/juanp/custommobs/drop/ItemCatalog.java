@@ -458,7 +458,29 @@ public final class ItemCatalog {
                 messageOf(section, "inicio", "mensaje-inicio", "start-message", "start"),
                 messageOf(section, "fin", "mensaje-fin", "end-message", "end"),
                 messageOf(section, "cooldown-aviso", "aviso-cooldown",
-                        "mensaje-cooldown", "cooldown-message")));
+                        "mensaje-cooldown", "cooldown-message"),
+                deniedRegions(section)));
+    }
+
+    /**
+     * Regiones de WorldGuard vetadas para el objeto.
+     *
+     * <p>Se leen de {@code usar.deny-regions}; se admite tambien {@code usar.regiones-vetadas}
+     * por coherencia con el yml en castellano.
+     */
+    private static java.util.List<String> deniedRegions(
+            org.bukkit.configuration.ConfigurationSection section) {
+        java.util.List<String> raw = section.getStringList("deny-regions");
+        if (raw.isEmpty()) {
+            raw = section.getStringList("regiones-vetadas");
+        }
+        java.util.List<String> names = new java.util.ArrayList<>();
+        for (String name : raw) {
+            if (name != null && !name.isBlank()) {
+                names.add(name.trim().toLowerCase(java.util.Locale.ROOT));
+            }
+        }
+        return java.util.List.copyOf(names);
     }
 
     /** Primer mensaje no vacio de las claves dadas, ya con colores. */

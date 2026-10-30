@@ -315,6 +315,9 @@ public final class CcService {
 
     private void tick() {
         long now = System.currentTimeMillis();
+        // La inmunidad de los mobs no se borraba nunca: solo la de los jugadores, al salir.
+        // Con esto el mapa no crece con cada escudo puesto a un mob.
+        this.immuneUntil.entrySet().removeIf(entry -> entry.getValue() <= now);
         for (Map.Entry<UUID, Map<String, Long>> entry : this.active.entrySet()) {
             Map<String, Long> types = entry.getValue();
             boolean wasLocked = this.locked(entry.getKey());

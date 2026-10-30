@@ -130,6 +130,17 @@ usar:
 - El cooldown es visual: barrido en la toolbar del item o boss bar si el material se
   comparte entre varios items. `usar.cooldown-aviso` ya no se usa.
 - Los avisos van al jugador que usa el objeto, no al objetivo.
+- `usar.deny-regions` (o `usar.regiones-vetadas`): regiones de **WorldGuard** donde el objeto
+  no se puede usar. Vacio = sin vetos. Es una lista:
+
+  ```yaml
+  usar:
+    skills: [balsamo_propio]
+    deny-regions: [spawn, tienda]
+  ```
+
+  Se comprueba como las de los mobs, y vale aunque otro plugin no cancele el clic: el uso
+  temprano del objeto pasa por la misma puerta. Sin WorldGuard la clave no hace nada.
 - Si el objeto tiene `clase` y/o `faccion`, la restriccion se comprueba **antes** de
   lanzar la skill. Un admin pasa solo si tiene `customcore.bypass`, no por ser admin.
 - Por defecto CustomCore procesa igual el uso aunque otro plugin cancele el clic

@@ -38,7 +38,7 @@ import java.util.Locale;
 import java.util.Set;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDeathEvent;
-import org.bukkit.event.world.ChunkLoadEvent;
+import org.bukkit.event.world.EntitiesLoadEvent;
 import org.bukkit.persistence.PersistentDataType;
 
 import java.util.ArrayList;
@@ -981,9 +981,17 @@ public final class MobService implements Listener {
         this.plugin.getLogger().info("Mobs custom restaurados: " + restored);
     }
 
+    /**
+     * Registra los mobs cuando su chunk vuelve a cargarse desde el disco.
+     *
+     * <p>Se usa {@link EntitiesLoadEvent} y no {@code ChunkLoadEvent}: en Paper moderno las
+     * entidades se cargan aparte del chunk, asi que {@code Chunk#getEntities()} dentro de
+     * {@code ChunkLoadEvent} puede forzar una carga sincrona o devolver una lista incompleta.
+     * Este evento trae ya la lista de entidades del chunk.
+     */
     @EventHandler
-    public void onChunkLoad(ChunkLoadEvent event) {
-        for (Entity entity : event.getChunk().getEntities()) {
+    public void onEntitiesLoad(EntitiesLoadEvent event) {
+        for (Entity entity : event.getEntities()) {
             if (entity instanceof LivingEntity living) {
                 this.register(living);
             }
