@@ -14,11 +14,14 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -116,6 +119,11 @@ public final class FactionGlowService extends BukkitRunnable implements GlowLink
         };
     }
 
+    /** {@code true} si ese jugador se ha apartado del brillo por su cuenta. */
+    public boolean optedOut(UUID playerId) {
+        return this.optedOut.contains(playerId);
+    }
+
     @Override
     public void run() {
         if (this.broken) {
@@ -126,29 +134,27 @@ public final class FactionGlowService extends BukkitRunnable implements GlowLink
             return;
         }
         double radius = this.plugin.getConfig().getDouble("faction-glow.radius", 48.0D);
-        NamedTextColor enemy = this.color("faction-glow.enemy", NamedTextColor.RED);
-        NamedTextColor ally = this.color("faction-glow.ally", NamedTextColor.GREEN);
-        NamedTextColor neutral = this.color("faction-glow.neutral", NamedTextColor.GRAY);
 
         for (Player viewer : Bukkit.getOnlinePlayers()) {
             Map<UUID, String> seen = this.teams.computeIfAbsent(viewer.getUniqueId(),
                     id -> new ConcurrentHashMap<>());
             boolean wants = this.enabledFor(viewer)
                     && this.service.factionGlowActive(viewer.getWorld());
-            for (Player target : Bukkit.getOnlinePlayers()) {
+            // Solo los jugadores del radio: antes se recorrian todos y se comparaba cada
+            // pareja, que con muchos jugadores es un n x n por segundo.
+            Collection<? extends Player> candidates = wants
+                    ? this.nearby(viewer, radius)
+                    : List.of();
+            Set<UUID> painted = new HashSet<>();
+            for (Player target : candidates) {
                 if (target.getUniqueId().equals(viewer.getUniqueId())) {
                     continue;
                 }
                 // Un jugador en sigilo no debe recibir equipo ni metadatos de brillo: podrian
                 // volver a mostrarle la placa o el contorno.
                 var sigilo = this.plugin.sigilo();
-                if (sigilo != null && sigilo.isHidden(target.getUniqueId())) {
-                    this.forget(viewer, target, seen);
-                    continue;
-                }
-                if (!wants || !this.near(viewer, target, radius)
+                if (sigilo != null && sigilo.isHidden(target.getUniqueId())
                         || !this.service.factionGlowActive(target.getWorld())) {
-                    this.forget(viewer, target, seen);
                     continue;
                 }
                 // Agachado, ni placa ni brillo: se le mete en un equipo que oculta el nombre.
@@ -157,7 +163,10 @@ public final class FactionGlowService extends BukkitRunnable implements GlowLink
                         sneaking ? HIDDEN_TEAM
                                 : this.colorFor(viewer, this.service.factionOf(target)),
                         seen, !sneaking);
+                painted.add(target.getUniqueId());
             }
+            // Los que se alejaron siguen en 'seen': hay que soltarlos o se quedan pintados.
+            this.forgetMissing(viewer, seen, painted);
             // Los mobs NO se pintan por paquetes. Su color ya sale sin tocar el protocolo: los
             // de servidor por el color de su faccion (factions.yml) y los de jugador por el
             // estilo de su dueno o su team. El pintado por espectador para mobs era el que
@@ -166,11 +175,56 @@ public final class FactionGlowService extends BukkitRunnable implements GlowLink
         }
     }
 
-    /** {@code true} si el espectador y la entidad estan lo bastante cerca para pintarla. */
-    private boolean near(Player viewer, LivingEntity target, double radius) {
-        return radius <= 0.0D
-                || (viewer.getWorld().equals(target.getWorld())
-                && viewer.getLocation().distanceSquared(target.getLocation()) <= radius * radius);
+    /**
+     * Suelta a los espectadores que ya no estan a la vista.
+     *
+     * <p>Antes se llamaba a {@code forget} uno a uno recorriendo todos los conectados; ahora
+     * solo se recorren los que estaban pintados, que casi siempre son unos pocos.
+     */
+    private void forgetMissing(Player viewer, Map<UUID, String> seen, Set<UUID> painted) {
+        if (seen.isEmpty()) {
+            return;
+        }
+        List<UUID> gone = new ArrayList<>();
+        for (UUID id : seen.keySet()) {
+            if (!painted.contains(id)) {
+                gone.add(id);
+            }
+        }
+        for (UUID id : gone) {
+            Entity entity = Bukkit.getEntity(id);
+            if (entity instanceof LivingEntity living) {
+                this.forget(viewer, living, seen);
+            } else {
+                // La entidad ya no existe: se borra la marca sin mandar paquetes.
+                seen.remove(id);
+                Map<UUID, Long> sent = this.glowAt.get(viewer.getUniqueId());
+                if (sent != null) {
+                    sent.remove(id);
+                }
+            }
+        }
+    }
+
+    /**
+     * Jugadores dentro del radio del espectador.
+     *
+     * <p>Paper devuelve la lista ya filtrada por distancia; el filtro propio solo hace falta
+     * cuando el radio esta desactivado o el mundo no coincide.
+     */
+    private Collection<? extends Player> nearby(Player viewer, double radius) {
+        if (radius <= 0.0D) {
+            return Bukkit.getOnlinePlayers();
+        }
+        return viewer.getWorld().getNearbyPlayers(viewer.getLocation(), radius);
+    }
+
+    /** Deja de pintar a todos y olvida lo que se le mando: al salir, su cliente se va. */
+    public void forgetPlayer(Player player) {
+        this.teams.remove(player.getUniqueId());
+        this.created.remove(player.getUniqueId());
+        this.glowAt.remove(player.getUniqueId());
+        this.optedOut.remove(player.getUniqueId());
     }
 
     // ------------------------------------------------------------------ pintar
