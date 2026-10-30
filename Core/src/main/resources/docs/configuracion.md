@@ -49,6 +49,10 @@ point:
 eggs:
   redeploy-cooldown-seconds: 5
 
+chains:
+  choice-distance: 8
+  conversation-timeout-seconds: 300
+
 worlds:
   enabled: []
 
@@ -103,6 +107,8 @@ book:
 | `limits.mount-groups` | cupo de monturas por grupo de LuckPerms |
 | `point.chunk-radius` | radio en chunks que se carga alrededor de un bloque ancla; maximo 6 |
 | `eggs.redeploy-cooldown-seconds` | espera para volver a colocar un huevo recien recogido (`0` = sin espera) |
+| `chains.choice-distance` | distancia maxima al mob para pulsar un boton de una cadena (`0` = sin limite) |
+| `chains.conversation-timeout-seconds` | segundos sin actividad tras los que una conversacion caduca (`0` = no caduca) |
 | `worlds.enabled` | mundos donde funciona el plugin; vacio = todos |
 | `recall.enabled` | si los mobs abandonados se retiran solos |
 | `recall.radius` | radio de abandono; `0` = derivado de la simulation-distance |
@@ -180,6 +186,17 @@ generaria trozos del mapa que nadie ha explorado. Tras recoger un mob, **su huev
   afectados.
 - `0` desactiva la espera.
 - No impide recoger: solo volver a soltar ese mismo mob.
+
+## Conversaciones de cadenas (`chains`)
+
+Los botones de una cadena son mensajes de chat, y un mensaje viejo no manda: **el boton
+lleva el paso en el que se mostro**, asi que pulsar un boton de una pregunta ya contestada
+no mueve la conversacion actual.
+
+- `chains.choice-distance`: distancia maxima al mob para pulsar (8 por defecto). Si te alejas
+  aunque sea un poco mas que eso, la conversacion se cierra. `0` = sin limite.
+- `chains.conversation-timeout-seconds`: si pasan 300 s sin pulsar nada, caduca y hay que
+  volver a hablar con el mob. `0` = no caduca.
 
 ## El MOTD
 

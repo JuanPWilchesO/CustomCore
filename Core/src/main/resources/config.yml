@@ -170,6 +170,12 @@ eggs:
   # Solo espera ese vinculo: los demas huevos del jugador y los nuevos no. 0 = sin espera.
   redeploy-cooldown-seconds: 5
 
+chains:
+  # Distancia maxima al mob para pulsar un boton de una cadena. 0 = sin limite.
+  choice-distance: 8
+  # Segundos sin actividad tras los que la conversacion caduca. 0 = no caduca.
+  conversation-timeout-seconds: 300
+
 spawning:
   # Aparicion aleatoria de los mobs de servidor que la pidan en su yml con 'spawn.natural'.
   # OJO: esto es aparte de los spawners. Un spawner es un punto fijo que reaparece; esto
