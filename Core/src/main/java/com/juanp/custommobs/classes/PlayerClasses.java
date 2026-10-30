@@ -1,11 +1,11 @@
 package com.juanp.custommobs.classes;
 
+import com.juanp.custommobs.store.AtomicYaml;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.Plugin;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
@@ -24,6 +24,8 @@ public final class PlayerClasses {
     private final Plugin plugin;
     private final File file;
     private final Map<UUID, String> entries = new LinkedHashMap<>();
+    /** El archivo no se pudo leer al arrancar: no se guarda encima hasta repararlo. */
+    private boolean loadFailed;
 
     public PlayerClasses(Plugin plugin) {
         this.plugin = plugin;
@@ -33,7 +35,15 @@ public final class PlayerClasses {
     /** Lee las clases del disco. Un archivo corrupto o una linea mala se ignoran. */
     public void load() {
         this.entries.clear();
+        this.loadFailed = false;
         if (!this.file.exists()) {
+            return;
+        }
+        AtomicYaml.cleanTemp(this.file);
+        if (AtomicYaml.unreadable(this.file)) {
+            this.plugin.getLogger().warning(
+                    "data/player-classes.yml no se puede leer: no se guardara encima.");
+            this.loadFailed = true;
             return;
         }
         YamlConfiguration cfg = YamlConfiguration.loadConfiguration(this.file);
@@ -82,20 +92,17 @@ public final class PlayerClasses {
     }
 
     private void save() {
+        if (this.loadFailed) {
+            return;
+        }
         YamlConfiguration cfg = new YamlConfiguration();
         ConfigurationSection root = cfg.createSection("players");
         for (Map.Entry<UUID, String> entry : this.entries.entrySet()) {
             root.set(entry.getKey().toString(), entry.getValue());
         }
-        try {
-            File parent = this.file.getParentFile();
-            if (parent != null && !parent.exists()) {
-                parent.mkdirs();
-            }
-            cfg.save(this.file);
-        } catch (IOException ex) {
-            this.plugin.getLogger().warning("No se pudo guardar data/player-classes.yml: "
-                    + ex.getMessage());
+        if (!AtomicYaml.save(cfg, this.file)) {
+            this.plugin.getLogger().warning("No se pudo guardar data/player-classes.yml"
+                    + " (el anterior queda intacto).");
         }
     }
 }

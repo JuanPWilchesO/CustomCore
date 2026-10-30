@@ -152,12 +152,33 @@ deje de contar cuando no hay jugadores cerca, su zona se mantiene **cargada**:
 ```yaml
 # Radio en chunks que se mantiene cargado alrededor del bloque.
 # Si no se pone, se usa el global (point.chunk-radius del config). 0 = desactivado.
+# Maximo 6: por encima se recorta.
 chunk-radius: 4
 ```
 
 Ojo con el coste: es un cuadrado de `(2*radio+1)^2` chunks. Con radio 4 son **81 chunks**
 por mob. Solo se suelta cuando el mob se recoge con su huevo; si luego se coloca en otro
 sitio, se cargan los chunks del lugar nuevo.
+
+Despues de recogerlo, ese huevo espera unos segundos antes de poder volver a colocarse
+(`eggs.redeploy-cooldown-seconds` del config), para que no se pueda ir generando mapa
+recogiendo y soltando en bucle.
+
+## Zonas protegidas: `deny-regions`
+
+Con WorldGuard instalado, un mob puede vetar regiones donde **no** se le puede invocar con
+su huevo:
+
+```yaml
+# Regiones de WorldGuard donde este mob no puede aparecer. Vacio = sin vetos.
+deny-regions:
+  - spawn
+  - tienda
+```
+
+Vale para cualquier categoria, tambien para los mobs de jugador. Se suman a las
+`spawn.deny-regions` de los mobs de servidor. Sin WorldGuard la clave no hace nada: el
+cerco esta abierto. No tiene que ver con los claims: son las regiones nombradas aqui.
 
 ## Apariencia, sonidos y resto
 

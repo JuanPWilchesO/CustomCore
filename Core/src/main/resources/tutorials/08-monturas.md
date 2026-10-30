@@ -120,6 +120,7 @@ lleva, con un aviso por chat y su plazo.
 2. Comprueba color, marcas y armadura.
 3. Camina sobre el agua: debe helarse.
 4. `/customcore cuota` → tu montura debe estar en la linea de **Monturas**.
-5. Golpeala con su huevo para recogerla y volver a colocarla.
+5. Golpeala con su huevo para recogerla y volver a colocarla (el huevo espera unos segundos
+   tras recogerla).
 
 Sigue con `../docs/monturas.md` para la referencia completa.

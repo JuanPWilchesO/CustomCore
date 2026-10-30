@@ -46,6 +46,9 @@ limits:
 point:
   chunk-radius: 4
 
+eggs:
+  redeploy-cooldown-seconds: 5
+
 worlds:
   enabled: []
 
@@ -98,7 +101,8 @@ book:
 | `limits.point-groups` | cupo por grupo para los anclados a un bloque |
 | `limits.default-mount-mobs` | cupo de monturas, sin grupo mapeado |
 | `limits.mount-groups` | cupo de monturas por grupo de LuckPerms |
-| `point.chunk-radius` | radio en chunks que se carga alrededor de un bloque ancla |
+| `point.chunk-radius` | radio en chunks que se carga alrededor de un bloque ancla; maximo 6 |
+| `eggs.redeploy-cooldown-seconds` | espera para volver a colocar un huevo recien recogido (`0` = sin espera) |
 | `worlds.enabled` | mundos donde funciona el plugin; vacio = todos |
 | `recall.enabled` | si los mobs abandonados se retiran solos |
 | `recall.radius` | radio de abandono; `0` = derivado de la simulation-distance |
@@ -161,6 +165,21 @@ y el mob puede sobrescribirlo con su propio `chunk-radius`.
 
 **Coste**: es un cuadrado de `(2*radio+1)^2` chunks por mob. Con el valor por defecto (4)
 son **81 chunks**. Bajalo o ponlo en `0` si notas presion de memoria.
+
+El radio tiene un **maximo duro de 6** (169 chunks por mob), tanto en `point.chunk-radius`
+como en el `chunk-radius` de cada mob: por encima de 6 el valor se recorta y se avisa en el
+log al cargar. Existe para que un yml no pueda pedir una zona desproporcionada por error.
+
+## Espera para volver a colocar un huevo (`eggs`)
+
+Recoger un mob y volver a colocarlo al momento pediria una zona de chunks nueva cada vez, y
+generaria trozos del mapa que nadie ha explorado. Tras recoger un mob, **su huevo** espera
+`eggs.redeploy-cooldown-seconds` (5 por defecto) antes de poder colocarse otra vez.
+
+- Solo espera **ese** vinculo: los demas huevos del jugador y los huevos nuevos no se ven
+  afectados.
+- `0` desactiva la espera.
+- No impide recoger: solo volver a soltar ese mismo mob.
 
 ## El MOTD
 

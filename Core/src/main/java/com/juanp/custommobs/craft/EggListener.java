@@ -5,6 +5,7 @@ import com.juanp.custommobs.mob.MobDefinition;
 import com.juanp.custommobs.mob.MobService;
 import com.juanp.custommobs.mob.PlayerMobRegistry;
 import com.juanp.custommobs.mob.Texts;
+import com.juanp.custommobs.region.RegionGate;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Entity;
@@ -12,6 +13,7 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.Event;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.inventory.CraftItemEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
@@ -20,6 +22,7 @@ import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -48,10 +51,54 @@ public final class EggListener implements Listener {
      */
     private final Set<UUID> justCollected = ConcurrentHashMap.newKeySet();
 
+    /** Vinculo recogido -> instante de la recogida, para la espera de redespliegue. */
+    private final Map<UUID, Long> recollected = new ConcurrentHashMap<>();
+
     public EggListener(CustomMobsPlugin plugin, CraftService craft, MobService service) {
         this.plugin = plugin;
         this.craft = craft;
         this.service = service;
+    }
+
+    /**
+     * Segundos que le quedan a un vinculo antes de poder volver a colocarse.
+     *
+     * <p>Es la puerta contra el bucle recoger-colocar: cada mob anclado a un bloque pide su
+     * cuadrado de chunks, y sin espera se podia ir generando zona nueva sin limite en trozos
+     * inexplorados del mapa.
+     *
+     * @return {@code 0} si ya se puede colocar
+     */
+    private long redeployWaitSeconds(UUID linkId) {
+        long cooldown = this.service.config().eggRedeployCooldown();
+        if (cooldown <= 0L) {
+            return 0L;
+        }
+        Long at = this.recollected.get(linkId);
+        if (at == null) {
+            return 0L;
+        }
+        long elapsed = (System.currentTimeMillis() - at) / 1000L;
+        long left = cooldown - elapsed;
+        if (left <= 0L) {
+            this.recollected.remove(linkId);
+            return 0L;
+        }
+        return left;
+    }
+
+    /**
+     * {@code true} si las regiones del mob permiten invocarlo ahi.
+     *
+     * <p>Se usa el mismo cerco que el spawneo natural ({@link RegionGate}): las zonas
+     * protegidas son las que el mob declara en {@code deny-regions}, no los claims de otros
+     * plugins. Sin WorldGuard, el cerco esta abierto y todo vale.
+     */
+    private boolean regionAllows(MobDefinition definition, Location location) {
+        if (definition.deniedRegions().isEmpty()) {
+            return true;
+        }
+        return RegionGate.create(this.plugin).allows(location, "", definition.deniedRegions());
     }
 
     /**
@@ -107,10 +154,20 @@ public final class EggListener implements Listener {
         return false;
     }
 
-    /** Colocar el huevo: despliega el mob, o lo vuelve a traer si estaba guardado. */
-    @EventHandler
+    /**
+     * Colocar el huevo: despliega el mob, o lo vuelve a traer si estaba guardado.
+     *
+     * <p>{@code ignoreCancelled} y la comprobacion de {@code useInteractedBlock} son la
+     * puerta a las protecciones: sin ellas el huevo se saltaba cualquier plugin que vetara
+     * el uso en esa zona (una region protegida, por ejemplo).
+     */
+    @EventHandler(ignoreCancelled = true)
     public void onInteract(PlayerInteractEvent event) {
         if (event.getHand() != EquipmentSlot.HAND) {
+            return;
+        }
+        // Otro plugin vetó el uso sobre ese bloque: el huevo no aparece.
+        if (event.useInteractedBlock() == Event.Result.DENY) {
             return;
         }
         Action action = event.getAction();
@@ -159,6 +216,21 @@ public final class EggListener implements Listener {
                 player.sendMessage(Texts.color("&eEse mob ya esta desplegado. Golpealo con este huevo para recogerlo."));
                 return;
             }
+            // Cooldown por vinculo: solo espera el mob que acaba de recogerse. Recoger y
+            // recolocar en bucle pedia una zona de chunks nueva cada vez en sitios
+            // inexplorados; el huevo nuevo (sin vinculo) nunca espera.
+            long wait = this.redeployWaitSeconds(bound.get());
+            if (wait > 0L) {
+                player.sendMessage(Texts.color("&eEse mob acaba de recogerse: espera " + wait
+                        + " s antes de volver a colocarlo."));
+                return;
+            }
+        }
+
+        Location target = this.spawnLocation(event, player);
+        if (!this.regionAllows(definition.get(), target)) {
+            player.sendMessage(Texts.color("&cAqui no se puede invocar ese mob: es una zona protegida."));
+            return;
         }
 
         // Cada cuenta es aparte: los que siguen al dueno, los fijos a un bloque y las
@@ -177,7 +249,7 @@ public final class EggListener implements Listener {
         }
 
         Optional<PlayerMobRegistry.MobLink> used = this.service.deploy(definition.get(),
-                this.spawnLocation(event, player), player, bound.orElse(null));
+                target, player, bound.orElse(null));
         if (used.isEmpty()) {
             player.sendMessage(Texts.color("&cNo se pudo invocar el mob."));
             return;
@@ -255,6 +327,8 @@ public final class EggListener implements Listener {
         // El huevo pasa a representar a este mob, aunque su marca se hubiera perdido.
         this.craft.bind(item, link.linkId());
         if (this.service.store(link.linkId())) {
+            // Arranca la espera de redespliegue de ESTE vinculo (ver redeployWaitSeconds).
+            this.recollected.put(link.linkId(), System.currentTimeMillis());
             // Se marca este clic para que su mitad RIGHT_CLICK_AIR no lo vuelva a soltar.
             UUID id = player.getUniqueId();
             this.justCollected.add(id);

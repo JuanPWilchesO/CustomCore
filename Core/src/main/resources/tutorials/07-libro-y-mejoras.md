@@ -50,8 +50,9 @@ gasta.
 
 ## 3. Lo que hace especial a este item
 
-Hiere al mob, **recogelo con su huevo y vuelve a colocarlo**. La mejora **sigue ahi**: la
-vida maxima subida viaja con el mob.
+Hiere al mob, **recogelo con su huevo y vuelve a colocarlo** (ese huevo espera unos segundos
+antes de poder colocarse otra vez). La mejora **sigue ahi**: la vida maxima subida viaja con
+el mob.
 
 Eso es lo que hace que valga la pena mejorarlos: lo que el jugador invierte en un mob no se
 pierde porque lo guarde un rato.

@@ -37,8 +37,15 @@ import java.util.concurrent.ConcurrentHashMap;
  * verdad no se toca; asi no se rompe nada de Teams ni de ningun otro plugin.
  *
  * <p>Modos (faction-glow.mode del config): off, global o player.
+ *
+ * <p>Toca la API de PacketEvents, que es opcional: solo se carga cuando el plugin esta
+ * instalado (ver {@link GlowLink}). Sin el se usa {@link NoGlowLink} y no se llega a esta
+ * clase, ni siquiera por enlace.
  */
-public final class FactionGlowService extends BukkitRunnable {
+public final class FactionGlowService extends BukkitRunnable implements GlowLink {
+
+    /** Si se perdio PacketEvents en caliente: la tarea se queda quieta en vez de fallar. */
+    private boolean broken;
 
     private static final String ENEMY_TEAM = "cmglow_enemy";
     private static final String ALLY_TEAM = "cmglow_ally";
@@ -65,13 +72,32 @@ public final class FactionGlowService extends BukkitRunnable {
         this.service = service;
     }
 
+    @Override
+    public void start(CustomMobsPlugin plugin) {
+        this.runTaskTimer(plugin, 20L, 20L);
+    }
+
+    @Override
+    public void stop() {
+        if (!this.isCancelled()) {
+            this.cancel();
+        }
+    }
+
+    @Override
+    public boolean available() {
+        return true;
+    }
+
     /** Modo configurado: off, global o player. */
+    @Override
     public String mode() {
         String raw = this.plugin.getConfig().getString("faction-glow.mode", "off");
         return raw == null ? "off" : raw.trim().toLowerCase(Locale.ROOT);
     }
 
     /** Alterna el brillo de un jugador. Devuelve como queda: true si queda activado. */
+    @Override
     public boolean toggle(Player player) {
         if (this.optedOut.remove(player.getUniqueId())) {
             return true;
@@ -81,6 +107,7 @@ public final class FactionGlowService extends BukkitRunnable {
     }
 
     /** true si ese jugador ve el brillo de facciones. */
+    @Override
     public boolean enabledFor(Player player) {
         return switch (this.mode()) {
             case "global" -> true;
@@ -91,6 +118,9 @@ public final class FactionGlowService extends BukkitRunnable {
 
     @Override
     public void run() {
+        if (this.broken) {
+            return;
+        }
         String current = this.mode();
         if (!"global".equals(current) && !"player".equals(current)) {
             return;
@@ -267,8 +297,21 @@ public final class FactionGlowService extends BukkitRunnable {
         return new WrapperPlayServerEntityMetadata(target.getEntityId(), data);
     }
 
+    /**
+     * Manda un paquete al cliente de ese espectador.
+     *
+     * <p>Si PacketEvents desaparecio (deshabilitado en caliente, recarga de plugins), la
+     * tarea se para sola en vez de fallar cada segundo y llenar el log.
+     */
     private void send(Player viewer, PacketWrapper<?> packet) {
-        PacketEvents.getAPI().getPlayerManager().sendPacket(viewer, packet);
+        try {
+            PacketEvents.getAPI().getPlayerManager().sendPacket(viewer, packet);
+        } catch (Throwable failure) {
+            this.broken = true;
+            this.plugin.getLogger().warning("Se para el brillo de facciones: PacketEvents no"
+                    + " responde (" + failure.getClass().getSimpleName() + ").");
+            this.stop();
+        }
     }
 
     // ------------------------------------------------------------------ relaciones

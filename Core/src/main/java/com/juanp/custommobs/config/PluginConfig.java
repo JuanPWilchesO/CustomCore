@@ -32,7 +32,10 @@ import java.util.Map;
  * @param groupLimits         cupo por grupo de LuckPerms, con las claves en minusculas
  * @param pointGroupLimits    cupo por grupo para los mobs anclados a un bloque
  * @param mountGroupLimits    cupo por grupo para las monturas
- * @param pointChunkRadius    radio en chunks que se mantiene cargado alrededor del bloque
+ * @param pointChunkRadius    radio en chunks que se mantiene cargado alrededor del bloque;
+ *                            acotado a {@link #MAX_CHUNK_RADIUS}
+ * @param eggRedeployCooldown segundos de espera para volver a colocar un huevo cuyo mob se
+ *                            acaba de recoger; {@code 0} = sin espera
  * @param bookMaterial        material del libro de inspeccion
  * @param bookName            nombre del libro, con color ya traducido
  * @param bookLore            lore del libro, con color ya traducido
@@ -73,6 +76,7 @@ public record PluginConfig(
         Map<String, Integer> pointGroupLimits,
         Map<String, Integer> mountGroupLimits,
         int pointChunkRadius,
+        int eggRedeployCooldown,
         org.bukkit.Material bookMaterial,
         String bookName,
         List<String> bookLore,
@@ -112,6 +116,14 @@ public record PluginConfig(
         int uiTitleStay,
         int uiTitleFadeOut
 ) {
+
+    /**
+     * Tope duro del radio de chunks de un mob fijo.
+     *
+     * <p>Con radio {@code r} se mantienen cargados {@code (2r+1)^2} chunks: con 6, 169.
+     * Debe coincidir con {@code MobLoader} para el radio propio de cada mob.
+     */
+    public static final int MAX_CHUNK_RADIUS = 6;
 
     public static PluginConfig load(FileConfiguration cfg) {
         PlayerTargetMode mode = PlayerTargetMode.parse(cfg.getString("targeting.player-mode", "defensive"));
@@ -168,7 +180,9 @@ public record PluginConfig(
                 readGroupLimits(cfg, "limits.groups"),
                 readGroupLimits(cfg, "limits.point-groups"),
                 readGroupLimits(cfg, "limits.mount-groups"),
-                Math.max(0, cfg.getInt("point.chunk-radius", 4)),
+                // Tope duro: (2r+1)^2 chunks por mob. Ver MobLoader.MAX_CHUNK_RADIUS.
+                Math.min(MAX_CHUNK_RADIUS, Math.max(0, cfg.getInt("point.chunk-radius", 4))),
+                Math.max(0, cfg.getInt("eggs.redeploy-cooldown-seconds", 5)),
                 bookMaterial(cfg),
                 Texts.color(cfg.getString("book.display-name", "&6Inventario de fuerzas")),
                 colorList(cfg.getStringList("book.lore")),

@@ -4,9 +4,11 @@ Mobs definidos por YAML, invocados con huevos crafteados, con facciones, disfrac
 equipamiento, encantamientos custom, skills y un cupo de mobs por jugador que sale del
 grupo de LuckPerms.
 
-Pensado para **Paper**. Se apoya en tres plugins opcionales: **Teams** (bandos de
-jugadores), **LibsDisguises** (apariencias) y **LuckPerms** (grupos y cupos). Sin
-cualquiera de ellos el plugin sigue funcionando: cada uno degrada por su cuenta.
+Pensado para **Paper**. Se apoya en plugins opcionales: **Teams** (bandos de
+jugadores), **LibsDisguises** (apariencias), **LuckPerms** (grupos y cupos),
+**WorldGuard** (zonas protegidas), **BetterModel** (modelos 3D) y **PacketEvents**
+(filtro del sigilo y brillo de facciones por espectador). Sin cualquiera de ellos el
+plugin sigue funcionando: cada uno degrada por su cuenta.
 
 ## Novedades 1.0.0
 

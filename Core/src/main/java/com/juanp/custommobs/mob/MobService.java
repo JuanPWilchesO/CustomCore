@@ -879,14 +879,43 @@ public final class MobService implements Listener {
             this.modelLink.apply(entity, customMob.definition(),
                     this.disguiseLink.isDisguised(entity));
             // Un mob de rol con 'ai: false' se queda quieto en su puesto.
-            if (!customMob.definition().usesAi() && entity instanceof Mob mob) {
+            boolean keepAiOff = !customMob.definition().usesAi();
+            if (keepAiOff && entity instanceof Mob mob) {
                 mob.setAI(false);
+            }
+            if (entity instanceof Mob mob) {
+                this.releaseStaleAiLock(mob, keepAiOff);
             }
             // Una montura no busca objetivos: la lleva su jinete.
             if (!customMob.definition().mountable()) {
                 this.applyBehaviour(entity);
             }
         });
+    }
+
+    /**
+     * Devuelve la IA a un mob que se quedo con ella apagada por un aturdimiento.
+     *
+     * <p>El estado del aturdimiento vive en memoria; {@code setAI(false)}, en el NBT. Si el
+     * mob se descargo aturdido —o el servidor se apago con el aturdido—, al volver traia la
+     * IA apagada y sin nadie que se la devolviera. La marca {@code ai-locked} dice que la
+     * apagamos nosotros; si ademas la definicion no la quiere apagada, se restaura.
+     *
+     * @param keepAiOff {@code true} si la definicion pide {@code ai: false}: manda ella
+     */
+    private void releaseStaleAiLock(Mob mob, boolean keepAiOff) {
+        var container = mob.getPersistentDataContainer();
+        if (container.get(this.keys.aiLocked(), PersistentDataType.BYTE) == null) {
+            return;
+        }
+        // El control puede seguir vivo en memoria (mob cargado y aturdido): no se toca.
+        if (this.plugin.cc() != null && this.plugin.cc().activeOn(mob.getUniqueId())) {
+            return;
+        }
+        container.remove(this.keys.aiLocked());
+        if (!keepAiOff && !mob.hasAI()) {
+            mob.setAI(true);
+        }
     }
 
     /** Reconstruye el vinculo leyendo el PersistentDataContainer. */
@@ -916,6 +945,22 @@ public final class MobService implements Listener {
             this.plugin.getLogger().info("API MobGoals no disponible ("
                     + throwable.getClass().getSimpleName() + "). Se usara el modo por eventos.");
         }
+    }
+
+    /**
+     * El mob de esa entidad, aunque no haya llegado a registrarse.
+     *
+     * <p>Si no esta en la lista de activos, se intenta leer del PDC: sirve para un mob que
+     * existe pero cuyo evento de registro aun no ha corrido. Uno descargado no se puede
+     * consultar de ninguna forma, asi que devuelve vacio.
+     */
+    public Optional<CustomMob> resolve(UUID entityId) {
+        CustomMob known = this.active.get(entityId);
+        if (known != null) {
+            return Optional.of(known);
+        }
+        Entity entity = Bukkit.getEntity(entityId);
+        return entity instanceof LivingEntity living ? this.read(living) : Optional.empty();
     }
 
     /** Restaura los mobs ya cargados al arrancar el plugin. */
@@ -1458,6 +1503,17 @@ public final class MobService implements Listener {
 
     public void clear() {
         this.active.clear();
+    }
+
+    /** Mobs custom cargados ahora mismo: los que se pueden restaurar al apagar. */
+    public List<LivingEntity> loadedMobs() {
+        List<LivingEntity> loaded = new ArrayList<>();
+        for (CustomMob customMob : this.active.values()) {
+            if (customMob.entity() instanceof LivingEntity living && living.isValid()) {
+                loaded.add(living);
+            }
+        }
+        return loaded;
     }
 
     /** Vuelve a pedir el modelo de cada mob vivo (tras recargar el catalogo). */

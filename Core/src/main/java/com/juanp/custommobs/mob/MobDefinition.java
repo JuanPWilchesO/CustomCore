@@ -51,6 +51,9 @@ import java.util.Set;
  *                         {@code null} = usar el valor global del config
  * @param mount            como preparar la montura (solo {@code category: mount});
  *                         {@code null} en cualquier otro caso
+ * @param deniedRegions    regiones de WorldGuard donde el mob no puede invocarse con su
+ *                         huevo; vacia = sin vetos. Independiente de {@code spawn}: un mob
+ *                         de jugador tambien puede tenerlas
  */
 public record MobDefinition(
         String id,
@@ -82,7 +85,8 @@ public record MobDefinition(
         boolean villageFriendly,
         Set<EntityDamageEvent.DamageCause> immune,
         boolean attacksMonsters,
-        boolean transformable
+        boolean transformable,
+        List<String> deniedRegions
 ) {
 
     /** Vida maxima configurada, o 20 si no se especifico. */

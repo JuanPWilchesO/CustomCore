@@ -1,10 +1,12 @@
 package com.juanp.custommobs.mob;
 
 import com.juanp.custommobs.CustomMobsPlugin;
+import com.juanp.custommobs.store.AtomicYaml;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
@@ -82,6 +84,13 @@ public final class PlayerMobRegistry {
     /** Indice entidad -> vinculo, para resolver desde el mob. */
     private final Map<UUID, UUID> linkOfEntity = new HashMap<>();
     private boolean dirty;
+    /**
+     * El archivo existia pero no se pudo leer: pudo quedar truncado. Mientras esto sea
+     * {@code true} no se guarda, porque la lista en memoria estaria vacia o incompleta y
+     * pisaria los vinculos de los mobs que solo viven dentro de su huevo.
+     */
+    private boolean loadFailed;
+    private boolean backupWarned;
 
     public PlayerMobRegistry(CustomMobsPlugin plugin) {
         this.plugin = plugin;
@@ -91,14 +100,37 @@ public final class PlayerMobRegistry {
     public void load() {
         this.byLink.clear();
         this.linkOfEntity.clear();
+        this.loadFailed = false;
+        this.backupWarned = false;
         if (!this.file.exists()) {
             return;
         }
-        YamlConfiguration yaml = YamlConfiguration.loadConfiguration(this.file);
-        ConfigurationSection links = yaml.getConfigurationSection("links");
-        if (links == null) {
+        // Sobra de una escritura interrumpida: el archivo bueno sigue siendo el principal.
+        AtomicYaml.cleanTemp(this.file);
+        YamlConfiguration yaml = this.read(this.file);
+        if (yaml == null) {
+            this.recover();
             return;
         }
+        ConfigurationSection links = yaml.getConfigurationSection("links");
+        if (links == null) {
+            if (yaml.getKeys(false).isEmpty()) {
+                // Un YAML vacio con el archivo presente es sospechoso: no se pisa.
+                this.plugin.getLogger().warning(
+                        "player-mobs.yml esta vacio; se deja intacto hasta el proximo arranque.");
+                this.loadFailed = true;
+            }
+            return;
+        }
+        this.readLinks(links);
+        if (!this.byLink.isEmpty()) {
+            this.plugin.getLogger().info("Vinculos de mobs cargados: " + this.byLink.size()
+                    + " (" + this.deployedTotal() + " desplegados).");
+        }
+    }
+
+    /** Vuelca la seccion {@code links} en los indices en memoria. */
+    private void readLinks(ConfigurationSection links) {
         for (String key : links.getKeys(false)) {
             UUID linkId = parse(key);
             if (linkId == null) {
@@ -119,13 +151,63 @@ public final class PlayerMobRegistry {
                 this.linkOfEntity.put(entity, linkId);
             }
         }
-        if (!this.byLink.isEmpty()) {
-            this.plugin.getLogger().info("Vinculos de mobs cargados: " + this.byLink.size()
-                    + " (" + this.deployedTotal() + " desplegados).");
+    }
+
+    /**
+     * Lee un YAML sin colapsar ante un error.
+     *
+     * <p>{@code loadConfiguration} devuelve una config vacia cuando el archivo no se puede
+     * interpretar, que es exactamente el caso que hay que distinguir. Por eso se lee a mano
+     * y se capturan los dos fallos posibles.
+     *
+     * @return la config, o {@code null} si el archivo existe pero no se pudo leer
+     */
+    private YamlConfiguration read(File source) {
+        YamlConfiguration yaml = new YamlConfiguration();
+        try {
+            yaml.load(source);
+            return yaml;
+        } catch (IOException | InvalidConfigurationException ex) {
+            this.plugin.getLogger().warning("No se pudo leer " + source.getName() + ": "
+                    + ex.getClass().getSimpleName() + ": " + ex.getMessage());
+            return null;
         }
     }
 
+    /**
+     * Intenta salvar los vinculos desde el {@code .bak} y, si no, bloquea el guardado.
+     *
+     * <p>Se prefiere el respaldo a arrancar en vacio: en vacio, el primer guardado borraria
+     * todos los huevos.
+     */
+    private void recover() {
+        File backup = new File(this.file.getParentFile(), this.file.getName() + ".bak");
+        YamlConfiguration yaml = backup.exists() ? this.read(backup) : null;
+        ConfigurationSection links = yaml == null ? null : yaml.getConfigurationSection("links");
+        if (links == null) {
+            this.plugin.getLogger().severe("player-mobs.yml no se puede leer y no hay respaldo"
+                    + " util. Se conserva el archivo y NO se guardara encima hasta que haya uno"
+                    + " legible: revisalo a mano.");
+            this.loadFailed = true;
+            return;
+        }
+        this.plugin.getLogger().warning("player-mobs.yml estaba danado: se recuperan los vinculos"
+                + " desde el respaldo .bak (" + links.getKeys(false).size() + ").");
+        this.readLinks(links);
+        this.file.delete();
+    }
+
     public void save() {
+        if (this.loadFailed) {
+            // Guardar aqui sustituiria los vinculos buenos por la lista parcial en memoria.
+            if (!this.backupWarned) {
+                this.plugin.getLogger().severe("Se cancela el guardado de los vinculos de mobs:"
+                        + " player-mobs.yml no se pudo leer al arrancar. Repara o retira el"
+                        + " archivo y reinicia.");
+                this.backupWarned = true;
+            }
+            return;
+        }
         YamlConfiguration yaml = new YamlConfiguration();
         for (MobLink link : this.byLink.values()) {
             String base = "links." + link.linkId() + ".";
@@ -156,11 +238,11 @@ public final class PlayerMobRegistry {
                 yaml.set(stateBase + "effects", state.potionEffects());
             }
         }
-        try {
-            yaml.save(this.file);
+        if (AtomicYaml.save(yaml, this.file)) {
             this.dirty = false;
-        } catch (IOException ex) {
-            this.plugin.getLogger().warning("No se pudieron guardar los vinculos de mobs: " + ex.getMessage());
+        } else {
+            this.plugin.getLogger().warning("No se pudieron guardar los vinculos de mobs:"
+                    + " no se pudo escribir " + this.file.getName() + " (el anterior queda intacto).");
         }
     }
 
