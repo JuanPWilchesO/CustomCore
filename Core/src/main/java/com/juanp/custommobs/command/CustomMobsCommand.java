@@ -66,7 +66,7 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
                 && ("despedir".equalsIgnoreCase(args[0]) || "dismiss".equalsIgnoreCase(args[0]));
         // '_chain' es el avance de una conversacion: lo manda un boton del chat, en nombre
         // del jugador, asi que tiene que poder usarlo cualquiera.
-        boolean ownChain = args.length >= 2 && "_chain".equalsIgnoreCase(args[0]);
+        boolean ownChain = args.length >= 4 && "_chain".equalsIgnoreCase(args[0]);
         // El brillo de facciones, en modo 'player', lo decide cada uno.
         boolean ownGlow = args.length == 1 && "glowfaccion".equalsIgnoreCase(args[0]);
         String needed = (help || ownQuota || ownStyle || ownDismiss || ownChain || ownGlow)
@@ -129,18 +129,20 @@ public final class CustomMobsCommand implements CommandExecutor, TabCompleter {
      * saltarse un paso —ni un pago— escribiendolo a mano.
      */
     private void chainStep(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player player) || args.length < 3) {
+        if (!(sender instanceof Player player) || args.length < 4) {
             return;
         }
         UUID conversationId;
         int option;
         try {
             conversationId = UUID.fromString(args[1]);
-            option = Integer.parseInt(args[2]);
+            option = Integer.parseInt(args[3]);
         } catch (IllegalArgumentException ex) {
             return;
         }
-        this.plugin.chains().choose(player, conversationId, option);
+        // El paso viaja en el boton: si no es el que la conversacion tiene apuntado, el clic
+        // es de una pregunta vieja y se descarta.
+        this.plugin.chains().choose(player, conversationId, args[2], option);
     }
 
     /**

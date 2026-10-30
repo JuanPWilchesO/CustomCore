@@ -36,6 +36,10 @@ import java.util.Map;
  *                            acotado a {@link #MAX_CHUNK_RADIUS}
  * @param eggRedeployCooldown segundos de espera para volver a colocar un huevo cuyo mob se
  *                            acaba de recoger; {@code 0} = sin espera
+ * @param chainChoiceDistance distancia maxima al mob para pulsar un boton de una cadena;
+ *                            {@code 0} = sin limite
+ * @param chainTimeoutSeconds segundos sin actividad tras los que una conversacion caduca;
+ *                            {@code 0} = no caduca
  * @param bookMaterial        material del libro de inspeccion
  * @param bookName            nombre del libro, con color ya traducido
  * @param bookLore            lore del libro, con color ya traducido
@@ -77,6 +81,8 @@ public record PluginConfig(
         Map<String, Integer> mountGroupLimits,
         int pointChunkRadius,
         int eggRedeployCooldown,
+        double chainChoiceDistance,
+        int chainTimeoutSeconds,
         org.bukkit.Material bookMaterial,
         String bookName,
         List<String> bookLore,
@@ -183,6 +189,8 @@ public record PluginConfig(
                 // Tope duro: (2r+1)^2 chunks por mob. Ver MobLoader.MAX_CHUNK_RADIUS.
                 Math.min(MAX_CHUNK_RADIUS, Math.max(0, cfg.getInt("point.chunk-radius", 4))),
                 Math.max(0, cfg.getInt("eggs.redeploy-cooldown-seconds", 5)),
+                Math.max(0.0D, cfg.getDouble("chains.choice-distance", 8.0D)),
+                Math.max(0, cfg.getInt("chains.conversation-timeout-seconds", 300)),
                 bookMaterial(cfg),
                 Texts.color(cfg.getString("book.display-name", "&6Inventario de fuerzas")),
                 colorList(cfg.getStringList("book.lore")),
