@@ -16,10 +16,13 @@ import java.util.List;
  * @param startMessage    aviso al lanzar; {@code null} si no hay
  * @param endMessage      aviso cuando caduca el efecto; {@code null} si no hay
  * @param cooldownMessage aviso al intentar usarlo en espera; admite {@code {segundos}}
+ * @param deniedRegions   regiones de WorldGuard donde el objeto no se puede usar; vacia = sin
+ *                        vetos. Se declara en el {@code usar:} del objeto
  */
 public record UseSpec(String effectId, List<String> skillIds, int duration,
                       boolean consume, int cooldownSeconds,
-                      String startMessage, String endMessage, String cooldownMessage) {
+                      String startMessage, String endMessage, String cooldownMessage,
+                      List<String> deniedRegions) {
 
     /** {@code true} si el objeto dispara skills en vez de un efecto suelto. */
     public boolean hasSkills() {
